@@ -6,13 +6,14 @@ import { TerrainTypeList } from '@/components/inventory/TerrainTypeList';
 import { TerrainEditor } from '@/components/inventory/TerrainEditor';
 import { ShapesOverview } from '@/components/inventory/ShapesOverview';
 import { CustomPiecesList } from '@/components/inventory/CustomPiecesList';
+import { TemplatesList } from '@/components/inventory/TemplatesList';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type ViewMode = 'overview' | 'terrain' | 'custom';
+type ViewMode = 'overview' | 'terrain' | 'custom' | 'templates';
 
 export default function InventoryPage() {
-  const { fetchShapes, fetchTerrainTypes, fetchCustomPieces, isLoading, error, clearError } = useInventoryStore();
+  const { fetchShapes, fetchTerrainTypes, fetchCustomPieces, fetchPieceTemplates, isLoading, error, clearError } = useInventoryStore();
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [selectedTerrainId, setSelectedTerrainId] = useState<string | null>(null);
 
@@ -20,7 +21,8 @@ export default function InventoryPage() {
     fetchShapes();
     fetchTerrainTypes();
     fetchCustomPieces();
-  }, [fetchShapes, fetchTerrainTypes, fetchCustomPieces]);
+    fetchPieceTemplates();
+  }, [fetchShapes, fetchTerrainTypes, fetchCustomPieces, fetchPieceTemplates]);
 
   const handleSelectTerrain = (id: string | null) => {
     setSelectedTerrainId(id);
@@ -30,6 +32,11 @@ export default function InventoryPage() {
   const handleSelectCustom = () => {
     setSelectedTerrainId(null);
     setViewMode('custom');
+  };
+
+  const handleSelectTemplates = () => {
+    setSelectedTerrainId(null);
+    setViewMode('templates');
   };
 
   return (
@@ -90,15 +97,19 @@ export default function InventoryPage() {
                 onSelect={handleSelectTerrain}
                 isCustomSelected={viewMode === 'custom'}
                 onSelectCustom={handleSelectCustom}
+                isTemplatesSelected={viewMode === 'templates'}
+                onSelectTemplates={handleSelectTemplates}
               />
             </div>
 
-            {/* Main content - terrain editor, shapes overview, or custom pieces */}
+            {/* Main content - terrain editor, shapes overview, custom pieces, or templates */}
             <div className="col-span-12 md:col-span-9">
               {viewMode === 'terrain' && selectedTerrainId ? (
                 <TerrainEditor terrainTypeId={selectedTerrainId} />
               ) : viewMode === 'custom' ? (
                 <CustomPiecesList />
+              ) : viewMode === 'templates' ? (
+                <TemplatesList />
               ) : (
                 <ShapesOverview />
               )}

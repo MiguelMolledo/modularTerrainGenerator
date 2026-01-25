@@ -4,19 +4,27 @@ import React, { useState, useEffect } from 'react';
 import { useInventoryStore } from '@/store/inventoryStore';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, Minus, Plus } from 'lucide-react';
+import { Save, Minus, Plus, Layers, Pencil, Trash2 } from 'lucide-react';
+import { PieceVariantFormDialog } from './PieceVariantFormDialog';
+import { CustomPiecePreview } from './CustomPiecePreview';
+import { PieceShape, PieceVariant } from '@/types';
 
 interface PiecesGridProps {
   terrainTypeId: string;
 }
 
 export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
-  const { shapes, terrainTypes, updateTerrainPieces, isLoading } = useInventoryStore();
+  const { shapes, terrainTypes, updateTerrainPieces, deletePieceVariant, isLoading } = useInventoryStore();
   const terrain = terrainTypes.find((t) => t.id === terrainTypeId);
 
   // Local state for quantities
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Variant dialog state
+  const [variantDialogOpen, setVariantDialogOpen] = useState(false);
+  const [selectedShape, setSelectedShape] = useState<PieceShape | null>(null);
+  const [editingVariant, setEditingVariant] = useState<PieceVariant | undefined>(undefined);
 
   // Initialize quantities from terrain pieces
   useEffect(() => {
@@ -43,6 +51,27 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
     }));
     await updateTerrainPieces(terrainTypeId, pieces);
     setHasChanges(false);
+  };
+
+  const handleCreateVariant = (shape: PieceShape) => {
+    setSelectedShape(shape);
+    setEditingVariant(undefined);
+    setVariantDialogOpen(true);
+  };
+
+  const handleEditVariant = (variant: PieceVariant) => {
+    const shape = shapes.find((s) => s.id === variant.shapeId);
+    if (shape) {
+      setSelectedShape(shape);
+      setEditingVariant(variant);
+      setVariantDialogOpen(true);
+    }
+  };
+
+  const handleDeleteVariant = async (variantId: string) => {
+    if (confirm('Are you sure you want to delete this variant?')) {
+      await deletePieceVariant(variantId);
+    }
   };
 
   if (!terrain) return null;
@@ -140,6 +169,17 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
+
+              {/* Create variant button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-3 w-full text-purple-400 hover:text-purple-300 hover:bg-purple-900/30"
+                onClick={() => handleCreateVariant(shape)}
+              >
+                <Layers className="h-3 w-3 mr-1" />
+                + Variant
+              </Button>
             </Card>
           );
         })}
@@ -149,6 +189,94 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
         <div className="text-center py-8 text-gray-500">
           No shapes available. Please check your database configuration.
         </div>
+      )}
+
+      {/* Variants section */}
+      {terrain.variants && terrain.variants.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+            <Layers className="h-5 w-5 text-purple-400" />
+            Variants
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {terrain.variants.map((variant) => {
+              const shape = shapes.find((s) => s.id === variant.shapeId);
+              if (!shape) return null;
+
+              return (
+                <Card key={variant.id} className="p-4">
+                  <div className="flex gap-4">
+                    {/* Preview */}
+                    <div className="shrink-0">
+                      <CustomPiecePreview
+                        width={shape.width}
+                        height={shape.height}
+                        cellColors={variant.cellColors}
+                        terrainTypes={terrainTypes}
+                        scale={6}
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-white font-medium truncate">{variant.name}</h4>
+                      <p className="text-gray-500 text-xs">{shape.name}</p>
+
+                      {/* Tags */}
+                      {variant.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {variant.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-1.5 py-0.5 bg-purple-600/30 text-purple-300 rounded text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Quantity */}
+                      <p className="text-gray-400 text-sm mt-2">Qty: {variant.quantity}</p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-700">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditVariant(variant)}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
+                      onClick={() => handleDeleteVariant(variant.id)}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Variant form dialog */}
+      {selectedShape && terrain && (
+        <PieceVariantFormDialog
+          open={variantDialogOpen}
+          onOpenChange={setVariantDialogOpen}
+          terrainType={terrain}
+          shape={selectedShape}
+          editingVariant={editingVariant}
+        />
       )}
     </div>
   );

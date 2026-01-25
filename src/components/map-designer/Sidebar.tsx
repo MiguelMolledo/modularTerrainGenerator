@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ChevronLeft, ChevronRight, Puzzle } from 'lucide-react';
+import { getGridDimensions } from '@/lib/gridUtils';
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
@@ -16,15 +17,14 @@ export function Sidebar() {
     placedPieces,
     selectedPieceId,
     currentLevel,
-    currentRotation,
-    rotateCurrentPiece,
     isSidebarDragging,
     startSidebarDrag,
     endSidebarDrag,
   } = useMapStore();
 
-  // Separate custom pieces from regular pieces
-  const regularPieces = availablePieces.filter((p) => !p.isCustom);
+  // Separate custom pieces, variants, and regular pieces
+  const regularPieces = availablePieces.filter((p) => !p.isCustom && !p.isVariant);
+  const variantPieces = availablePieces.filter((p) => p.isVariant);
   const customPieces = availablePieces.filter((p) => p.isCustom);
 
   // End drag on mouseup anywhere (cleanup)
@@ -61,36 +61,20 @@ export function Sidebar() {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-4 border-b border-gray-700">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Pieces</h2>
-              <p className="text-sm text-gray-400">Drag pieces to the map</p>
-            </div>
-            <button
-              onClick={rotateCurrentPiece}
-              className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm transition-colors"
-              title="Rotate piece (R)"
-            >
-              <span className="text-lg">↻</span>
-              <span className="font-mono">{currentRotation}°</span>
-            </button>
-          </div>
-        </div>
-
-        <Tabs defaultValue={terrainTypes[0]?.id} className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue={terrainTypes[0]?.slug || terrainTypes[0]?.id} className="flex-1 flex flex-col min-h-0">
           <div className="mx-2 mt-2 shrink-0 overflow-x-auto scrollbar-thin">
             <TabsList className="inline-flex w-max gap-1 bg-gray-900 p-1">
             {terrainTypes.map((terrain) => {
+              // Filter by slug since regular pieces use slug as terrainTypeId
               const terrainPieces = regularPieces.filter(
-                (p) => p.terrainTypeId === terrain.id
+                (p) => p.terrainTypeId === terrain.slug || p.terrainTypeId === terrain.id
               );
               if (terrainPieces.length === 0) return null;
 
               return (
                 <TabsTrigger
                   key={terrain.id}
-                  value={terrain.id}
+                  value={terrain.slug || terrain.id}
                   className="text-xs data-[state=active]:bg-gray-700"
                   style={{
                     borderBottom: `2px solid ${terrain.color}`,
@@ -116,17 +100,23 @@ export function Sidebar() {
 
           <ScrollArea className="flex-1 min-h-0 custom-scrollbar">
             {terrainTypes.map((terrain) => {
+              // Filter by slug since regular pieces use slug as terrainTypeId
               const terrainPieces = regularPieces.filter(
-                (p) => p.terrainTypeId === terrain.id
+                (p) => p.terrainTypeId === terrain.slug || p.terrainTypeId === terrain.id
+              );
+              // Filter variants for this terrain
+              const terrainVariants = variantPieces.filter(
+                (p) => p.terrainTypeId === terrain.slug || p.terrainTypeId === terrain.id
               );
 
               return (
                 <TabsContent
                   key={terrain.id}
-                  value={terrain.id}
+                  value={terrain.slug || terrain.id}
                   className="p-2 m-0"
                 >
                   <div className="space-y-2">
+                    {/* Regular pieces */}
                     {terrainPieces.map((piece) => {
                       const totalUsed = getTotalUsed(piece.id);
                       const available = piece.quantity - totalUsed;
@@ -207,6 +197,120 @@ export function Sidebar() {
                         </Card>
                       );
                     })}
+
+                    {/* Variants section */}
+                    {terrainVariants.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-2 pt-2 mt-2 border-t border-gray-700">
+                          <span className="text-xs text-purple-400 font-medium">Variants</span>
+                        </div>
+                        {terrainVariants.map((piece) => {
+                          const totalUsed = getTotalUsed(piece.id);
+                          const available = piece.quantity - totalUsed;
+                          const isSelected = selectedPieceId === piece.id;
+                          const isOverused = available < 0;
+
+                          // Grid dimensions for variant pieces
+                          const { rows, cols } = piece.cellColors
+                            ? getGridDimensions(piece.size.width, piece.size.height)
+                            : { rows: 1, cols: 1 };
+
+                          // Helper to find terrain by UUID (for cellColors)
+                          const findTerrainById = (id: string) => terrainTypes.find((t) => t.id === id);
+
+                          return (
+                            <Card
+                              key={piece.id}
+                              onMouseDown={(e) => handleMouseDown(e, piece.id)}
+                              className={`cursor-grab active:cursor-grabbing transition-all select-none ${
+                                isSelected ? 'ring-2 ring-blue-500' : ''
+                              } ${isOverused ? 'border-red-500 bg-red-950/30' : 'hover:bg-gray-700'}`}
+                              style={{
+                                borderLeft: `4px solid ${isOverused ? '#ef4444' : '#a855f7'}`,
+                              }}
+                            >
+                              <CardContent className="p-3">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h3 className={`font-medium text-sm ${isOverused ? 'text-red-300' : 'text-white'}`}>
+                                      {piece.name}
+                                    </h3>
+                                    <p className="text-xs text-gray-400">
+                                      {piece.size.label}
+                                    </p>
+                                    {/* Tags */}
+                                    {piece.tags && piece.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {piece.tags.slice(0, 3).map((tag) => (
+                                          <span
+                                            key={tag}
+                                            className="px-1 py-0.5 bg-purple-600/30 text-purple-300 rounded text-[10px]"
+                                          >
+                                            {tag}
+                                          </span>
+                                        ))}
+                                        {piece.tags.length > 3 && (
+                                          <span className="text-[10px] text-gray-500">+{piece.tags.length - 3}</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-right">
+                                    <span className={`text-sm font-bold ${available > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                      {available}
+                                    </span>
+                                    <span className="text-xs text-gray-500">/{piece.quantity}</span>
+                                  </div>
+                                </div>
+
+                                {/* Visual grid representation for variants */}
+                                <div className="mt-2 flex items-end gap-1">
+                                  {piece.cellColors && piece.cellColors.length > 0 ? (
+                                    <div
+                                      className="rounded overflow-hidden border border-gray-600"
+                                      style={{
+                                        width: `${piece.size.width * 8}px`,
+                                        height: `${piece.size.height * 8}px`,
+                                        display: 'grid',
+                                        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                                        gridTemplateRows: `repeat(${rows}, 1fr)`,
+                                        opacity: 0.8,
+                                      }}
+                                    >
+                                      {piece.cellColors.flatMap((row, rowIdx) =>
+                                        row.map((terrainId, colIdx) => {
+                                          const cellTerrain = findTerrainById(terrainId);
+                                          return (
+                                            <div
+                                              key={`${rowIdx}-${colIdx}`}
+                                              style={{
+                                                backgroundColor: cellTerrain?.color || '#666',
+                                                borderRight: colIdx < cols - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                                                borderBottom: rowIdx < rows - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                                              }}
+                                            />
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div
+                                      className="rounded"
+                                      style={{
+                                        width: `${piece.size.width * 8}px`,
+                                        height: `${piece.size.height * 8}px`,
+                                        backgroundColor: terrain.color,
+                                        opacity: 0.6,
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                 </TabsContent>
               );
@@ -220,10 +324,16 @@ export function Sidebar() {
                   const available = piece.quantity - totalUsed;
                   const isSelected = selectedPieceId === piece.id;
                   const isOverused = available < 0;
-                  const primaryTerrain = terrainTypes.find((t) => t.id === piece.terrainTypeId);
-                  const secondaryTerrain = piece.secondaryTerrainTypeId
-                    ? terrainTypes.find((t) => t.id === piece.secondaryTerrainTypeId)
-                    : undefined;
+                  // Look up by slug or id for backward compatibility
+                  const primaryTerrain = terrainTypes.find((t) => t.slug === piece.terrainTypeId || t.id === piece.terrainTypeId);
+
+                  // Grid dimensions for custom pieces
+                  const { rows, cols } = piece.cellColors
+                    ? getGridDimensions(piece.size.width, piece.size.height)
+                    : { rows: 1, cols: 1 };
+
+                  // Helper to find terrain by UUID (for cellColors)
+                  const findTerrainById = (id: string) => terrainTypes.find((t) => t.id === id);
 
                   return (
                     <Card
@@ -244,7 +354,7 @@ export function Sidebar() {
                             </h3>
                             <p className="text-xs text-gray-400">
                               {piece.size.label}
-                              {piece.isSplit && ` (${piece.splitDirection === 'horizontal' ? 'H' : 'V'}-Split)`}
+                              {piece.cellColors && cols * rows > 1 && ` (${cols}x${rows})`}
                             </p>
                           </div>
                           <div className="text-right">
@@ -255,31 +365,35 @@ export function Sidebar() {
                           </div>
                         </div>
 
-                        {/* Visual size representation for custom pieces */}
+                        {/* Visual grid representation for custom pieces */}
                         <div className="mt-2 flex items-end gap-1">
-                          {piece.isSplit && piece.splitDirection ? (
+                          {piece.cellColors && piece.cellColors.length > 0 ? (
                             <div
                               className="rounded overflow-hidden border border-gray-600"
                               style={{
                                 width: `${piece.size.width * 8}px`,
                                 height: `${piece.size.height * 8}px`,
-                                display: 'flex',
-                                flexDirection: piece.splitDirection === 'horizontal' ? 'column' : 'row',
-                                opacity: 0.6,
+                                display: 'grid',
+                                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                                gridTemplateRows: `repeat(${rows}, 1fr)`,
+                                opacity: 0.8,
                               }}
                             >
-                              <div
-                                style={{
-                                  flex: 1,
-                                  backgroundColor: primaryTerrain?.color || '#666',
-                                }}
-                              />
-                              <div
-                                style={{
-                                  flex: 1,
-                                  backgroundColor: secondaryTerrain?.color || '#888',
-                                }}
-                              />
+                              {piece.cellColors.flatMap((row, rowIdx) =>
+                                row.map((terrainId, colIdx) => {
+                                  const cellTerrain = findTerrainById(terrainId);
+                                  return (
+                                    <div
+                                      key={`${rowIdx}-${colIdx}`}
+                                      style={{
+                                        backgroundColor: cellTerrain?.color || '#666',
+                                        borderRight: colIdx < cols - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                                        borderBottom: rowIdx < rows - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                                      }}
+                                    />
+                                  );
+                                })
+                              )}
                             </div>
                           ) : (
                             <div

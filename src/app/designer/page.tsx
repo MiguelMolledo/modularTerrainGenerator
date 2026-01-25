@@ -35,9 +35,11 @@ function MapLoader() {
       const pieces = getModularPieces();
       if (pieces.length > 0) {
         setAvailablePieces(pieces);
-        // Also update terrain types for the sidebar (use slug as id for compatibility)
+        // Also update terrain types for the sidebar
+        // Include both UUID and slug so we can look up by either
         const simpleTerrainTypes = terrainTypes.map(t => ({
-          id: t.slug, // Use slug to match piece terrainTypeId
+          id: t.id, // Use actual UUID for custom piece cellColors lookup
+          slug: t.slug, // Keep slug for regular piece terrainTypeId lookup
           name: t.name,
           color: t.color,
           icon: t.icon,

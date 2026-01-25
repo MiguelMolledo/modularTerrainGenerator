@@ -8,6 +8,7 @@ import { BASE_PIXELS_PER_INCH } from '@/config/terrain';
 import { PlacedPiece } from '@/types';
 import { checkCollisionWithPieces } from '@/lib/collisionUtils';
 import { setStageInstance } from '@/lib/stageRef';
+import { getGridDimensions } from '@/lib/gridUtils';
 
 interface DragPreview {
   x: number;
@@ -20,9 +21,9 @@ interface DragPreview {
   rotation: number;
   hasCollision: boolean;
   isDiagonal: boolean;
-  isSplit?: boolean;
-  splitDirection?: 'horizontal' | 'vertical';
-  secondaryColor?: string;
+  isCustom?: boolean;
+  isVariant?: boolean;
+  cellColors?: string[][]; // Grid of terrain IDs
 }
 
 interface MapCanvasProps {
@@ -585,10 +586,6 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     const hasCollision = checkCollision(snappedX, snappedY, effectiveWidth, effectiveHeight, undefined, selectedPiece.isDiagonal, rotation);
 
-    const secondaryTerrain = selectedPiece.secondaryTerrainTypeId
-      ? terrainTypes.find((t) => t.id === selectedPiece.secondaryTerrainTypeId)
-      : undefined;
-
     setDragPreview({
       x: snappedX,
       y: snappedY,
@@ -602,9 +599,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       rotation: rotation,
       hasCollision,
       isDiagonal: selectedPiece.isDiagonal,
-      isSplit: selectedPiece.isSplit,
-      splitDirection: selectedPiece.splitDirection,
-      secondaryColor: secondaryTerrain?.color,
+      isCustom: selectedPiece.isCustom,
+      isVariant: selectedPiece.isVariant,
+      cellColors: selectedPiece.cellColors,
     });
   };
 
@@ -692,9 +689,6 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     const hasCollision = checkCollision(snappedX, snappedY, effectiveWidth, effectiveHeight, undefined, selectedPiece.isDiagonal, rotation);
     const terrain = terrainTypes.find((t) => t.id === selectedPiece.terrainTypeId);
-    const secondaryTerrain = selectedPiece.secondaryTerrainTypeId
-      ? terrainTypes.find((t) => t.id === selectedPiece.secondaryTerrainTypeId)
-      : undefined;
 
     const newPreview = {
       x: snappedX,
@@ -709,9 +703,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       rotation: rotation,
       hasCollision,
       isDiagonal: selectedPiece.isDiagonal,
-      isSplit: selectedPiece.isSplit,
-      splitDirection: selectedPiece.splitDirection,
-      secondaryColor: secondaryTerrain?.color,
+      isCustom: selectedPiece.isCustom,
+      isVariant: selectedPiece.isVariant,
+      cellColors: selectedPiece.cellColors,
     };
 
     // Update both ref and state
@@ -916,64 +910,33 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                     dash={[8, 4]}
                   />
                 </Group>
-              ) : dragPreview.isSplit && dragPreview.splitDirection ? (
-                // Split piece preview
+              ) : (dragPreview.isCustom || dragPreview.isVariant) && dragPreview.cellColors && dragPreview.cellColors.length > 0 ? (
+                // Grid-based custom/variant piece preview
                 <>
-                  {dragPreview.splitDirection === 'horizontal' ? (
-                    <>
-                      <Rect
-                        x={0}
-                        y={0}
-                        width={dragPreview.width * pixelsPerInch}
-                        height={dragPreview.height * pixelsPerInch / 2}
-                        fill={getPreviewColor()}
-                        opacity={dragPreview.hasCollision ? 0.5 : 0.4}
-                        stroke="#fff"
-                        strokeWidth={2}
-                        dash={[8, 4]}
-                        cornerRadius={[4, 4, 0, 0]}
-                      />
-                      <Rect
-                        x={0}
-                        y={dragPreview.height * pixelsPerInch / 2}
-                        width={dragPreview.width * pixelsPerInch}
-                        height={dragPreview.height * pixelsPerInch / 2}
-                        fill={dragPreview.hasCollision ? '#ef4444' : (dragPreview.secondaryColor || dragPreview.color)}
-                        opacity={dragPreview.hasCollision ? 0.5 : 0.4}
-                        stroke="#fff"
-                        strokeWidth={2}
-                        dash={[8, 4]}
-                        cornerRadius={[0, 0, 4, 4]}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <Rect
-                        x={0}
-                        y={0}
-                        width={dragPreview.width * pixelsPerInch / 2}
-                        height={dragPreview.height * pixelsPerInch}
-                        fill={getPreviewColor()}
-                        opacity={dragPreview.hasCollision ? 0.5 : 0.4}
-                        stroke="#fff"
-                        strokeWidth={2}
-                        dash={[8, 4]}
-                        cornerRadius={[4, 0, 0, 4]}
-                      />
-                      <Rect
-                        x={dragPreview.width * pixelsPerInch / 2}
-                        y={0}
-                        width={dragPreview.width * pixelsPerInch / 2}
-                        height={dragPreview.height * pixelsPerInch}
-                        fill={dragPreview.hasCollision ? '#ef4444' : (dragPreview.secondaryColor || dragPreview.color)}
-                        opacity={dragPreview.hasCollision ? 0.5 : 0.4}
-                        stroke="#fff"
-                        strokeWidth={2}
-                        dash={[8, 4]}
-                        cornerRadius={[0, 4, 4, 0]}
-                      />
-                    </>
-                  )}
+                  {(() => {
+                    const { rows, cols } = getGridDimensions(dragPreview.width, dragPreview.height);
+                    const cellWidth = (dragPreview.width * pixelsPerInch) / cols;
+                    const cellHeight = (dragPreview.height * pixelsPerInch) / rows;
+                    return dragPreview.cellColors.map((row, rowIdx) =>
+                      row.map((terrainId, colIdx) => {
+                        const terrain = terrainTypes.find((t) => t.id === terrainId);
+                        return (
+                          <Rect
+                            key={`${rowIdx}-${colIdx}`}
+                            x={colIdx * cellWidth}
+                            y={rowIdx * cellHeight}
+                            width={cellWidth}
+                            height={cellHeight}
+                            fill={dragPreview.hasCollision ? '#ef4444' : (terrain?.color || '#666')}
+                            opacity={dragPreview.hasCollision ? 0.5 : 0.4}
+                            stroke="#fff"
+                            strokeWidth={1}
+                            dash={[4, 2]}
+                          />
+                        );
+                      })
+                    );
+                  })()}
                 </>
               ) : (
                 <Rect
@@ -1020,7 +983,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
             const piece = availablePieces.find((p) => p.id === placed.pieceId);
             if (!piece) return null;
 
-            const terrain = terrainTypes.find((t) => t.id === piece.terrainTypeId);
+            // Look up by id (UUID) or slug for backward compatibility
+            const terrain = terrainTypes.find((t) => t.id === piece.terrainTypeId || t.slug === piece.terrainTypeId);
             const pieceWidth = piece.size.width * pixelsPerInch;
             const pieceHeight = piece.size.height * pixelsPerInch;
             const isDragging = draggingPieceId === placed.id;
@@ -1048,51 +1012,41 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                     stroke={isSelected ? '#3b82f6' : 'rgba(255,255,255,0.3)'}
                     strokeWidth={isSelected ? 3 : 1}
                   />
-                ) : piece.isSplit && piece.splitDirection ? (
-                  // Split piece rendering - two rectangles
+                ) : (piece.isCustom || piece.isVariant) && piece.cellColors && piece.cellColors.length > 0 ? (
+                  // Grid-based custom/variant piece rendering
                   <>
-                    {piece.splitDirection === 'horizontal' ? (
-                      // Horizontal split: top and bottom
-                      <>
-                        <Rect
-                          width={pieceWidth}
-                          height={pieceHeight / 2}
-                          fill={terrain?.color || '#666'}
-                          stroke={isSelected ? '#3b82f6' : 'rgba(255,255,255,0.3)'}
-                          strokeWidth={isSelected ? 3 : 1}
-                          cornerRadius={[2, 2, 0, 0]}
-                        />
-                        <Rect
-                          y={pieceHeight / 2}
-                          width={pieceWidth}
-                          height={pieceHeight / 2}
-                          fill={terrainTypes.find((t) => t.id === piece.secondaryTerrainTypeId)?.color || terrain?.color || '#666'}
-                          stroke={isSelected ? '#3b82f6' : 'rgba(255,255,255,0.3)'}
-                          strokeWidth={isSelected ? 3 : 1}
-                          cornerRadius={[0, 0, 2, 2]}
-                        />
-                      </>
-                    ) : (
-                      // Vertical split: left and right
-                      <>
-                        <Rect
-                          width={pieceWidth / 2}
-                          height={pieceHeight}
-                          fill={terrain?.color || '#666'}
-                          stroke={isSelected ? '#3b82f6' : 'rgba(255,255,255,0.3)'}
-                          strokeWidth={isSelected ? 3 : 1}
-                          cornerRadius={[2, 0, 0, 2]}
-                        />
-                        <Rect
-                          x={pieceWidth / 2}
-                          width={pieceWidth / 2}
-                          height={pieceHeight}
-                          fill={terrainTypes.find((t) => t.id === piece.secondaryTerrainTypeId)?.color || terrain?.color || '#666'}
-                          stroke={isSelected ? '#3b82f6' : 'rgba(255,255,255,0.3)'}
-                          strokeWidth={isSelected ? 3 : 1}
-                          cornerRadius={[0, 2, 2, 0]}
-                        />
-                      </>
+                    {(() => {
+                      const { rows, cols } = getGridDimensions(piece.size.width, piece.size.height);
+                      const cellWidth = pieceWidth / cols;
+                      const cellHeight = pieceHeight / rows;
+                      return piece.cellColors.map((row, rowIdx) =>
+                        row.map((terrainId, colIdx) => {
+                          const cellTerrain = terrainTypes.find((t) => t.id === terrainId);
+                          return (
+                            <Rect
+                              key={`${rowIdx}-${colIdx}`}
+                              x={colIdx * cellWidth}
+                              y={rowIdx * cellHeight}
+                              width={cellWidth}
+                              height={cellHeight}
+                              fill={cellTerrain?.color || '#666'}
+                              stroke={isSelected ? '#3b82f6' : 'rgba(255,255,255,0.2)'}
+                              strokeWidth={isSelected ? 2 : 0.5}
+                            />
+                          );
+                        })
+                      );
+                    })()}
+                    {/* Selection outline */}
+                    {isSelected && (
+                      <Rect
+                        width={pieceWidth}
+                        height={pieceHeight}
+                        stroke="#3b82f6"
+                        strokeWidth={3}
+                        fill="transparent"
+                        cornerRadius={2}
+                      />
                     )}
                   </>
                 ) : (

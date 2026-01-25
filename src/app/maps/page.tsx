@@ -4,7 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMapInventoryStore } from '@/store/mapInventoryStore';
 import { useMapStore } from '@/store/mapStore';
+import { useInventoryStore } from '@/store/inventoryStore';
 import { MapCard } from '@/components/maps/MapCard';
+import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,7 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { SavedMap } from '@/types';
+import { SavedMap, ModularPiece } from '@/types';
 import { Plus, RefreshCw, Search, ArrowUpDown, Loader2 } from 'lucide-react';
 import { DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, DEFAULT_LEVELS } from '@/config/terrain';
 
@@ -23,15 +25,24 @@ export default function MapsPage() {
   const router = useRouter();
   const { savedMaps, isLoading, error, fetchMaps, clearError, saveMap } = useMapInventoryStore();
   const { loadMapData } = useMapStore();
+  const { terrainTypes, fetchTerrainTypes, getModularPieces } = useInventoryStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('updated');
   const [showNewMapDialog, setShowNewMapDialog] = useState(false);
   const [newMapName, setNewMapName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [showExportReportDialog, setShowExportReportDialog] = useState(false);
+  const [selectedMapForReport, setSelectedMapForReport] = useState<SavedMap | null>(null);
 
   useEffect(() => {
     fetchMaps();
-  }, [fetchMaps]);
+    fetchTerrainTypes();
+  }, [fetchMaps, fetchTerrainTypes]);
+
+  // Get available pieces from inventory for report
+  const availablePieces: ModularPiece[] = React.useMemo(() => {
+    return getModularPieces();
+  }, [getModularPieces]);
 
   const handleNewMapClick = () => {
     setNewMapName('');
@@ -87,6 +98,11 @@ export default function MapsPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportReport = (map: SavedMap) => {
+    setSelectedMapForReport(map);
+    setShowExportReportDialog(true);
   };
 
   // Filter and sort maps
@@ -220,7 +236,12 @@ export default function MapsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredMaps.map((map) => (
-              <MapCard key={map.id} map={map} onExport={handleExport} />
+              <MapCard
+                key={map.id}
+                map={map}
+                onExport={handleExport}
+                onExportReport={handleExportReport}
+              />
             ))}
           </div>
         )}
@@ -277,6 +298,20 @@ export default function MapsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Export Report Dialog */}
+      {selectedMapForReport && (
+        <ExportReportDialog
+          open={showExportReportDialog}
+          onOpenChange={(open) => {
+            setShowExportReportDialog(open);
+            if (!open) setSelectedMapForReport(null);
+          }}
+          map={selectedMapForReport}
+          availablePieces={availablePieces}
+          terrainTypes={terrainTypes}
+        />
+      )}
     </div>
   );
 }

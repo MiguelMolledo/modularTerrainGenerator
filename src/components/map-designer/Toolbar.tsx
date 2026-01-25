@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useMapStore } from '@/store/mapStore';
 import { useMapInventoryStore } from '@/store/mapInventoryStore';
+import { useInventoryStore } from '@/store/inventoryStore';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -18,9 +19,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen } from 'lucide-react';
+import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { generateThumbnail } from '@/lib/stageRef';
+import type { ModularPiece, SavedMap } from '@/types';
 
 export function Toolbar() {
   const router = useRouter();
@@ -29,6 +32,7 @@ export function Toolbar() {
   const [saveName, setSaveName] = useState('');
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [showExportReportDialog, setShowExportReportDialog] = useState(false);
   const mapSelectorRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,11 +61,18 @@ export function Toolbar() {
   } = useMapStore();
 
   const { saveMap, savedMaps, fetchMaps, loadMap } = useMapInventoryStore();
+  const { terrainTypes, fetchTerrainTypes, getModularPieces } = useInventoryStore();
 
-  // Fetch maps on mount
+  // Fetch maps and terrain types on mount
   useEffect(() => {
     fetchMaps();
-  }, [fetchMaps]);
+    fetchTerrainTypes();
+  }, [fetchMaps, fetchTerrainTypes]);
+
+  // Get available pieces from inventory for report
+  const availablePieces: ModularPiece[] = useMemo(() => {
+    return getModularPieces();
+  }, [getModularPieces]);
 
   // Focus search input when dropdown opens
   useEffect(() => {
@@ -166,6 +177,29 @@ export function Toolbar() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  const handleExportReport = () => {
+    setShowExportReportDialog(true);
+  };
+
+  // Build current map data for the export report dialog
+  const currentMapData: SavedMap = useMemo(() => {
+    const mapData = getMapDataForSave();
+    const snapshot = generateThumbnail();
+    return {
+      id: currentMapId || 'current',
+      name: mapName,
+      description: mapData.description,
+      mapWidth: mapData.mapWidth,
+      mapHeight: mapData.mapHeight,
+      levels: mapData.levels,
+      placedPieces: mapData.placedPieces,
+      gridConfig: mapData.gridConfig,
+      snapshot: snapshot || undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }, [currentMapId, mapName, getMapDataForSave]);
 
   const handleNewMap = () => {
     if (placedPieces.length > 0) {
@@ -457,6 +491,14 @@ export function Toolbar() {
               Export JSON
             </Button>
             <Button
+              variant="outline"
+              onClick={handleExportReport}
+              className="flex-1 sm:flex-none"
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              Export Report
+            </Button>
+            <Button
               onClick={handleSave}
               disabled={isSaving || !saveName.trim()}
               className="flex-1 sm:flex-none"
@@ -471,6 +513,15 @@ export function Toolbar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Export Report Dialog */}
+      <ExportReportDialog
+        open={showExportReportDialog}
+        onOpenChange={setShowExportReportDialog}
+        map={currentMapData}
+        availablePieces={availablePieces}
+        terrainTypes={terrainTypes}
+      />
     </TooltipProvider>
   );
 }

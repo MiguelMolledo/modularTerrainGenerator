@@ -12,7 +12,7 @@ import { Save } from 'lucide-react';
 const TERRAIN_EMOJIS = ['🏜️', '🌲', '🏔️', '🌊', '🐊', '🌋', '❄️', '🌾', '🏛️', '🌙', '☀️', '🌸'];
 const TERRAIN_COLORS = [
   '#E5C07B', '#98C379', '#D19A66', '#61AFEF', '#56B6C2', '#E06C75',
-  '#C678DD', '#ABB2BF', '#282C34', '#5C6370', '#BE5046', '#E5C07B',
+  '#C678DD', '#ABB2BF', '#282C34', '#5C6370', '#BE5046', '#4EC9B0',
 ];
 
 interface TerrainEditorProps {

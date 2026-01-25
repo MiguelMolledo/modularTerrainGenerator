@@ -1,6 +1,7 @@
 // Terrain types (desert, forest, etc.)
 export interface TerrainType {
   id: string;
+  slug?: string; // Optional slug for backward compatibility
   name: string;
   color: string;
   icon: string;
@@ -14,8 +15,9 @@ export interface PieceSize {
   label: string;
 }
 
-// Split direction for dual-color pieces
-export type SplitDirection = 'horizontal' | 'vertical';
+// Cell colors for grid-based custom pieces
+// 2D array where cellColors[row][col] = terrain type UUID
+export type CellColors = string[][];
 
 // A modular piece definition
 export interface ModularPiece {
@@ -29,9 +31,11 @@ export interface ModularPiece {
   defaultRotation?: number; // pre-defined rotation for diagonal pieces (0, 90, 180, 270)
   // Custom piece properties
   isCustom?: boolean;
-  isSplit?: boolean;
-  splitDirection?: SplitDirection;
-  secondaryTerrainTypeId?: string;
+  cellColors?: CellColors; // Grid of terrain IDs for multi-color pieces
+  // Variant properties
+  isVariant?: boolean;
+  variantId?: string;
+  tags?: string[];
 }
 
 // A piece placed on the map
@@ -146,6 +150,7 @@ export interface TerrainTypeWithInventory {
   displayOrder: number;
   pieces: TerrainPieceConfig[];
   objects: TerrainObject[];
+  variants: PieceVariant[];
 }
 
 // Custom piece definition (user-created)
@@ -154,10 +159,40 @@ export interface CustomPiece {
   name: string;
   width: number;  // in inches (0.5 increments)
   height: number; // in inches (0.5 increments)
-  isSplit: boolean;
-  splitDirection?: SplitDirection;
-  primaryTerrainTypeId: string;
-  secondaryTerrainTypeId?: string;
+  cellColors: CellColors; // Grid of terrain type UUIDs
   quantity: number;
   displayOrder: number;
+}
+
+// Piece variant (modified version of a standard piece with custom colors)
+export interface PieceVariant {
+  id: string;
+  terrainTypeId: string;
+  shapeId: string;
+  name: string;
+  tags: string[];
+  cellColors: CellColors; // Grid of terrain type UUIDs
+  quantity: number;
+  displayOrder: number;
+  shape?: PieceShape;
+}
+
+// Piece template item (shape + quantity)
+export interface PieceTemplateItem {
+  id: string;
+  templateId: string;
+  shapeId: string;
+  quantity: number;
+  shape?: PieceShape;
+}
+
+// Piece template definition
+export interface PieceTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  icon: string;
+  isDefault: boolean;
+  displayOrder: number;
+  items: PieceTemplateItem[];
 }

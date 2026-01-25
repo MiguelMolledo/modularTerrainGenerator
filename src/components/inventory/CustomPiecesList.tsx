@@ -7,6 +7,7 @@ import { CustomPiece } from '@/types';
 import { CustomPiecePreview } from './CustomPiecePreview';
 import { CustomPieceFormDialog } from './CustomPieceFormDialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { getGridDimensions, getUniqueTerrainIds } from '@/lib/gridUtils';
 
 export function CustomPiecesList() {
   const { customPieces, terrainTypes, deleteCustomPiece, isLoading } = useInventoryStore();
@@ -58,7 +59,7 @@ export function CustomPiecesList() {
         <div className="text-center py-8">
           <div className="text-4xl mb-2">🧩</div>
           <p className="text-gray-400 text-sm mb-4">
-            No custom pieces yet. Create your first custom piece with any size and dual colors!
+            No custom pieces yet. Create your first custom piece with any size and multiple terrain colors!
           </p>
           <Button
             variant="outline"
@@ -71,10 +72,9 @@ export function CustomPiecesList() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {customPieces.map((piece) => {
-            const primaryTerrain = getTerrainById(piece.primaryTerrainTypeId);
-            const secondaryTerrain = piece.secondaryTerrainTypeId
-              ? getTerrainById(piece.secondaryTerrainTypeId)
-              : undefined;
+            const { rows, cols } = getGridDimensions(piece.width, piece.height);
+            const uniqueTerrainIds = getUniqueTerrainIds(piece.cellColors);
+            const terrains = uniqueTerrainIds.map(id => getTerrainById(id)).filter(Boolean);
 
             return (
               <div
@@ -86,10 +86,8 @@ export function CustomPiecesList() {
                   <CustomPiecePreview
                     width={piece.width}
                     height={piece.height}
-                    isSplit={piece.isSplit}
-                    splitDirection={piece.splitDirection}
-                    primaryColor={primaryTerrain?.color || '#666'}
-                    secondaryColor={secondaryTerrain?.color}
+                    cellColors={piece.cellColors}
+                    terrainTypes={terrainTypes}
                     scale={6}
                   />
                 </div>
@@ -100,33 +98,24 @@ export function CustomPiecesList() {
                     {piece.name}
                   </h4>
                   <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <span>{piece.width}" x {piece.height}"</span>
-                    {piece.isSplit && (
-                      <span className="bg-blue-600/30 text-blue-400 px-1.5 py-0.5 rounded">
-                        {piece.splitDirection === 'horizontal' ? 'H-Split' : 'V-Split'}
-                      </span>
-                    )}
+                    <span>{piece.width}&quot; x {piece.height}&quot;</span>
+                    <span className="bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded">
+                      {cols}x{rows} grid
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="flex items-center gap-1">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: primaryTerrain?.color }}
-                      />
-                      <span className="text-gray-400">{primaryTerrain?.name}</span>
-                    </div>
-                    {piece.isSplit && secondaryTerrain && (
-                      <>
-                        <span className="text-gray-600">+</span>
+                  <div className="flex items-center gap-1 flex-wrap text-xs">
+                    {terrains.map((terrain, idx) => (
+                      <React.Fragment key={terrain!.id}>
+                        {idx > 0 && <span className="text-gray-600">+</span>}
                         <div className="flex items-center gap-1">
                           <div
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: secondaryTerrain.color }}
+                            style={{ backgroundColor: terrain!.color }}
                           />
-                          <span className="text-gray-400">{secondaryTerrain.name}</span>
+                          <span className="text-gray-400">{terrain!.name}</span>
                         </div>
-                      </>
-                    )}
+                      </React.Fragment>
+                    ))}
                   </div>
                   <div className="text-xs text-gray-500">
                     Quantity: {piece.quantity}

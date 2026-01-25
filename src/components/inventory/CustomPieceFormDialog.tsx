@@ -10,9 +10,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { CustomPiece, SplitDirection } from '@/types';
+import { CustomPiece, CellColors } from '@/types';
 import { CustomPiecePreview } from './CustomPiecePreview';
+import { GridColorPicker } from './GridColorPicker';
 import { Minus, Plus } from 'lucide-react';
+import { createDefaultGrid, resizeGrid, getGridDimensions } from '@/lib/gridUtils';
 
 interface CustomPieceFormDialogProps {
   open: boolean;
@@ -30,49 +32,62 @@ export function CustomPieceFormDialog({
   const [name, setName] = useState('');
   const [width, setWidth] = useState(3);
   const [height, setHeight] = useState(3);
-  const [isSplit, setIsSplit] = useState(false);
-  const [splitDirection, setSplitDirection] = useState<SplitDirection>('horizontal');
-  const [primaryTerrainId, setPrimaryTerrainId] = useState('');
-  const [secondaryTerrainId, setSecondaryTerrainId] = useState('');
+  const [cellColors, setCellColors] = useState<CellColors>([]);
   const [quantity, setQuantity] = useState(1);
 
-  // Reset form when opening/closing or when editingPiece changes
+  // Initialize or reset form when opening/closing or when editingPiece changes
   useEffect(() => {
     if (open) {
       if (editingPiece) {
         setName(editingPiece.name);
         setWidth(editingPiece.width);
         setHeight(editingPiece.height);
-        setIsSplit(editingPiece.isSplit);
-        setSplitDirection(editingPiece.splitDirection || 'horizontal');
-        setPrimaryTerrainId(editingPiece.primaryTerrainTypeId);
-        setSecondaryTerrainId(editingPiece.secondaryTerrainTypeId || '');
+        setCellColors(editingPiece.cellColors);
         setQuantity(editingPiece.quantity);
       } else {
+        const defaultTerrainId = terrainTypes[0]?.id || '';
         setName('');
         setWidth(3);
         setHeight(3);
-        setIsSplit(false);
-        setSplitDirection('horizontal');
-        setPrimaryTerrainId(terrainTypes[0]?.id || '');
-        setSecondaryTerrainId(terrainTypes[1]?.id || terrainTypes[0]?.id || '');
+        setCellColors(createDefaultGrid(3, 3, defaultTerrainId));
         setQuantity(1);
       }
     }
   }, [open, editingPiece, terrainTypes]);
 
+  // Update grid when dimensions change
+  useEffect(() => {
+    if (!open) return;
+
+    const defaultTerrainId = terrainTypes[0]?.id || '';
+    const { rows: newRows, cols: newCols } = getGridDimensions(width, height);
+
+    // Use functional update to avoid stale closure and infinite loops
+    setCellColors((prevColors) => {
+      const currentRows = prevColors.length;
+      const currentCols = prevColors[0]?.length || 0;
+
+      // Only resize if dimensions actually changed
+      if (currentRows !== newRows || currentCols !== newCols) {
+        if (prevColors.length === 0) {
+          return createDefaultGrid(width, height, defaultTerrainId);
+        } else {
+          return resizeGrid(prevColors, width, height, defaultTerrainId);
+        }
+      }
+      return prevColors;
+    });
+  }, [width, height, open, terrainTypes]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !primaryTerrainId) return;
+    if (!name.trim() || cellColors.length === 0) return;
 
     const data = {
       name: name.trim(),
       width,
       height,
-      isSplit,
-      splitDirection: isSplit ? splitDirection : undefined,
-      primaryTerrainTypeId: primaryTerrainId,
-      secondaryTerrainTypeId: isSplit ? secondaryTerrainId : undefined,
+      cellColors,
       quantity,
     };
 
@@ -92,16 +107,17 @@ export function CustomPieceFormDialog({
   const adjustSize = (field: 'width' | 'height', delta: number) => {
     const setter = field === 'width' ? setWidth : setHeight;
     const current = field === 'width' ? width : height;
-    const newValue = Math.max(0.5, Math.min(12, current + delta));
-    setter(newValue);
+    const newValue = Math.max(1.5, Math.min(12, current + delta));
+    // Snap to 1.5 increments for consistency with grid
+    const snapped = Math.round(newValue / 1.5) * 1.5;
+    setter(snapped);
   };
 
-  const primaryTerrain = terrainTypes.find((t) => t.id === primaryTerrainId);
-  const secondaryTerrain = terrainTypes.find((t) => t.id === secondaryTerrainId);
+  const { rows, cols } = getGridDimensions(width, height);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editingPiece ? 'Edit Custom Piece' : 'Create Custom Piece'}
@@ -118,7 +134,7 @@ export function CustomPieceFormDialog({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Large Desert/Water Split"
+              placeholder="e.g., River Bend, Coast Corner"
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
@@ -136,17 +152,20 @@ export function CustomPieceFormDialog({
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => adjustSize('width', -0.5)}
-                  disabled={width <= 0.5}
+                  onClick={() => adjustSize('width', -1.5)}
+                  disabled={width <= 1.5}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
                 <input
                   type="number"
                   value={width}
-                  onChange={(e) => setWidth(Math.max(0.5, Math.min(12, Number(e.target.value))))}
-                  step={0.5}
-                  min={0.5}
+                  onChange={(e) => {
+                    const val = Math.max(1.5, Math.min(12, Number(e.target.value)));
+                    setWidth(Math.round(val / 1.5) * 1.5);
+                  }}
+                  step={1.5}
+                  min={1.5}
                   max={12}
                   className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -155,7 +174,7 @@ export function CustomPieceFormDialog({
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => adjustSize('width', 0.5)}
+                  onClick={() => adjustSize('width', 1.5)}
                   disabled={width >= 12}
                 >
                   <Plus className="h-4 w-4" />
@@ -172,17 +191,20 @@ export function CustomPieceFormDialog({
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => adjustSize('height', -0.5)}
-                  disabled={height <= 0.5}
+                  onClick={() => adjustSize('height', -1.5)}
+                  disabled={height <= 1.5}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
                 <input
                   type="number"
                   value={height}
-                  onChange={(e) => setHeight(Math.max(0.5, Math.min(12, Number(e.target.value))))}
-                  step={0.5}
-                  min={0.5}
+                  onChange={(e) => {
+                    const val = Math.max(1.5, Math.min(12, Number(e.target.value)));
+                    setHeight(Math.round(val / 1.5) * 1.5);
+                  }}
+                  step={1.5}
+                  min={1.5}
                   max={12}
                   className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -191,7 +213,7 @@ export function CustomPieceFormDialog({
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => adjustSize('height', 0.5)}
+                  onClick={() => adjustSize('height', 1.5)}
                   disabled={height >= 12}
                 >
                   <Plus className="h-4 w-4" />
@@ -200,118 +222,20 @@ export function CustomPieceFormDialog({
             </div>
           </div>
 
-          {/* Primary Terrain */}
-          <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
-              Primary Terrain
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {terrainTypes.map((terrain) => (
-                <button
-                  key={terrain.id}
-                  type="button"
-                  onClick={() => setPrimaryTerrainId(terrain.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
-                    primaryTerrainId === terrain.id
-                      ? 'ring-2 ring-blue-500 bg-gray-700'
-                      : 'bg-gray-800 hover:bg-gray-700'
-                  }`}
-                >
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: terrain.color }}
-                  />
-                  <span className="text-sm text-white">{terrain.icon} {terrain.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Grid info */}
+          <p className="text-sm text-gray-400">
+            Piece size: {width}&quot; × {height}&quot; = {cols}×{rows} grid ({cols * rows} cells)
+          </p>
 
-          {/* Split Toggle */}
-          <div className="flex items-center gap-3">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isSplit}
-                onChange={(e) => setIsSplit(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-            <span className="text-sm font-medium text-gray-300">
-              Split into two colors
-            </span>
-          </div>
-
-          {/* Split Options (shown when split is enabled) */}
-          {isSplit && (
-            <>
-              {/* Split Direction */}
-              <div>
-                <label className="text-sm font-medium text-gray-300 block mb-1">
-                  Split Direction
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSplitDirection('horizontal')}
-                    className={`flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                      splitDirection === 'horizontal'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="w-6 h-4 border border-current flex flex-col">
-                      <div className="flex-1 bg-current opacity-50" />
-                      <div className="flex-1" />
-                    </div>
-                    Horizontal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSplitDirection('vertical')}
-                    className={`flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                      splitDirection === 'vertical'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="w-6 h-4 border border-current flex flex-row">
-                      <div className="flex-1 bg-current opacity-50" />
-                      <div className="flex-1" />
-                    </div>
-                    Vertical
-                  </button>
-                </div>
-              </div>
-
-              {/* Secondary Terrain */}
-              <div>
-                <label className="text-sm font-medium text-gray-300 block mb-1">
-                  Secondary Terrain
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {terrainTypes.map((terrain) => (
-                    <button
-                      key={terrain.id}
-                      type="button"
-                      onClick={() => setSecondaryTerrainId(terrain.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
-                        secondaryTerrainId === terrain.id
-                          ? 'ring-2 ring-blue-500 bg-gray-700'
-                          : 'bg-gray-800 hover:bg-gray-700'
-                      }`}
-                    >
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: terrain.color }}
-                      />
-                      <span className="text-sm text-white">{terrain.icon} {terrain.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
+          {/* Grid Color Picker */}
+          {cellColors.length > 0 && (
+            <GridColorPicker
+              width={width}
+              height={height}
+              cellColors={cellColors}
+              onChange={setCellColors}
+              terrainTypes={terrainTypes}
+            />
           )}
 
           {/* Quantity */}
@@ -354,15 +278,15 @@ export function CustomPieceFormDialog({
               Preview
             </label>
             <div className="bg-gray-800 rounded-lg p-4 flex items-center justify-center min-h-[100px]">
-              <CustomPiecePreview
-                width={width}
-                height={height}
-                isSplit={isSplit}
-                splitDirection={splitDirection}
-                primaryColor={primaryTerrain?.color || '#666'}
-                secondaryColor={secondaryTerrain?.color}
-                scale={8}
-              />
+              {cellColors.length > 0 && (
+                <CustomPiecePreview
+                  width={width}
+                  height={height}
+                  cellColors={cellColors}
+                  terrainTypes={terrainTypes}
+                  scale={8}
+                />
+              )}
             </div>
           </div>
 
@@ -376,7 +300,7 @@ export function CustomPieceFormDialog({
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !name.trim() || !primaryTerrainId || (isSplit && !secondaryTerrainId)}
+              disabled={isLoading || !name.trim() || cellColors.length === 0}
             >
               {isLoading ? 'Saving...' : editingPiece ? 'Save Changes' : 'Create'}
             </Button>

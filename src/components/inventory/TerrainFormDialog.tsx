@@ -14,7 +14,7 @@ import {
 const TERRAIN_EMOJIS = ['🏜️', '🌲', '🏔️', '🌊', '🐊', '🌋', '❄️', '🌾', '🏛️', '🌙', '☀️', '🌸'];
 const TERRAIN_COLORS = [
   '#E5C07B', '#98C379', '#D19A66', '#61AFEF', '#56B6C2', '#E06C75',
-  '#C678DD', '#ABB2BF', '#282C34', '#5C6370', '#BE5046', '#E5C07B',
+  '#C678DD', '#ABB2BF', '#282C34', '#5C6370', '#BE5046', '#4EC9B0',
 ];
 
 interface TerrainFormDialogProps {
@@ -23,12 +23,15 @@ interface TerrainFormDialogProps {
 }
 
 export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps) {
-  const { createTerrainType, isLoading } = useInventoryStore();
+  const { createTerrainType, pieceTemplates, isLoading } = useInventoryStore();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [icon, setIcon] = useState('🗺️');
   const [color, setColor] = useState('#888888');
   const [description, setDescription] = useState('');
+  // Default to "Standard Set" template if available
+  const defaultTemplate = pieceTemplates.find((t) => t.name === 'Standard Set');
+  const [selectedTemplateId, setSelectedTemplateId] = useState(defaultTemplate?.id || '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +43,7 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
       icon,
       color,
       description: description.trim() || undefined,
+      templateId: selectedTemplateId,
     });
 
     if (result) {
@@ -48,6 +52,7 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
       setIcon('🗺️');
       setColor('#888888');
       setDescription('');
+      setSelectedTemplateId(defaultTemplate?.id || '');
       onOpenChange(false);
     }
   };
@@ -60,9 +65,16 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
     }
   };
 
+  const selectedTemplate = pieceTemplates.find((t) => t.id === selectedTemplateId);
+
+  // Helper to get total pieces in a template
+  const getTemplatePieceCount = (template: typeof pieceTemplates[0]) => {
+    return template.items.reduce((sum, item) => sum + item.quantity, 0);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Terrain Type</DialogTitle>
         </DialogHeader>
@@ -142,6 +154,60 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
                 />
               ))}
             </div>
+          </div>
+
+          {/* Piece Template */}
+          <div>
+            <label className="text-sm font-medium text-gray-300 block mb-2">
+              Piece Template
+            </label>
+            {pieceTemplates.length === 0 ? (
+              <p className="text-sm text-gray-400">
+                Loading templates...
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {pieceTemplates.map((template) => {
+                  const pieceCount = getTemplatePieceCount(template);
+                  const isSelected = selectedTemplateId === template.id;
+
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => setSelectedTemplateId(template.id)}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500'
+                          : 'bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{template.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-white text-sm truncate">
+                            {template.name}
+                            {!template.isDefault && (
+                              <span className="ml-1 text-xs text-amber-400">*</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {pieceCount === 0 ? 'No pieces' : `${pieceCount} pieces`}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Template description */}
+            {selectedTemplate && (
+              <p className="text-xs text-gray-400 mt-2 px-1">
+                {selectedTemplate.description || 'No description'}
+              </p>
+            )}
           </div>
 
           {/* Description */}

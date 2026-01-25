@@ -2,6 +2,7 @@
 
 import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useMapStore } from '@/store/mapStore';
+import { getGridDimensions } from '@/lib/gridUtils';
 
 const MENU_RADIUS = 120; // Distance from center to items
 const ITEM_SIZE = 64; // Size of each item
@@ -28,7 +29,8 @@ export function RadialMenu() {
     (pieceId: string) => {
       const piece = availablePieces.find((p) => p.id === pieceId);
       if (!piece) return null;
-      const terrain = terrainTypes.find((t) => t.id === piece.terrainTypeId);
+      // Check both id and slug for terrain lookup
+      const terrain = terrainTypes.find((t) => t.id === piece.terrainTypeId || t.slug === piece.terrainTypeId);
       return { piece, terrain };
     },
     [availablePieces, terrainTypes]
@@ -258,25 +260,67 @@ export function RadialMenu() {
               </span>
               {/* Piece shape indicator */}
               <div className="mt-1">
-                {item.piece.isDiagonal ? (
-                  <svg width="20" height="20" style={{ opacity: 0.8 }}>
-                    <polygon
-                      points="0,0 20,0 0,20"
-                      fill={item.terrain?.color}
-                      transform={`rotate(${item.piece.defaultRotation || 0} 10 10)`}
-                    />
-                  </svg>
-                ) : (
-                  <div
-                    className="rounded-sm"
-                    style={{
-                      width: Math.min(item.piece.size.width * 5, 20),
-                      height: Math.min(item.piece.size.height * 3, 12),
-                      backgroundColor: item.terrain?.color,
-                      opacity: 0.8,
-                    }}
-                  />
-                )}
+                {(() => {
+                  // Calculate proper aspect ratio preview
+                  const maxSize = 24;
+                  const pieceW = item.piece.size.width;
+                  const pieceH = item.piece.size.height;
+                  const scale = Math.min(maxSize / pieceW, maxSize / pieceH);
+                  const displayW = pieceW * scale;
+                  const displayH = pieceH * scale;
+
+                  if (item.piece.isDiagonal) {
+                    return (
+                      <svg width={displayW} height={displayH} style={{ opacity: 0.8 }}>
+                        <polygon
+                          points={`0,0 ${displayW},0 0,${displayH}`}
+                          fill={item.terrain?.color}
+                          transform={`rotate(${item.piece.defaultRotation || 0} ${displayW/2} ${displayH/2})`}
+                        />
+                      </svg>
+                    );
+                  } else if (item.piece.cellColors && item.piece.cellColors.length > 0) {
+                    // Show grid colors for variants/custom pieces
+                    const { rows, cols } = getGridDimensions(pieceW, pieceH);
+                    const cellW = displayW / cols;
+                    const cellH = displayH / rows;
+                    return (
+                      <div
+                        className="rounded-sm overflow-hidden"
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: `repeat(${cols}, ${cellW}px)`,
+                          gridTemplateRows: `repeat(${rows}, ${cellH}px)`,
+                          opacity: 0.9,
+                        }}
+                      >
+                        {item.piece.cellColors.flatMap((row, rowIdx) =>
+                          row.map((terrainId, colIdx) => {
+                            const cellTerrain = terrainTypes.find((t) => t.id === terrainId);
+                            return (
+                              <div
+                                key={`${rowIdx}-${colIdx}`}
+                                style={{ backgroundColor: cellTerrain?.color || '#666' }}
+                              />
+                            );
+                          })
+                        )}
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div
+                        className="rounded-sm"
+                        style={{
+                          width: displayW,
+                          height: displayH,
+                          backgroundColor: item.terrain?.color,
+                          opacity: 0.8,
+                        }}
+                      />
+                    );
+                  }
+                })()}
               </div>
             </div>
           );

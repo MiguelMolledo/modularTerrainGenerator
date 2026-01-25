@@ -6,14 +6,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SavedMap } from '@/types';
 import { useMapInventoryStore } from '@/store/mapInventoryStore';
-import { Trash2, Copy, Edit2, Download, MoreVertical, ImagePlus, ImageOff, Camera } from 'lucide-react';
+import { Trash2, Copy, Edit2, Download, MoreVertical, ImagePlus, ImageOff, Camera, FileText } from 'lucide-react';
 
 interface MapCardProps {
   map: SavedMap;
   onExport: (map: SavedMap) => void;
+  onExportReport: (map: SavedMap) => void;
 }
 
-export function MapCard({ map, onExport }: MapCardProps) {
+export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
   const router = useRouter();
   const { deleteMap, duplicateMap, renameMap, uploadCustomThumbnail, removeCustomThumbnail } = useMapInventoryStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -55,6 +56,11 @@ export function MapCard({ map, onExport }: MapCardProps) {
   const handleExport = () => {
     setIsMenuOpen(false);
     onExport(map);
+  };
+
+  const handleExportReport = () => {
+    setIsMenuOpen(false);
+    onExportReport(map);
   };
 
   const handleUploadClick = () => {
@@ -253,6 +259,12 @@ export function MapCard({ map, onExport }: MapCardProps) {
                 onClick={handleExport}
               >
                 <Download className="h-4 w-4" /> Export JSON
+              </button>
+              <button
+                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+                onClick={handleExportReport}
+              >
+                <FileText className="h-4 w-4" /> Export Report
               </button>
               <hr className="my-1 border-gray-700" />
               <button

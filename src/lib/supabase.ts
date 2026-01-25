@@ -91,10 +91,38 @@ export interface DbCustomPiece {
   name: string;
   width: number;
   height: number;
-  is_split: boolean;
-  split_direction: 'horizontal' | 'vertical' | null;
-  primary_terrain_type_id: string;
-  secondary_terrain_type_id: string | null;
+  cell_colors: string[][]; // JSONB: 2D array of terrain type UUIDs
+  quantity: number;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbPieceTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  is_default: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbPieceTemplateItem {
+  id: string;
+  template_id: string;
+  shape_id: string;
+  quantity: number;
+}
+
+export interface DbPieceVariant {
+  id: string;
+  terrain_type_id: string;
+  shape_id: string;
+  name: string;
+  tags: string[];
+  cell_colors: string[][]; // JSONB: 2D array of terrain type UUIDs
   quantity: number;
   display_order: number;
   created_at: string;

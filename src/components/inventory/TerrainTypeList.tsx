@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useInventoryStore } from '@/store/inventoryStore';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, Puzzle } from 'lucide-react';
+import { Plus, Trash2, Puzzle, LayoutTemplate } from 'lucide-react';
 import { TerrainFormDialog } from './TerrainFormDialog';
 
 interface TerrainTypeListProps {
@@ -12,10 +12,19 @@ interface TerrainTypeListProps {
   onSelect: (id: string | null) => void;
   isCustomSelected?: boolean;
   onSelectCustom?: () => void;
+  isTemplatesSelected?: boolean;
+  onSelectTemplates?: () => void;
 }
 
-export function TerrainTypeList({ selectedId, onSelect, isCustomSelected, onSelectCustom }: TerrainTypeListProps) {
-  const { terrainTypes, customPieces, deleteTerrainType } = useInventoryStore();
+export function TerrainTypeList({
+  selectedId,
+  onSelect,
+  isCustomSelected,
+  onSelectCustom,
+  isTemplatesSelected,
+  onSelectTemplates,
+}: TerrainTypeListProps) {
+  const { terrainTypes, customPieces, pieceTemplates, deleteTerrainType } = useInventoryStore();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -54,6 +63,33 @@ export function TerrainTypeList({ selectedId, onSelect, isCustomSelected, onSele
                 <h3 className="font-medium text-white">Custom Pieces</h3>
                 <p className="text-xs text-gray-400">
                   {customPieces.length} custom {customPieces.length === 1 ? 'piece' : 'pieces'}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Templates Section */}
+      {onSelectTemplates && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold text-white">Templates</h2>
+          <Card
+            className={`p-3 cursor-pointer transition-all ${
+              isTemplatesSelected
+                ? 'ring-2 ring-amber-500 bg-gray-800'
+                : 'hover:bg-gray-800/50'
+            }`}
+            onClick={onSelectTemplates}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-600/20 flex items-center justify-center">
+                <LayoutTemplate className="h-5 w-5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-white">Piece Templates</h3>
+                <p className="text-xs text-gray-400">
+                  {pieceTemplates.filter(t => !t.isDefault).length} custom, {pieceTemplates.filter(t => t.isDefault).length} default
                 </p>
               </div>
             </div>

@@ -1,15 +1,14 @@
 'use client';
 
 import React from 'react';
-import { SplitDirection } from '@/types';
+import { CellColors, TerrainTypeWithInventory } from '@/types';
+import { getGridDimensions } from '@/lib/gridUtils';
 
 interface CustomPiecePreviewProps {
   width: number;
   height: number;
-  isSplit: boolean;
-  splitDirection?: SplitDirection;
-  primaryColor: string;
-  secondaryColor?: string;
+  cellColors: CellColors;
+  terrainTypes: TerrainTypeWithInventory[];
   scale?: number;
   className?: string;
 }
@@ -17,75 +16,62 @@ interface CustomPiecePreviewProps {
 export function CustomPiecePreview({
   width,
   height,
-  isSplit,
-  splitDirection,
-  primaryColor,
-  secondaryColor,
+  cellColors,
+  terrainTypes,
   scale = 10,
   className = '',
 }: CustomPiecePreviewProps) {
   const displayWidth = width * scale;
   const displayHeight = height * scale;
+  const { rows, cols } = getGridDimensions(width, height);
 
-  if (!isSplit || !splitDirection || !secondaryColor) {
+  const getTerrainColor = (terrainId: string) => {
+    const terrain = terrainTypes.find((t) => t.id === terrainId);
+    return terrain?.color || '#666';
+  };
+
+  // If single cell, render simple box
+  if (rows === 1 && cols === 1) {
+    const color = getTerrainColor(cellColors[0]?.[0] || '');
     return (
       <div
         className={`border-2 border-gray-600 rounded ${className}`}
         style={{
           width: displayWidth,
           height: displayHeight,
-          backgroundColor: primaryColor,
+          backgroundColor: color,
         }}
       />
     );
   }
 
-  if (splitDirection === 'horizontal') {
-    return (
-      <div
-        className={`border-2 border-gray-600 rounded overflow-hidden flex flex-col ${className}`}
-        style={{
-          width: displayWidth,
-          height: displayHeight,
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            backgroundColor: primaryColor,
-          }}
-        />
-        <div
-          style={{
-            flex: 1,
-            backgroundColor: secondaryColor,
-          }}
-        />
-      </div>
-    );
-  }
+  // Calculate cell sizes
+  const cellWidth = displayWidth / cols;
+  const cellHeight = displayHeight / rows;
 
-  // Vertical split
   return (
     <div
-      className={`border-2 border-gray-600 rounded overflow-hidden flex flex-row ${className}`}
+      className={`border-2 border-gray-600 rounded overflow-hidden ${className}`}
       style={{
         width: displayWidth,
         height: displayHeight,
+        display: 'grid',
+        gridTemplateColumns: `repeat(${cols}, ${cellWidth}px)`,
+        gridTemplateRows: `repeat(${rows}, ${cellHeight}px)`,
       }}
     >
-      <div
-        style={{
-          flex: 1,
-          backgroundColor: primaryColor,
-        }}
-      />
-      <div
-        style={{
-          flex: 1,
-          backgroundColor: secondaryColor,
-        }}
-      />
+      {cellColors.map((row, rowIdx) =>
+        row.map((terrainId, colIdx) => (
+          <div
+            key={`${rowIdx}-${colIdx}`}
+            style={{
+              backgroundColor: getTerrainColor(terrainId),
+              borderRight: colIdx < cols - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+              borderBottom: rowIdx < rows - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+            }}
+          />
+        ))
+      )}
     </div>
   );
 }
