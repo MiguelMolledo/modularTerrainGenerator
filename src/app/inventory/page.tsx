@@ -7,10 +7,11 @@ import { TerrainEditor } from '@/components/inventory/TerrainEditor';
 import { ShapesOverview } from '@/components/inventory/ShapesOverview';
 import { CustomPiecesList } from '@/components/inventory/CustomPiecesList';
 import { TemplatesList } from '@/components/inventory/TemplatesList';
+import { PieceTypesManager } from '@/components/inventory/PieceTypesManager';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type ViewMode = 'overview' | 'terrain' | 'custom' | 'templates';
+type ViewMode = 'overview' | 'terrain' | 'custom' | 'templates' | 'pieceTypes';
 
 export default function InventoryPage() {
   const { fetchShapes, fetchTerrainTypes, fetchCustomPieces, fetchPieceTemplates, isLoading, error, clearError } = useInventoryStore();
@@ -37,6 +38,11 @@ export default function InventoryPage() {
   const handleSelectTemplates = () => {
     setSelectedTerrainId(null);
     setViewMode('templates');
+  };
+
+  const handleSelectPieceTypes = () => {
+    setSelectedTerrainId(null);
+    setViewMode('pieceTypes');
   };
 
   return (
@@ -95,6 +101,8 @@ export default function InventoryPage() {
               <TerrainTypeList
                 selectedId={selectedTerrainId}
                 onSelect={handleSelectTerrain}
+                isPieceTypesSelected={viewMode === 'pieceTypes'}
+                onSelectPieceTypes={handleSelectPieceTypes}
                 isCustomSelected={viewMode === 'custom'}
                 onSelectCustom={handleSelectCustom}
                 isTemplatesSelected={viewMode === 'templates'}
@@ -102,7 +110,7 @@ export default function InventoryPage() {
               />
             </div>
 
-            {/* Main content - terrain editor, shapes overview, custom pieces, or templates */}
+            {/* Main content - terrain editor, shapes overview, custom pieces, templates, or piece types */}
             <div className="col-span-12 md:col-span-9">
               {viewMode === 'terrain' && selectedTerrainId ? (
                 <TerrainEditor terrainTypeId={selectedTerrainId} />
@@ -110,6 +118,8 @@ export default function InventoryPage() {
                 <CustomPiecesList />
               ) : viewMode === 'templates' ? (
                 <TemplatesList />
+              ) : viewMode === 'pieceTypes' ? (
+                <PieceTypesManager />
               ) : (
                 <ShapesOverview />
               )}

@@ -20,10 +20,88 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText } from 'lucide-react';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Eye, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Grid3X3, Magnet, Lock, Unlock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { generateThumbnail } from '@/lib/stageRef';
 import type { ModularPiece, SavedMap } from '@/types';
+
+// Dropdown menu component
+function DropdownMenu({
+  trigger,
+  children,
+  align = 'left'
+}: {
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+  align?: 'left' | 'right';
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
+      {isOpen && (
+        <div
+          className={`absolute top-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 min-w-[180px] py-1 ${
+            align === 'right' ? 'right-0' : 'left-0'
+          }`}
+          onClick={() => setIsOpen(false)}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  onClick,
+  active,
+  shortcut,
+  danger
+}: {
+  icon?: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  shortcut?: string;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
+        danger
+          ? 'text-red-400 hover:bg-red-950'
+          : active
+            ? 'text-blue-400 bg-blue-950/50'
+            : 'text-white hover:bg-gray-700'
+      }`}
+      onClick={onClick}
+    >
+      {Icon && <Icon className="h-4 w-4" />}
+      <span className="flex-1">{label}</span>
+      {shortcut && <span className="text-xs text-gray-500">{shortcut}</span>}
+      {active && <span className="text-xs text-blue-400">✓</span>}
+    </button>
+  );
+}
+
+function MenuDivider() {
+  return <hr className="my-1 border-gray-700" />;
+}
 
 export function Toolbar() {
   const router = useRouter();
@@ -58,6 +136,8 @@ export function Toolbar() {
     placedPieces,
     resetToNewMap,
     loadMapData,
+    is3DMode,
+    toggle3DMode,
   } = useMapStore();
 
   const { saveMap, savedMaps, fetchMaps, loadMap } = useMapInventoryStore();
@@ -213,138 +293,129 @@ export function Toolbar() {
 
   return (
     <TooltipProvider>
-      <div className="h-14 bg-gray-800 border-b border-gray-700 flex items-center px-4 gap-4">
+      <div className="h-14 bg-gray-800 border-b border-gray-700 flex items-center px-3 gap-2">
         {/* Map name */}
         <input
           type="text"
           value={mapName}
           onChange={(e) => setMapName(e.target.value)}
-          className="bg-transparent border-b border-transparent hover:border-gray-600 focus:border-blue-500 outline-none text-white font-semibold text-lg px-1"
+          className="bg-transparent border-b border-transparent hover:border-gray-600 focus:border-blue-500 outline-none text-white font-semibold text-base px-1 min-w-0 max-w-[150px]"
         />
 
         <Separator orientation="vertical" className="h-8" />
 
-        {/* Level selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">Level:</span>
-          <div className="flex gap-1">
+        {/* Level selector - compact */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-400 hidden sm:inline">Level:</span>
+          <div className="flex gap-0.5">
             {levels.map((level) => (
-              <Tooltip key={level}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={currentLevel === level ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCurrentLevel(level)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {level === 0 ? 'G' : level > 0 ? level : `B${Math.abs(level)}`}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {level === 0
-                    ? 'Ground floor'
-                    : level > 0
-                    ? `Floor ${level}`
-                    : `Basement ${Math.abs(level)}`}
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                key={level}
+                variant={currentLevel === level ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentLevel(level)}
+                className="w-7 h-7 p-0 text-xs"
+                title={level === 0 ? 'Ground floor' : level > 0 ? `Floor ${level}` : `Basement ${Math.abs(level)}`}
+              >
+                {level === 0 ? 'G' : level > 0 ? level : `B${Math.abs(level)}`}
+              </Button>
             ))}
           </div>
         </div>
 
         <Separator orientation="vertical" className="h-8" />
 
-        {/* Zoom controls */}
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={handleZoomOut}>
-                −
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Zoom out</TooltipContent>
-          </Tooltip>
+        {/* View Dropdown */}
+        <DropdownMenu
+          trigger={
+            <Button variant="outline" size="sm" className="gap-1">
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">View</span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          }
+        >
+          <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-700">
+            Zoom: {Math.round(zoom * 100)}%
+          </div>
+          <MenuItem icon={ZoomIn} label="Zoom In" onClick={handleZoomIn} shortcut="+" />
+          <MenuItem icon={ZoomOut} label="Zoom Out" onClick={handleZoomOut} shortcut="-" />
+          <MenuItem icon={RotateCcw} label="Reset View" onClick={handleResetView} />
+          <MenuDivider />
+          <MenuItem
+            icon={isViewLocked ? Lock : Unlock}
+            label={isViewLocked ? 'Unlock View' : 'Lock View'}
+            onClick={toggleViewLock}
+            active={isViewLocked}
+          />
+        </DropdownMenu>
 
-          <span className="text-sm text-gray-400 w-12 text-center">
-            {Math.round(zoom * 100)}%
-          </span>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={handleZoomIn}>
-                +
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Zoom in</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={handleResetView}>
-                ⟲
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Reset view</TooltipContent>
-          </Tooltip>
-        </div>
-
-        <Separator orientation="vertical" className="h-8" />
-
-        {/* Grid controls */}
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={gridConfig.showGrid ? 'default' : 'outline'}
-                size="sm"
-                onClick={toggleGrid}
-              >
-                Grid
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Toggle grid visibility</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={gridConfig.snapToGrid ? 'default' : 'outline'}
-                size="sm"
-                onClick={toggleSnapToGrid}
-              >
-                Snap
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Toggle snap to grid</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={isViewLocked ? 'default' : 'outline'}
-                size="sm"
-                onClick={toggleViewLock}
-              >
-                {isViewLocked ? '🔒' : '🔓'}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isViewLocked ? 'Unlock view (allow pan)' : 'Lock view (prevent pan)'}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {/* Grid Dropdown */}
+        <DropdownMenu
+          trigger={
+            <Button variant="outline" size="sm" className="gap-1">
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Grid</span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          }
+        >
+          <MenuItem
+            icon={Grid3X3}
+            label="Show Grid"
+            onClick={toggleGrid}
+            active={gridConfig.showGrid}
+          />
+          <MenuItem
+            icon={Magnet}
+            label="Snap to Grid"
+            onClick={toggleSnapToGrid}
+            active={gridConfig.snapToGrid}
+          />
+          <MenuDivider />
+          <MenuItem
+            icon={Trash2}
+            label="Clear All Pieces"
+            onClick={clearMap}
+            danger
+          />
+        </DropdownMenu>
 
         <Separator orientation="vertical" className="h-8" />
 
-        {/* Rotation indicator */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">
-            R to rotate
-          </span>
-          <span className="text-xs text-white bg-gray-700 px-2 py-1 rounded">
-            {currentRotation}°
-          </span>
+        {/* 2D/3D Toggle - compact */}
+        <div className="flex items-center gap-0.5 bg-gray-700 rounded-md p-0.5">
+          <Button
+            variant={!is3DMode ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => is3DMode && toggle3DMode()}
+            className={`px-2 h-7 ${!is3DMode ? '' : 'text-gray-400 hover:text-white'}`}
+            title="Edit mode (2D)"
+          >
+            <Grid2X2 className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline text-xs">2D</span>
+          </Button>
+          <Button
+            variant={is3DMode ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => !is3DMode && toggle3DMode()}
+            className={`px-2 h-7 ${is3DMode ? '' : 'text-gray-400 hover:text-white'}`}
+            title="Preview mode (3D)"
+          >
+            <Box className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline text-xs">3D</span>
+          </Button>
         </div>
+
+        {/* Rotation indicator - only on larger screens and 2D mode */}
+        {!is3DMode && (
+          <div className="hidden md:flex items-center gap-1">
+            <span className="text-xs text-gray-500">R:</span>
+            <span className="text-xs text-white bg-gray-700 px-1.5 py-0.5 rounded">
+              {currentRotation}°
+            </span>
+          </div>
+        )}
 
         <div className="flex-1" />
 
@@ -354,13 +425,13 @@ export function Toolbar() {
             variant="outline"
             size="sm"
             onClick={() => setShowMapSelector(!showMapSelector)}
-            className="min-w-[140px] justify-between"
+            className="gap-1"
           >
-            <FolderOpen className="h-4 w-4 mr-2" />
-            <span className="truncate max-w-[100px]">
+            <FolderOpen className="h-4 w-4" />
+            <span className="hidden sm:inline truncate max-w-[80px]">
               {savedMaps.length} Maps
             </span>
-            <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showMapSelector ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`h-3 w-3 transition-transform ${showMapSelector ? 'rotate-180' : ''}`} />
           </Button>
 
           {showMapSelector && (
@@ -415,9 +486,9 @@ export function Toolbar() {
         {/* New Map button */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="outline" size="sm" onClick={handleNewMap}>
-              <FilePlus className="h-4 w-4 mr-1" />
-              New
+            <Button variant="outline" size="sm" onClick={handleNewMap} className="gap-1">
+              <FilePlus className="h-4 w-4" />
+              <span className="hidden sm:inline">New</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>Start a new map</TooltipContent>
@@ -431,30 +502,21 @@ export function Toolbar() {
               size="sm"
               onClick={handleSaveClick}
               disabled={isSaving}
+              className="gap-1"
             >
               {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Save className="h-4 w-4 mr-1" />
+                <Save className="h-4 w-4" />
               )}
-              {currentMapId ? 'Save' : 'Save New'}
+              <span className="hidden sm:inline">
+                {currentMapId ? 'Save' : 'Save'}
+              </span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
             {currentMapId ? 'Save changes' : 'Save as new map'}
           </TooltipContent>
-        </Tooltip>
-
-        <Separator orientation="vertical" className="h-8" />
-
-        {/* Danger zone */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="destructive" size="sm" onClick={clearMap}>
-              Clear Map
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Remove all pieces from the map</TooltipContent>
         </Tooltip>
       </div>
 

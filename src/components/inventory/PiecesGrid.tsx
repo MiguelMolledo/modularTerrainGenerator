@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useInventoryStore } from '@/store/inventoryStore';
+import { useElevationStore, createElevationKey } from '@/store/elevationStore';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, Minus, Plus, Layers, Pencil, Trash2 } from 'lucide-react';
+import { Save, Minus, Plus, Layers, Pencil, Trash2, Mountain } from 'lucide-react';
 import { PieceVariantFormDialog } from './PieceVariantFormDialog';
 import { CustomPiecePreview } from './CustomPiecePreview';
-import { PieceShape, PieceVariant } from '@/types';
+import { ElevationEditor } from './ElevationEditor';
+import { PieceShape, PieceVariant, CornerElevations } from '@/types';
 
 interface PiecesGridProps {
   terrainTypeId: string;
@@ -15,6 +17,7 @@ interface PiecesGridProps {
 
 export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
   const { shapes, terrainTypes, updateTerrainPieces, deletePieceVariant, isLoading } = useInventoryStore();
+  const { elevations, setElevation, getElevation } = useElevationStore();
   const terrain = terrainTypes.find((t) => t.id === terrainTypeId);
 
   // Local state for quantities
@@ -25,6 +28,10 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
   const [selectedShape, setSelectedShape] = useState<PieceShape | null>(null);
   const [editingVariant, setEditingVariant] = useState<PieceVariant | undefined>(undefined);
+
+  // Elevation editor state
+  const [elevationDialogOpen, setElevationDialogOpen] = useState(false);
+  const [elevationShape, setElevationShape] = useState<PieceShape | null>(null);
 
   // Initialize quantities from terrain pieces
   useEffect(() => {
@@ -57,6 +64,24 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
     setSelectedShape(shape);
     setEditingVariant(undefined);
     setVariantDialogOpen(true);
+  };
+
+  const handleEditElevation = (shape: PieceShape) => {
+    setElevationShape(shape);
+    setElevationDialogOpen(true);
+  };
+
+  const handleSaveElevation = (pieceId: string, elevation: CornerElevations) => {
+    if (terrain) {
+      const key = createElevationKey(terrain.slug, pieceId);
+      setElevation(key, elevation);
+    }
+  };
+
+  const getShapeElevation = (shapeKey: string): CornerElevations | undefined => {
+    if (!terrain) return undefined;
+    const key = createElevationKey(terrain.slug, shapeKey);
+    return getElevation(key);
   };
 
   const handleEditVariant = (variant: PieceVariant) => {
@@ -170,16 +195,33 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
                 </Button>
               </div>
 
-              {/* Create variant button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-3 w-full text-purple-400 hover:text-purple-300 hover:bg-purple-900/30"
-                onClick={() => handleCreateVariant(shape)}
-              >
-                <Layers className="h-3 w-3 mr-1" />
-                + Variant
-              </Button>
+              {/* Action buttons */}
+              <div className="flex gap-2 mt-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 text-purple-400 hover:text-purple-300 hover:bg-purple-900/30"
+                  onClick={() => handleCreateVariant(shape)}
+                >
+                  <Layers className="h-3 w-3 mr-1" />
+                  Variant
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`flex-1 ${
+                    getShapeElevation(shape.shapeKey)
+                      ? 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/30'
+                      : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700/30'
+                  }`}
+                  onClick={() => handleEditElevation(shape)}
+                  disabled={shape.isDiagonal}
+                  title={shape.isDiagonal ? 'Elevation not available for diagonal pieces' : 'Edit 3D elevation'}
+                >
+                  <Mountain className="h-3 w-3 mr-1" />
+                  {getShapeElevation(shape.shapeKey) ? '3D' : 'Flat'}
+                </Button>
+              </div>
             </Card>
           );
         })}
@@ -276,6 +318,21 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
           terrainType={terrain}
           shape={selectedShape}
           editingVariant={editingVariant}
+        />
+      )}
+
+      {/* Elevation editor dialog */}
+      {elevationShape && terrain && (
+        <ElevationEditor
+          open={elevationDialogOpen}
+          onOpenChange={setElevationDialogOpen}
+          pieceId={elevationShape.shapeKey}
+          pieceName={`${terrain.name} ${elevationShape.name}`}
+          pieceWidth={elevationShape.width}
+          pieceHeight={elevationShape.height}
+          terrainColor={terrain.color}
+          currentElevation={getShapeElevation(elevationShape.shapeKey)}
+          onSave={handleSaveElevation}
         />
       )}
     </div>

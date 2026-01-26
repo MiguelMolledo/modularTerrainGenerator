@@ -103,6 +103,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     setPan,
     setZoom,
     removePlacedPiece,
+    updatePlacedPiece,
     setSelectedPlacedPieceId,
     setSelectedPieceId,
     setCurrentRotation,
@@ -114,6 +115,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     isPlacementMode,
     exitPlacementMode,
     addPlacedPiece,
+    toggle3DMode,
   } = useMapStore();
 
   const pixelsPerInch = BASE_PIXELS_PER_INCH * zoom;
@@ -409,6 +411,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         e.preventDefault();
         openRadialMenu(mousePosRef.current.x, mousePosRef.current.y);
       }
+      // V key to toggle between 2D and 3D view
+      if ((e.key === 'v' || e.key === 'V') && !e.repeat) {
+        e.preventDefault();
+        toggle3DMode();
+      }
       // Escape to cancel placement mode or map drag
       if (e.key === 'Escape') {
         if (isPlacementMode) {
@@ -467,6 +474,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     setMapDragPiece,
     setDraggingPieceId,
     setSelectedPieceId,
+    toggle3DMode,
   ]);
 
   // Generate grid lines
@@ -498,15 +506,31 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     }
   }
 
-  // Filter pieces for current level
-  const visiblePieces = placedPieces.filter((p) => p.level === currentLevel);
+  // Filter pieces for current level and sort so selected piece renders last (on top)
+  const visiblePieces = useMemo(() => {
+    const pieces = placedPieces.filter((p) => p.level === currentLevel);
+    // Sort: selected piece last so it renders on top
+    return pieces.sort((a, b) => {
+      if (a.id === selectedPlacedPieceId) return 1;
+      if (b.id === selectedPlacedPieceId) return -1;
+      return 0;
+    });
+  }, [placedPieces, currentLevel, selectedPlacedPieceId]);
 
-  // Handle wheel zoom
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom(zoom + delta);
-  };
+  // Handle wheel zoom - using native event listener for passive: false
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom(zoom + delta);
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [zoom, setZoom]);
 
   // Handle mousedown on placed piece - prepare for potential drag
   const handlePieceMouseDown = (placedId: string, e: any) => {
@@ -542,10 +566,10 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       originalY: placed.y,
     });
 
-    // Remove the piece temporarily (will re-add on drop)
-    removePlacedPiece(placed.id);
+    // Don't remove the piece - just hide it visually via draggingPieceId
+    // The piece will be updated in place when dropped
 
-    // Select the piece type (like sidebar)
+    // Select the piece type (like sidebar) for preview
     setSelectedPieceId(piece.id);
     setCurrentRotation(placed.rotation);
     setDraggingPieceId(placed.id);
@@ -566,12 +590,13 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     const rawX = (e.clientX - rect.left - panX) / pixelsPerInch;
     const rawY = (e.clientY - rect.top - panY) / pixelsPerInch;
 
-    // Use defaultRotation for pieces that have it (diagonal), otherwise use 0
-    const rotation = selectedPiece.defaultRotation ?? 0;
+    // For sidebar drag, use defaultRotation for diagonal pieces or currentRotation
+    const rotation = currentRotation ?? selectedPiece.defaultRotation ?? 0;
 
-    // For non-rotated pieces, use original dimensions
-    const effectiveWidth = selectedPiece.size.width;
-    const effectiveHeight = selectedPiece.size.height;
+    // Swap dimensions if rotated 90 or 270 degrees
+    const isRotated = rotation === 90 || rotation === 270;
+    const effectiveWidth = isRotated ? selectedPiece.size.height : selectedPiece.size.width;
+    const effectiveHeight = isRotated ? selectedPiece.size.width : selectedPiece.size.height;
 
     // Center the piece on cursor
     const centeredX = rawX - effectiveWidth / 2;
@@ -669,12 +694,13 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     const rawX = (e.clientX - rect.left - panX) / pixelsPerInch;
     const rawY = (e.clientY - rect.top - panY) / pixelsPerInch;
 
-    // Use defaultRotation for pieces that have it (diagonal), otherwise use 0
-    const rotation = selectedPiece.defaultRotation ?? 0;
+    // For map drag, preserve the piece's rotation; for sidebar/placement, use currentRotation
+    const rotation = mapDragPiece?.rotation ?? currentRotation ?? selectedPiece.defaultRotation ?? 0;
 
-    // For non-rotated pieces, use original dimensions
-    const effectiveWidth = selectedPiece.size.width;
-    const effectiveHeight = selectedPiece.size.height;
+    // Swap dimensions if rotated 90 or 270 degrees
+    const isRotated = rotation === 90 || rotation === 270;
+    const effectiveWidth = isRotated ? selectedPiece.size.height : selectedPiece.size.width;
+    const effectiveHeight = isRotated ? selectedPiece.size.width : selectedPiece.size.height;
 
     // Center the piece on cursor
     const centeredX = rawX - effectiveWidth / 2;
@@ -687,7 +713,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       effectiveHeight
     );
 
-    const hasCollision = checkCollision(snappedX, snappedY, effectiveWidth, effectiveHeight, undefined, selectedPiece.isDiagonal, rotation);
+    // Exclude the piece being dragged from collision check
+    const excludeId = mapDragPiece?.id;
+    const hasCollision = checkCollision(snappedX, snappedY, effectiveWidth, effectiveHeight, excludeId, selectedPiece.isDiagonal, rotation);
     const terrain = terrainTypes.find((t) => t.id === selectedPiece.terrainTypeId);
 
     const newPreview = {
@@ -728,31 +756,22 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     // Handle map drag - use preview position directly
     if (mapDragPiece && selectedPiece) {
       setDragPreview((prev) => ({ ...prev, visible: false }));
+      const pieceId = mapDragPiece.id;
       setMapDragPiece(null);
       setDraggingPieceId(null);
       setSelectedPieceId(null);
 
-      // If collision or preview not visible, restore original piece
+      // If collision or preview not visible, keep piece at original position (do nothing)
       if (preview.hasCollision || !preview.visible) {
-        addPlacedPiece({
-          id: mapDragPiece.id,
-          pieceId: mapDragPiece.pieceId,
-          x: mapDragPiece.originalX,
-          y: mapDragPiece.originalY,
-          rotation: mapDragPiece.rotation,
-          level: mapDragPiece.level,
-        });
+        // Piece stays where it was - no update needed
         return;
       }
 
-      // Place at preview position - the preview is always correct!
-      addPlacedPiece({
-        id: mapDragPiece.id,
-        pieceId: mapDragPiece.pieceId,
+      // Update piece position in place (no delete/recreate)
+      updatePlacedPiece(pieceId, {
         x: preview.x,
         y: preview.y,
         rotation: preview.rotation,
-        level: mapDragPiece.level,
       });
       return;
     }
@@ -840,7 +859,6 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     <div
       ref={containerRef}
       className="flex-1 h-full min-h-0 overflow-hidden bg-gray-900 relative"
-      onWheel={handleWheel}
       onDrop={handleCanvasDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -1075,14 +1093,97 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                   shadowOpacity={0.8}
                   y={piece.isDiagonal ? 4 : 0}
                 />
-                {/* Delete button - appears when selected */}
+                {/* Elevation indicators at corners */}
+                {piece.elevation && !piece.isDiagonal && (
+                  <>
+                    {/* NW corner (top-left) */}
+                    {piece.elevation.nw > 0 && (
+                      <Group x={0} y={0}>
+                        <Circle
+                          radius={isSelected ? 10 : 8}
+                          fill={isSelected ? '#facc15' : '#3b82f6'}
+                          stroke={isSelected ? '#fff' : '#fff'}
+                          strokeWidth={isSelected ? 2 : 1}
+                        />
+                        <Text
+                          x={-6}
+                          y={-5}
+                          text={piece.elevation.nw.toFixed(1)}
+                          fontSize={8}
+                          fill={isSelected ? '#000' : '#fff'}
+                          fontStyle="bold"
+                        />
+                      </Group>
+                    )}
+                    {/* NE corner (top-right) */}
+                    {piece.elevation.ne > 0 && (
+                      <Group x={pieceWidth} y={0}>
+                        <Circle
+                          radius={isSelected ? 10 : 8}
+                          fill={isSelected ? '#facc15' : '#3b82f6'}
+                          stroke={isSelected ? '#fff' : '#fff'}
+                          strokeWidth={isSelected ? 2 : 1}
+                        />
+                        <Text
+                          x={-6}
+                          y={-5}
+                          text={piece.elevation.ne.toFixed(1)}
+                          fontSize={8}
+                          fill={isSelected ? '#000' : '#fff'}
+                          fontStyle="bold"
+                        />
+                      </Group>
+                    )}
+                    {/* SW corner (bottom-left) */}
+                    {piece.elevation.sw > 0 && (
+                      <Group x={0} y={pieceHeight}>
+                        <Circle
+                          radius={isSelected ? 10 : 8}
+                          fill={isSelected ? '#facc15' : '#3b82f6'}
+                          stroke={isSelected ? '#fff' : '#fff'}
+                          strokeWidth={isSelected ? 2 : 1}
+                        />
+                        <Text
+                          x={-6}
+                          y={-5}
+                          text={piece.elevation.sw.toFixed(1)}
+                          fontSize={8}
+                          fill={isSelected ? '#000' : '#fff'}
+                          fontStyle="bold"
+                        />
+                      </Group>
+                    )}
+                    {/* SE corner (bottom-right) */}
+                    {piece.elevation.se > 0 && (
+                      <Group x={pieceWidth} y={pieceHeight}>
+                        <Circle
+                          radius={isSelected ? 10 : 8}
+                          fill={isSelected ? '#facc15' : '#3b82f6'}
+                          stroke={isSelected ? '#fff' : '#fff'}
+                          strokeWidth={isSelected ? 2 : 1}
+                        />
+                        <Text
+                          x={-6}
+                          y={-5}
+                          text={piece.elevation.se.toFixed(1)}
+                          fontSize={8}
+                          fill={isSelected ? '#000' : '#fff'}
+                          fontStyle="bold"
+                        />
+                      </Group>
+                    )}
+                  </>
+                )}
+                {/* Rotate button - appears when selected, at top center */}
                 {isSelected && (
                   <Group
-                    x={pieceWidth - 12}
-                    y={-4}
+                    x={pieceWidth / 2}
+                    y={-12}
                     onClick={(e) => {
                       e.cancelBubble = true;
-                      removePlacedPiece(placed.id);
+                      // Rotate 90 degrees clockwise
+                      const newRotation = (placed.rotation + 90) % 360;
+                      updatePlacedPiece(placed.id, { rotation: newRotation });
                     }}
                     onMouseEnter={(e) => {
                       const stage = e.target.getStage();
@@ -1095,7 +1196,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                   >
                     <Circle
                       radius={10}
-                      fill="#ef4444"
+                      fill="#3b82f6"
                       stroke="#fff"
                       strokeWidth={2}
                       shadowColor="black"
@@ -1103,12 +1204,12 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                       shadowOpacity={0.5}
                     />
                     <Text
-                      text="×"
-                      fontSize={16}
+                      text="↻"
+                      fontSize={14}
                       fill="#fff"
                       fontStyle="bold"
                       x={-5}
-                      y={-9}
+                      y={-7}
                     />
                   </Group>
                 )}
@@ -1132,7 +1233,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
       {/* Help text */}
       <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-gray-400">
-        Click: Select | R: Rotate | Del/Backspace: Delete | Double-click: Quick delete
+        Click: Select | R: Rotate | Del: Delete | V: Toggle 3D
       </div>
     </div>
   );

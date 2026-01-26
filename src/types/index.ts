@@ -15,6 +15,23 @@ export interface PieceSize {
   label: string;
 }
 
+// Corner elevations for 3D pieces (height at each corner in inches)
+// Heights are relative to the base piece height (0.5")
+export interface CornerElevations {
+  nw: number;  // northwest corner (top-left in 2D)
+  ne: number;  // northeast corner (top-right in 2D)
+  sw: number;  // southwest corner (bottom-left in 2D)
+  se: number;  // southeast corner (bottom-right in 2D)
+}
+
+// Default flat elevation (all corners at 0, meaning base height only)
+export const DEFAULT_CORNER_ELEVATIONS: CornerElevations = {
+  nw: 0,
+  ne: 0,
+  sw: 0,
+  se: 0,
+};
+
 // Cell colors for grid-based custom pieces
 // 2D array where cellColors[row][col] = terrain type UUID
 export type CellColors = string[][];
@@ -29,6 +46,9 @@ export interface ModularPiece {
   imageUrl?: string;
   quantity: number; // how many the user has crafted
   defaultRotation?: number; // pre-defined rotation for diagonal pieces (0, 90, 180, 270)
+  // 3D elevation - height at each corner (in inches, 0-2.5 range)
+  // If not specified, piece is flat with base height only
+  elevation?: CornerElevations;
   // Custom piece properties
   isCustom?: boolean;
   cellColors?: CellColors; // Grid of terrain IDs for multi-color pieces

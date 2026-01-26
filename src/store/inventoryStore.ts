@@ -23,6 +23,7 @@ import {
   PieceTemplateItem,
   PieceVariant,
 } from '@/types';
+import { useElevationStore, createElevationKey } from './elevationStore';
 
 interface InventoryState {
   shapes: PieceShape[];
@@ -34,6 +35,22 @@ interface InventoryState {
 
   // Actions - Shapes
   fetchShapes: () => Promise<void>;
+  createShape: (data: {
+    shapeKey: string;
+    name: string;
+    width: number;
+    height: number;
+    isDiagonal: boolean;
+    defaultRotation: number;
+  }) => Promise<PieceShape | null>;
+  updateShape: (id: string, data: Partial<{
+    name: string;
+    width: number;
+    height: number;
+    isDiagonal: boolean;
+    defaultRotation: number;
+  }>) => Promise<boolean>;
+  deleteShape: (id: string) => Promise<boolean>;
 
   // Actions - Terrain Types
   fetchTerrainTypes: () => Promise<void>;
@@ -197,6 +214,125 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch shapes';
       set({ error: message, isLoading: false });
+    }
+  },
+
+  createShape: async (data) => {
+    if (!isSupabaseConfigured() || !supabase) {
+      set({ error: 'Supabase not configured', isLoading: false });
+      return null;
+    }
+
+    // Check if shape with same key already exists
+    const existingShape = get().shapes.find(s => s.shapeKey === data.shapeKey);
+    if (existingShape) {
+      set({ error: `A piece type with dimensions ${data.width}"x${data.height}" ${data.isDiagonal ? '(diagonal)' : ''} already exists`, isLoading: false });
+      return null;
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const { data: result, error } = await supabase
+        .from('piece_shapes')
+        .insert({
+          shape_key: data.shapeKey,
+          name: data.name,
+          width: data.width,
+          height: data.height,
+          is_diagonal: data.isDiagonal,
+          default_rotation: data.defaultRotation,
+          display_order: get().shapes.length + 1,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Handle unique constraint violation
+        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+          throw new Error(`A piece type with key "${data.shapeKey}" already exists`);
+        }
+        throw error;
+      }
+
+      const newShape = dbToPieceShape(result as DbPieceShape);
+
+      set((state) => ({
+        shapes: [...state.shapes, newShape],
+        isLoading: false,
+      }));
+
+      return newShape;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create shape';
+      set({ error: message, isLoading: false });
+      return null;
+    }
+  },
+
+  updateShape: async (id, data) => {
+    if (!isSupabaseConfigured() || !supabase) {
+      set({ error: 'Supabase not configured', isLoading: false });
+      return false;
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const updateData: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.width !== undefined) updateData.width = data.width;
+      if (data.height !== undefined) updateData.height = data.height;
+      if (data.isDiagonal !== undefined) updateData.is_diagonal = data.isDiagonal;
+      if (data.defaultRotation !== undefined) updateData.default_rotation = data.defaultRotation;
+
+      const { error } = await supabase
+        .from('piece_shapes')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set((state) => ({
+        shapes: state.shapes.map((s) =>
+          s.id === id ? { ...s, ...data } : s
+        ),
+        isLoading: false,
+      }));
+
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update shape';
+      set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  deleteShape: async (id) => {
+    if (!isSupabaseConfigured() || !supabase) {
+      set({ error: 'Supabase not configured', isLoading: false });
+      return false;
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('piece_shapes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set((state) => ({
+        shapes: state.shapes.filter((s) => s.id !== id),
+        isLoading: false,
+      }));
+
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete shape';
+      set({ error: message, isLoading: false });
+      return false;
     }
   },
 
@@ -1112,6 +1248,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   // Generate ModularPiece[] for mapStore compatibility
   getModularPieces: (): ModularPiece[] => {
     const { shapes, terrainTypes, customPieces } = get();
+    const elevations = useElevationStore.getState().elevations;
     const pieces: ModularPiece[] = [];
 
     // Add predefined terrain pieces
@@ -1121,6 +1258,12 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
         const shape = pieceConfig.shape || shapes.find((s) => s.id === pieceConfig.shapeId);
         if (!shape) continue;
+
+        // Get elevation from elevation store
+        // First try terrain-specific, then fall back to default
+        const elevationKey = createElevationKey(terrain.slug, shape.shapeKey);
+        const defaultElevationKey = createElevationKey('_default', shape.shapeKey);
+        const elevation = elevations[elevationKey] || elevations[defaultElevationKey];
 
         pieces.push({
           id: `${terrain.slug}-${shape.shapeKey}`,
@@ -1134,6 +1277,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           isDiagonal: shape.isDiagonal,
           quantity: pieceConfig.quantity,
           defaultRotation: shape.defaultRotation,
+          elevation,
         });
       }
     }

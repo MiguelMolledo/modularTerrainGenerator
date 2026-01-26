@@ -20,7 +20,13 @@ export function Sidebar() {
     isSidebarDragging,
     startSidebarDrag,
     endSidebarDrag,
+    selectedTerrainTab,
+    setSelectedTerrainTab,
   } = useMapStore();
+
+  // Get first terrain tab as default
+  const defaultTab = terrainTypes[0]?.slug || terrainTypes[0]?.id || '';
+  const activeTab = selectedTerrainTab || defaultTab;
 
   // Separate custom pieces, variants, and regular pieces
   const regularPieces = availablePieces.filter((p) => !p.isCustom && !p.isVariant);
@@ -61,7 +67,7 @@ export function Sidebar() {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <Tabs defaultValue={terrainTypes[0]?.slug || terrainTypes[0]?.id} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={setSelectedTerrainTab} className="flex-1 flex flex-col min-h-0">
           <div className="mx-2 mt-2 shrink-0 overflow-x-auto scrollbar-thin">
             <TabsList className="inline-flex w-max gap-1 bg-gray-900 p-1">
             {terrainTypes.map((terrain) => {

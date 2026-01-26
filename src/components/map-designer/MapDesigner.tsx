@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useMapStore } from '@/store/mapStore';
 import { Sidebar } from './Sidebar';
 import { MapCanvas } from './MapCanvas';
@@ -8,6 +8,23 @@ import { Toolbar } from './Toolbar';
 import { PiecesSummaryPanel } from './PiecesSummaryPanel';
 import { RadialMenu } from './RadialMenu';
 import { v4 as uuidv4 } from 'uuid';
+import { Loader2 } from 'lucide-react';
+
+// Lazy load 3D viewer to reduce initial bundle
+const Map3DViewer = lazy(() =>
+  import('./three/Map3DViewer').then((mod) => ({ default: mod.Map3DViewer }))
+);
+
+function Loading3D() {
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-gray-900">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 text-blue-500 animate-spin mx-auto" />
+        <p className="text-gray-400 mt-2">Loading 3D view...</p>
+      </div>
+    </div>
+  );
+}
 
 export function MapDesigner() {
   const {
@@ -17,6 +34,7 @@ export function MapDesigner() {
     availablePieces,
     placedPieces,
     setCurrentRotation,
+    is3DMode,
   } = useMapStore();
 
   const handleDrop = (x: number, y: number, rotation: number) => {
@@ -46,13 +64,21 @@ export function MapDesigner() {
     <div className="h-[calc(100vh-3rem)] flex flex-col bg-gray-900">
       <Toolbar />
       <div className="flex-1 flex overflow-hidden min-h-0">
-        <Sidebar />
+        {!is3DMode && <Sidebar />}
         <div className="flex-1 relative overflow-hidden min-h-0 h-full">
-          <MapCanvas onDrop={handleDrop} />
-          <PiecesSummaryPanel />
+          {is3DMode ? (
+            <Suspense fallback={<Loading3D />}>
+              <Map3DViewer />
+            </Suspense>
+          ) : (
+            <>
+              <MapCanvas onDrop={handleDrop} />
+              <PiecesSummaryPanel />
+            </>
+          )}
         </div>
       </div>
-      <RadialMenu />
+      {!is3DMode && <RadialMenu />}
     </div>
   );
 }

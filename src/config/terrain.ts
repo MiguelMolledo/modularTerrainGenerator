@@ -8,8 +8,11 @@ export const PIECE_SIZES: PieceSize[] = [
   { width: 3, height: 6, label: '3" x 6"' },
 ];
 
-// Piece height (for future 3D support)
+// Piece height (for 3D support)
 export const PIECE_HEIGHT_INCHES = 0.5;
+
+// Height per level/floor in inches (for 3D view)
+export const LEVEL_HEIGHT_INCHES = 2.5;
 
 // Map dimensions
 export const DEFAULT_MAP_WIDTH = 72;  // inches

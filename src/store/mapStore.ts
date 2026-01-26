@@ -60,6 +60,12 @@ interface MapState {
   // Placement mode (after selecting from radial menu)
   isPlacementMode: boolean;
 
+  // 3D View State
+  is3DMode: boolean;
+
+  // Sidebar state
+  selectedTerrainTab: string | null;
+
   // Actions
   setMapName: (name: string) => void;
   setMapDescription: (description: string) => void;
@@ -98,6 +104,12 @@ interface MapState {
   enterPlacementMode: (pieceId: string) => void;
   exitPlacementMode: () => void;
 
+  // 3D View Actions
+  toggle3DMode: () => void;
+
+  // Sidebar actions
+  setSelectedTerrainTab: (tab: string) => void;
+
   // Map persistence
   setCurrentMapId: (id: string | null) => void;
   loadMapData: (data: SavedMapData, mapId?: string) => void;
@@ -127,6 +139,54 @@ const demoPieces: ModularPiece[] = [
     size: { width: 6, height: 6, label: '6" x 6"' },
     isDiagonal: false,
     quantity: 4,
+  },
+  // =====================
+  // RAMP/SLOPE PIECES (with elevation)
+  // =====================
+  {
+    id: 'desert-ramp-north-6x6',
+    name: 'Desert Ramp N',
+    terrainTypeId: 'desert',
+    size: { width: 6, height: 6, label: '6" x 6" ⬆' },
+    isDiagonal: false,
+    quantity: 2,
+    elevation: { nw: 2, ne: 2, sw: 0, se: 0 }, // Slopes up to north
+  },
+  {
+    id: 'desert-ramp-east-6x6',
+    name: 'Desert Ramp E',
+    terrainTypeId: 'desert',
+    size: { width: 6, height: 6, label: '6" x 6" ➡' },
+    isDiagonal: false,
+    quantity: 2,
+    elevation: { nw: 0, ne: 2, sw: 0, se: 2 }, // Slopes up to east
+  },
+  {
+    id: 'desert-corner-nw-6x6',
+    name: 'Desert Corner NW',
+    terrainTypeId: 'desert',
+    size: { width: 6, height: 6, label: '6" x 6" ◤' },
+    isDiagonal: false,
+    quantity: 2,
+    elevation: { nw: 2.5, ne: 0, sw: 0, se: 0 }, // Single corner elevated
+  },
+  {
+    id: 'forest-ramp-south-6x6',
+    name: 'Forest Ramp S',
+    terrainTypeId: 'forest',
+    size: { width: 6, height: 6, label: '6" x 6" ⬇' },
+    isDiagonal: false,
+    quantity: 2,
+    elevation: { nw: 0, ne: 0, sw: 2, se: 2 }, // Slopes up to south
+  },
+  {
+    id: 'water-ramp-west-6x3',
+    name: 'Water Ramp W',
+    terrainTypeId: 'water',
+    size: { width: 6, height: 3, label: '6" x 3" ⬅' },
+    isDiagonal: false,
+    quantity: 2,
+    elevation: { nw: 2, ne: 0, sw: 2, se: 0 }, // Slopes up to west
   },
   // Rectangular pieces (both orientations)
   {
@@ -573,6 +633,8 @@ export const useMapStore = create<MapState>((set, get) => ({
   radialMenuSelectedIndex: null,
   radialMenuPosition: { x: 0, y: 0 },
   isPlacementMode: false,
+  is3DMode: false,
+  selectedTerrainTab: null,
 
   // Actions
   setMapName: (name) => set({ mapName: name }),
@@ -755,6 +817,15 @@ export const useMapStore = create<MapState>((set, get) => ({
       selectedPieceId: null,
     }),
 
+  // 3D View Actions
+  toggle3DMode: () =>
+    set((state) => ({
+      is3DMode: !state.is3DMode,
+    })),
+
+  // Sidebar actions
+  setSelectedTerrainTab: (tab) => set({ selectedTerrainTab: tab }),
+
   // Map persistence actions
   setCurrentMapId: (id) => set({ currentMapId: id }),
 
@@ -781,6 +852,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       selectedPieceId: null,
       selectedPlacedPieceId: null,
       isPlacementMode: false,
+      is3DMode: false,
       features: [],
     }),
 

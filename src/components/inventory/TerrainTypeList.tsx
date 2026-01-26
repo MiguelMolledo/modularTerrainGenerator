@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useInventoryStore } from '@/store/inventoryStore';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, Puzzle, LayoutTemplate } from 'lucide-react';
+import { Plus, Trash2, Puzzle, LayoutTemplate, Shapes } from 'lucide-react';
 import { TerrainFormDialog } from './TerrainFormDialog';
 
 interface TerrainTypeListProps {
@@ -14,6 +14,8 @@ interface TerrainTypeListProps {
   onSelectCustom?: () => void;
   isTemplatesSelected?: boolean;
   onSelectTemplates?: () => void;
+  isPieceTypesSelected?: boolean;
+  onSelectPieceTypes?: () => void;
 }
 
 export function TerrainTypeList({
@@ -23,8 +25,10 @@ export function TerrainTypeList({
   onSelectCustom,
   isTemplatesSelected,
   onSelectTemplates,
+  isPieceTypesSelected,
+  onSelectPieceTypes,
 }: TerrainTypeListProps) {
-  const { terrainTypes, customPieces, pieceTemplates, deleteTerrainType } = useInventoryStore();
+  const { terrainTypes, customPieces, pieceTemplates, shapes, deleteTerrainType } = useInventoryStore();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -43,6 +47,33 @@ export function TerrainTypeList({
 
   return (
     <div className="space-y-4">
+      {/* Piece Types Section */}
+      {onSelectPieceTypes && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold text-white">Piece Catalog</h2>
+          <Card
+            className={`p-3 cursor-pointer transition-all ${
+              isPieceTypesSelected
+                ? 'ring-2 ring-green-500 bg-gray-800'
+                : 'hover:bg-gray-800/50'
+            }`}
+            onClick={onSelectPieceTypes}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-600/20 flex items-center justify-center">
+                <Shapes className="h-5 w-5 text-green-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-white">Piece Types</h3>
+                <p className="text-xs text-gray-400">
+                  {shapes.length} available {shapes.length === 1 ? 'shape' : 'shapes'}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Custom Pieces Section */}
       {onSelectCustom && (
         <div className="space-y-2">
