@@ -1,16 +1,94 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMapStore } from '@/store/mapStore';
+import { useInventoryStore } from '@/store/inventoryStore';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function PiecesSummaryPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const { placedPieces, availablePieces, terrainTypes } = useMapStore();
+  const { shapes, terrainTypes: inventoryTerrainTypes } = useInventoryStore();
 
   const getTotalUsed = (pieceId: string) => {
     return placedPieces.filter((p) => p.pieceId === pieceId).length;
   };
+
+  // Helper to find shape for a piece
+  const findShapeForPiece = (piece: typeof availablePieces[0]) => {
+    if (piece.isCustom) return null;
+
+    if (piece.isVariant && piece.variantId) {
+      for (const terrain of inventoryTerrainTypes) {
+        const variant = terrain.variants?.find((v) => v.id === piece.variantId);
+        if (variant?.shapeId) {
+          return shapes.find((s) => s.id === variant.shapeId);
+        }
+      }
+    } else {
+      const pieceIdParts = piece.id.split('-');
+      const shapeKey = pieceIdParts.slice(1).join('-');
+      return shapes.find((s) => s.shapeKey === shapeKey);
+    }
+    return null;
+  };
+
+  // Calculate magnets for pieces ON the map
+  const magnetSummary = useMemo(() => {
+    const magnetTotals = new Map<string, number>();
+
+    for (const placedPiece of placedPieces) {
+      const piece = availablePieces.find((p) => p.id === placedPiece.pieceId);
+      if (!piece) continue;
+
+      const shape = findShapeForPiece(piece);
+      if (shape?.magnets) {
+        for (const magnet of shape.magnets) {
+          const current = magnetTotals.get(magnet.size) || 0;
+          magnetTotals.set(magnet.size, current + magnet.quantity);
+        }
+      }
+    }
+
+    return Array.from(magnetTotals.entries())
+      .map(([size, quantity]) => ({ size, quantity }))
+      .sort((a, b) => a.size.localeCompare(b.size));
+  }, [placedPieces, availablePieces, shapes, inventoryTerrainTypes]);
+
+  // Calculate magnets needed for pieces TO BUILD (shortfall)
+  const magnetsNeeded = useMemo(() => {
+    const magnetTotals = new Map<string, number>();
+
+    // Group placed pieces by pieceId and count
+    const usedCounts = new Map<string, number>();
+    for (const placed of placedPieces) {
+      usedCounts.set(placed.pieceId, (usedCounts.get(placed.pieceId) || 0) + 1);
+    }
+
+    // For each piece type, calculate magnets for shortfall
+    for (const [pieceId, usedCount] of usedCounts) {
+      const piece = availablePieces.find((p) => p.id === pieceId);
+      if (!piece) continue;
+
+      const shortfall = usedCount - piece.quantity;
+      if (shortfall <= 0) continue; // No shortfall
+
+      const shape = findShapeForPiece(piece);
+      if (shape?.magnets) {
+        for (const magnet of shape.magnets) {
+          const current = magnetTotals.get(magnet.size) || 0;
+          magnetTotals.set(magnet.size, current + (magnet.quantity * shortfall));
+        }
+      }
+    }
+
+    return Array.from(magnetTotals.entries())
+      .map(([size, quantity]) => ({ size, quantity }))
+      .sort((a, b) => a.size.localeCompare(b.size));
+  }, [placedPieces, availablePieces, shapes, inventoryTerrainTypes]);
+
+  const totalMagnets = magnetSummary.reduce((sum, m) => sum + m.quantity, 0);
+  const totalMagnetsNeeded = magnetsNeeded.reduce((sum, m) => sum + m.quantity, 0);
 
   // Get pieces that have been used
   const usedPieces = availablePieces
@@ -117,6 +195,35 @@ export function PiecesSummaryPanel() {
                           Need {Math.abs(remaining)} more
                         </span>
                       )}
+                      {/* Show magnets needed for this piece type */}
+                      {(() => {
+                        // Find shape for this piece
+                        let pieceMagnets = 0;
+                        if (!piece.isCustom) {
+                          let shape = null;
+                          if (piece.isVariant && piece.variantId) {
+                            for (const t of inventoryTerrainTypes) {
+                              const variant = t.variants?.find((v) => v.id === piece.variantId);
+                              if (variant?.shapeId) {
+                                shape = shapes.find((s) => s.id === variant.shapeId);
+                                break;
+                              }
+                            }
+                          } else {
+                            const pieceIdParts = piece.id.split('-');
+                            const shapeKey = pieceIdParts.slice(1).join('-');
+                            shape = shapes.find((s) => s.shapeKey === shapeKey);
+                          }
+                          if (shape?.magnets) {
+                            pieceMagnets = shape.magnets.reduce((sum, m) => sum + m.quantity, 0) * used;
+                          }
+                        }
+                        return pieceMagnets > 0 ? (
+                          <div className="text-xs text-purple-400 mt-0.5">
+                            🧲 {pieceMagnets}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -147,6 +254,54 @@ export function PiecesSummaryPanel() {
                 </span>
               </div>
             </div>
+
+            {/* Magnet Summary */}
+            {totalMagnets > 0 && (
+              <div className="mt-3 pt-3 border-t border-gray-700">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-sm">🧲</span>
+                  <span className="text-xs font-medium text-gray-300">
+                    Magnets
+                  </span>
+                </div>
+
+                {/* Magnets for map */}
+                <div className="space-y-1 mb-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">For map:</span>
+                    <span className="text-purple-400 font-bold">{totalMagnets}</span>
+                  </div>
+                  {magnetSummary.map(({ size, quantity }) => (
+                    <div
+                      key={size}
+                      className="flex justify-between text-xs pl-2"
+                    >
+                      <span className="text-gray-500 font-mono">{size}</span>
+                      <span className="text-gray-300">{quantity}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Magnets needed for pieces to build */}
+                {totalMagnetsNeeded > 0 && (
+                  <div className="space-y-1 pt-2 border-t border-gray-700/50">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-red-400">To build:</span>
+                      <span className="text-red-400 font-bold">{totalMagnetsNeeded}</span>
+                    </div>
+                    {magnetsNeeded.map(({ size, quantity }) => (
+                      <div
+                        key={`need-${size}`}
+                        className="flex justify-between text-xs pl-2"
+                      >
+                        <span className="text-gray-500 font-mono">{size}</span>
+                        <span className="text-red-300">{quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

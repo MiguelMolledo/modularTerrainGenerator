@@ -15,8 +15,8 @@ export const PIECE_HEIGHT_INCHES = 0.5;
 export const LEVEL_HEIGHT_INCHES = 2.5;
 
 // Map dimensions
-export const DEFAULT_MAP_WIDTH = 72;  // inches
-export const DEFAULT_MAP_HEIGHT = 45; // inches
+export const DEFAULT_MAP_WIDTH = 60;  // inches
+export const DEFAULT_MAP_HEIGHT = 60; // inches
 
 // Grid configuration
 export const GRID_CELL_SIZE = 1.5; // inches - minimum common divisor

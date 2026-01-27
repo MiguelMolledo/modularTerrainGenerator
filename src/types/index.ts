@@ -124,6 +124,12 @@ export interface SavedMapData {
 // Inventory System Types
 // =============================================
 
+// Magnet configuration - size and quantity per piece
+export interface MagnetConfig {
+  size: string;     // e.g., "3x2", "5x10", etc.
+  quantity: number; // how many of this size per piece
+}
+
 // Base shape definition (from piece_shapes table)
 export interface PieceShape {
   id: string;
@@ -134,6 +140,7 @@ export interface PieceShape {
   isDiagonal: boolean;
   defaultRotation: number;
   displayOrder: number;
+  magnets?: MagnetConfig[]; // Array of magnet configurations
 }
 
 // Terrain piece configuration (association between terrain and shape)

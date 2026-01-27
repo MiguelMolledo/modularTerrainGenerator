@@ -81,6 +81,35 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     startY: number;
   } | null>(null);
 
+  // Selection rectangle state
+  const [selectionRect, setSelectionRect] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+    active: boolean;
+  } | null>(null);
+  // Ref to track selection mode (for immediate drag cancellation)
+  const isSelectingRef = useRef(false);
+
+  // Right-click panning state
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null);
+
+  // Multi-drag state (for moving multiple selected pieces)
+  const [multiDragState, setMultiDragState] = useState<{
+    pieces: Array<{
+      id: string;
+      pieceId: string;
+      originalX: number;
+      originalY: number;
+      rotation: number;
+      level: number;
+    }>;
+    startMouseX: number;
+    startMouseY: number;
+  } | null>(null);
+
   // Drag threshold in pixels
   const DRAG_THRESHOLD = 5;
 
@@ -96,7 +125,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     terrainTypes,
     currentLevel,
     selectedPieceId,
-    selectedPlacedPieceId,
+    selectedPlacedPieceIds,
     isViewLocked,
     currentRotation,
     isSidebarDragging,
@@ -104,7 +133,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     setZoom,
     removePlacedPiece,
     updatePlacedPiece,
-    setSelectedPlacedPieceId,
+    updatePlacedPieces,
+    setSelectedPlacedPieceIds,
+    addToSelection,
+    toggleSelection,
+    clearSelection,
     setSelectedPieceId,
     setCurrentRotation,
     rotateCurrentPiece,
@@ -394,16 +427,21 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
       // R key only rotates already placed pieces (not during drag)
       if (e.key === 'r' || e.key === 'R') {
-        // Only rotate if we have a placed piece selected and not dragging
-        if (selectedPlacedPieceId && !draggingPieceId && !isSidebarDragging && !mapDragPiece && !isPlacementMode) {
+        // Only rotate if we have placed pieces selected and not dragging
+        if (selectedPlacedPieceIds.length > 0 && !draggingPieceId && !isSidebarDragging && !mapDragPiece && !isPlacementMode && !multiDragState) {
           e.preventDefault();
           rotateSelectedPlacedPiece();
         }
       }
-      // Delete selected piece with Delete or Backspace
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedPlacedPieceId) {
+      // Delete selected pieces with Delete or Backspace
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedPlacedPieceIds.length > 0) {
         e.preventDefault();
-        removePlacedPiece(selectedPlacedPieceId);
+        // Remove all selected pieces
+        selectedPlacedPieceIds.forEach((id) => removePlacedPiece(id));
+      }
+      // Escape also clears selection
+      if (e.key === 'Escape' && selectedPlacedPieceIds.length > 0 && !isPlacementMode && !mapDragPiece) {
+        clearSelection();
       }
       // Open radial menu with T key (only if not already open and not dragging)
       // e.repeat checks if this is a repeated keydown from holding the key
@@ -458,14 +496,16 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     isSidebarDragging,
     isDraggingFromSidebar,
     selectedPieceId,
-    selectedPlacedPieceId,
+    selectedPlacedPieceIds,
     draggingPieceId,
     mapDragPiece,
+    multiDragState,
     currentRotation,
     setCurrentRotation,
     updatePreviewAfterRotation,
     rotateSelectedPlacedPiece,
     removePlacedPiece,
+    clearSelection,
     isPlacementMode,
     exitPlacementMode,
     isRadialMenuOpen,
@@ -506,16 +546,27 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     }
   }
 
-  // Filter pieces for current level and sort so selected piece renders last (on top)
+  // Filter pieces for current level, deduplicate, and sort so selected pieces render last (on top)
+  const selectedSet = useMemo(() => new Set(selectedPlacedPieceIds), [selectedPlacedPieceIds]);
+
   const visiblePieces = useMemo(() => {
     const pieces = placedPieces.filter((p) => p.level === currentLevel);
-    // Sort: selected piece last so it renders on top
-    return pieces.sort((a, b) => {
-      if (a.id === selectedPlacedPieceId) return 1;
-      if (b.id === selectedPlacedPieceId) return -1;
+    // Deduplicate by id (keep first occurrence)
+    const seen = new Set<string>();
+    const uniquePieces = pieces.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+    // Sort: selected pieces last so they render on top
+    return uniquePieces.sort((a, b) => {
+      const aSelected = selectedSet.has(a.id);
+      const bSelected = selectedSet.has(b.id);
+      if (aSelected && !bSelected) return 1;
+      if (!aSelected && bSelected) return -1;
       return 0;
     });
-  }, [placedPieces, currentLevel, selectedPlacedPieceId]);
+  }, [placedPieces, currentLevel, selectedSet]);
 
   // Handle wheel zoom - using native event listener for passive: false
   useEffect(() => {
@@ -536,15 +587,32 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   const handlePieceMouseDown = (placedId: string, e: any) => {
     e.cancelBubble = true;
 
+    // If in placement mode, exit it first
+    if (isPlacementMode) {
+      exitPlacementMode();
+      setDragPreview((prev) => ({ ...prev, visible: false }));
+    }
+
+    const isShiftKey = e.evt?.shiftKey;
+    const isAlreadySelected = selectedSet.has(placedId);
+
     // Record the start position for drag threshold detection
     const stage = e.target.getStage();
     const pointerPos = stage?.getPointerPosition();
     if (pointerPos) {
-      setPendingDrag({
-        placedId,
-        startX: pointerPos.x,
-        startY: pointerPos.y,
-      });
+      // If Shift is held, we'll handle selection toggle on click, not drag
+      if (!isShiftKey) {
+        // If clicking on an unselected piece, select it first (for single selection)
+        if (!isAlreadySelected) {
+          setSelectedPlacedPieceIds([placedId]);
+        }
+        // Set up pending drag
+        setPendingDrag({
+          placedId,
+          startX: pointerPos.x,
+          startY: pointerPos.y,
+        });
+      }
     }
   };
 
@@ -556,6 +624,30 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     const piece = availablePieces.find((p) => p.id === placed.pieceId);
     if (!piece) return;
 
+    // Check if we're dragging multiple selected pieces
+    if (selectedPlacedPieceIds.length > 1 && selectedSet.has(placedId)) {
+      // Multi-drag: store all selected pieces' original positions
+      const selectedPieces = placedPieces.filter((p) => selectedSet.has(p.id));
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        setMultiDragState({
+          pieces: selectedPieces.map((p) => ({
+            id: p.id,
+            pieceId: p.pieceId,
+            originalX: p.x,
+            originalY: p.y,
+            rotation: p.rotation,
+            level: p.level,
+          })),
+          startMouseX: (pendingDrag?.startX || 0 - panX) / pixelsPerInch,
+          startMouseY: (pendingDrag?.startY || 0 - panY) / pixelsPerInch,
+        });
+      }
+      setPendingDrag(null);
+      return;
+    }
+
+    // Single piece drag (original behavior)
     // Store the piece info and mark as dragging
     setMapDragPiece({
       id: placed.id,
@@ -668,20 +760,73 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     onDrop(currentPreview.x, currentPreview.y, currentRotation);
   };
 
-  // Handle mouse move for sidebar drag, placement mode, AND map drag
+  // Handle mouse move for sidebar drag, placement mode, map drag, selection rect, multi-drag, AND panning
   const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    // Handle right-click panning
+    if (isPanning && panStartRef.current) {
+      const deltaX = e.clientX - panStartRef.current.mouseX;
+      const deltaY = e.clientY - panStartRef.current.mouseY;
+      setPan(panStartRef.current.panX + deltaX, panStartRef.current.panY + deltaY);
+      return;
+    }
+
+    const rawX = (e.clientX - rect.left - panX) / pixelsPerInch;
+    const rawY = (e.clientY - rect.top - panY) / pixelsPerInch;
+
+    // Handle selection rectangle
+    if (selectionRect?.active) {
+      setSelectionRect((prev) =>
+        prev ? { ...prev, currentX: rawX, currentY: rawY } : null
+      );
+      return;
+    }
+
+    // Handle multi-drag (moving multiple selected pieces)
+    if (multiDragState) {
+      const deltaX = rawX - multiDragState.startMouseX;
+      const deltaY = rawY - multiDragState.startMouseY;
+
+      // Calculate new positions for all selected pieces
+      const updates = multiDragState.pieces.map((p) => {
+        let newX = p.originalX + deltaX;
+        let newY = p.originalY + deltaY;
+
+        // Apply grid snap if enabled
+        if (gridConfig.snapToGrid) {
+          newX = Math.round(newX / gridConfig.cellSize) * gridConfig.cellSize;
+          newY = Math.round(newY / gridConfig.cellSize) * gridConfig.cellSize;
+        }
+
+        // Clamp to map bounds
+        const piece = availablePieces.find((ap) => ap.id === p.pieceId);
+        if (piece) {
+          const isRotated = p.rotation === 90 || p.rotation === 270;
+          const w = isRotated ? piece.size.height : piece.size.width;
+          const h = isRotated ? piece.size.width : piece.size.height;
+          newX = Math.max(0, Math.min(newX, mapWidth - w));
+          newY = Math.max(0, Math.min(newY, mapHeight - h));
+        }
+
+        return { id: p.id, updates: { x: newX, y: newY } };
+      });
+
+      // Update all pieces in real-time
+      updatePlacedPieces(updates);
+      return;
+    }
+
     // Check if we should start a map drag (threshold detection)
     if (pendingDrag && !mapDragPiece) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) {
-        const currentX = e.clientX - rect.left;
-        const currentY = e.clientY - rect.top;
-        const deltaX = Math.abs(currentX - (pendingDrag.startX - panX));
-        const deltaY = Math.abs(currentY - (pendingDrag.startY - panY));
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+      const deltaX = Math.abs(currentX - (pendingDrag.startX - panX));
+      const deltaY = Math.abs(currentY - (pendingDrag.startY - panY));
 
-        if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
-          startMapDrag(pendingDrag.placedId);
-        }
+      if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+        startMapDrag(pendingDrag.placedId);
       }
       return;
     }
@@ -689,10 +834,6 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     // Handle sidebar drag, placement mode, or map drag
     const isDragging = isSidebarDragging || isPlacementMode || mapDragPiece;
     if (!isDragging || !selectedPiece || !containerRef.current) return;
-
-    const rect = containerRef.current.getBoundingClientRect();
-    const rawX = (e.clientX - rect.left - panX) / pixelsPerInch;
-    const rawY = (e.clientY - rect.top - panY) / pixelsPerInch;
 
     // For map drag, preserve the piece's rotation; for sidebar/placement, use currentRotation
     const rotation = mapDragPiece?.rotation ?? currentRotation ?? selectedPiece.defaultRotation ?? 0;
@@ -743,7 +884,81 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle mouse up to place piece from sidebar drag or map drag
   // KEY INSIGHT: The preview is ALWAYS accurate, so we just use its position directly
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
+    // Handle right-click panning end
+    if (isPanning) {
+      setIsPanning(false);
+      panStartRef.current = null;
+      return;
+    }
+
+    // Handle selection rectangle finalization
+    if (selectionRect?.active) {
+      isSelectingRef.current = false;
+
+      const minX = Math.min(selectionRect.startX, selectionRect.currentX);
+      const maxX = Math.max(selectionRect.startX, selectionRect.currentX);
+      const minY = Math.min(selectionRect.startY, selectionRect.currentY);
+      const maxY = Math.max(selectionRect.startY, selectionRect.currentY);
+
+      // Only select if rectangle is big enough (not just a click)
+      const rectWidth = maxX - minX;
+      const rectHeight = maxY - minY;
+
+      if (rectWidth > 0.5 || rectHeight > 0.5) {
+        // Find pieces that intersect with the selection rectangle
+        const piecesInRect = placedPieces.filter((placed) => {
+          if (placed.level !== currentLevel) return false;
+
+          const piece = availablePieces.find((p) => p.id === placed.pieceId);
+          if (!piece) return false;
+
+          // Calculate effective dimensions based on rotation
+          const isRotated = placed.rotation === 90 || placed.rotation === 270;
+          const pieceWidth = isRotated ? piece.size.height : piece.size.width;
+          const pieceHeight = isRotated ? piece.size.width : piece.size.height;
+
+          // Check intersection
+          const pieceLeft = placed.x;
+          const pieceRight = placed.x + pieceWidth;
+          const pieceTop = placed.y;
+          const pieceBottom = placed.y + pieceHeight;
+
+          return (
+            pieceRight > minX &&
+            pieceLeft < maxX &&
+            pieceBottom > minY &&
+            pieceTop < maxY
+          );
+        });
+
+        if (piecesInRect.length > 0) {
+          const isShiftKey = e.shiftKey;
+          if (isShiftKey) {
+            // Add to existing selection
+            const newIds = piecesInRect.map((p) => p.id);
+            const combined = [...new Set([...selectedPlacedPieceIds, ...newIds])];
+            setSelectedPlacedPieceIds(combined);
+          } else {
+            // Replace selection
+            setSelectedPlacedPieceIds(piecesInRect.map((p) => p.id));
+          }
+        } else if (!e.shiftKey) {
+          // Clear selection if no pieces in rect and not holding shift
+          clearSelection();
+        }
+      }
+
+      setSelectionRect(null);
+      return;
+    }
+
+    // Handle multi-drag finalization
+    if (multiDragState) {
+      setMultiDragState(null);
+      return;
+    }
+
     // Clear pending drag if threshold wasn't met (it was just a click)
     if (pendingDrag) {
       setPendingDrag(null);
@@ -791,6 +1006,25 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle mouse leave to hide preview and cancel map drag
   const handleMouseLeave = () => {
+    // Stop panning
+    if (isPanning) {
+      setIsPanning(false);
+      panStartRef.current = null;
+    }
+    // Clear selection rectangle
+    if (selectionRect) {
+      isSelectingRef.current = false;
+      setSelectionRect(null);
+    }
+    // Cancel multi-drag and restore original positions
+    if (multiDragState) {
+      const restoreUpdates = multiDragState.pieces.map((p) => ({
+        id: p.id,
+        updates: { x: p.originalX, y: p.originalY },
+      }));
+      updatePlacedPieces(restoreUpdates);
+      setMultiDragState(null);
+    }
     // Clear pending drag
     if (pendingDrag) {
       setPendingDrag(null);
@@ -816,6 +1050,12 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle click on canvas background to deselect or place piece in placement mode
   const handleCanvasClick = (e: any) => {
+    // Check if clicking on background (not on a piece)
+    const isBackground = e.target === e.currentTarget || e.target.attrs?.name === 'background';
+
+    // Only handle clicks on background - piece clicks are handled by their own handlers
+    if (!isBackground) return;
+
     // Use the ref to get the latest preview position
     const currentPreview = dragPreviewRef.current;
 
@@ -827,16 +1067,76 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       return;
     }
 
-    // Only deselect if clicking on the background, not on a piece
-    if (e.target === e.currentTarget || e.target.attrs?.name === 'background') {
-      setSelectedPlacedPieceId(null);
+    // Deselect if clicking on the background (and not finishing a selection rectangle)
+    if (!selectionRect) {
+      clearSelection();
+    }
+  };
+
+  // Handle mousedown on stage background to start selection rectangle or panning
+  const handleStageMouseDown = (e: any) => {
+    const isBackground = e.target === e.currentTarget || e.target.attrs?.name === 'background';
+    const mouseButton = e.evt?.button;
+
+    // Right click (button 2): start panning
+    if (mouseButton === 2 && !isViewLocked) {
+      e.evt?.preventDefault();
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        panStartRef.current = {
+          mouseX: e.evt.clientX,
+          mouseY: e.evt.clientY,
+          panX: panX,
+          panY: panY,
+        };
+        setIsPanning(true);
+      }
+      return;
+    }
+
+    // Left click (button 0): start selection rectangle on background
+    if (mouseButton === 0 && isBackground) {
+      // Don't start selection if view is locked
+      if (isViewLocked) return;
+
+      const stage = e.target.getStage();
+      const pointerPos = stage?.getPointerPosition();
+      if (pointerPos && containerRef.current) {
+        // Mark that we're starting a selection
+        isSelectingRef.current = true;
+
+        const rawX = (pointerPos.x - panX) / pixelsPerInch;
+        const rawY = (pointerPos.y - panY) / pixelsPerInch;
+        setSelectionRect({
+          startX: rawX,
+          startY: rawY,
+          currentX: rawX,
+          currentY: rawY,
+          active: true,
+        });
+      }
     }
   };
 
   // Handle piece click to select
   const handlePieceClick = (placedId: string, e: any) => {
     e.cancelBubble = true; // Prevent event from bubbling to stage
-    setSelectedPlacedPieceId(placedId);
+
+    // If in placement mode, exit it (user clicked on existing piece instead)
+    if (isPlacementMode) {
+      exitPlacementMode();
+      setDragPreview((prev) => ({ ...prev, visible: false }));
+    }
+
+    const isShiftKey = e.evt?.shiftKey;
+
+    if (isShiftKey) {
+      // Shift+click: toggle selection
+      toggleSelection(placedId);
+    } else {
+      // Normal click: if not already in a multi-selection being maintained, select only this piece
+      // This is already handled in mousedown for non-shift clicks
+    }
   };
 
   // Format piece label for display
@@ -858,13 +1158,14 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   return (
     <div
       ref={containerRef}
-      className="flex-1 h-full min-h-0 overflow-hidden bg-gray-900 relative"
+      className={`flex-1 h-full min-h-0 overflow-hidden bg-gray-900 relative ${isPanning ? 'cursor-grabbing' : ''}`}
       onDrop={handleCanvasDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
+      onContextMenu={(e) => e.preventDefault()}
       tabIndex={0}
     >
       <Stage
@@ -873,14 +1174,10 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         height={containerSize.height}
         x={panX}
         y={panY}
-        draggable={!isViewLocked}
-        onDragEnd={(e) => {
-          // Only update pan if it's the stage being dragged, not a piece
-          if (e.target === e.currentTarget) {
-            setPan(e.target.x(), e.target.y());
-          }
-        }}
+        draggable={false}
         onClick={handleCanvasClick}
+        onMouseDown={handleStageMouseDown}
+        onContextMenu={(e) => e.evt.preventDefault()}
       >
         {/* Background */}
         <Layer>
@@ -897,6 +1194,22 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
         {/* Grid */}
         <Layer listening={false}>{gridLines}</Layer>
+
+        {/* Selection rectangle */}
+        {selectionRect && (
+          <Layer listening={false}>
+            <Rect
+              x={Math.min(selectionRect.startX, selectionRect.currentX) * pixelsPerInch}
+              y={Math.min(selectionRect.startY, selectionRect.currentY) * pixelsPerInch}
+              width={Math.abs(selectionRect.currentX - selectionRect.startX) * pixelsPerInch}
+              height={Math.abs(selectionRect.currentY - selectionRect.startY) * pixelsPerInch}
+              fill="rgba(59, 130, 246, 0.2)"
+              stroke="#3b82f6"
+              strokeWidth={2}
+              dash={[6, 3]}
+            />
+          </Layer>
+        )}
 
         {/* Drop preview / highlight */}
         <Layer listening={false}>
@@ -1006,7 +1319,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
             const pieceWidth = piece.size.width * pixelsPerInch;
             const pieceHeight = piece.size.height * pixelsPerInch;
             const isDragging = draggingPieceId === placed.id;
-            const isSelected = selectedPlacedPieceId === placed.id;
+            const isSelected = selectedSet.has(placed.id);
 
             return (
               <Group
@@ -1233,7 +1546,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
       {/* Help text */}
       <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-gray-400">
-        Click: Select | R: Rotate | Del: Delete | V: Toggle 3D
+        Left drag: Select | Right drag: Pan | Shift+Click: Add to selection | R: Rotate | Del: Delete
       </div>
     </div>
   );

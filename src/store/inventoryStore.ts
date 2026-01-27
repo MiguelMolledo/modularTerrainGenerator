@@ -22,6 +22,7 @@ import {
   PieceTemplate,
   PieceTemplateItem,
   PieceVariant,
+  MagnetConfig,
 } from '@/types';
 import { useElevationStore, createElevationKey } from './elevationStore';
 
@@ -42,6 +43,7 @@ interface InventoryState {
     height: number;
     isDiagonal: boolean;
     defaultRotation: number;
+    magnets?: MagnetConfig[];
   }) => Promise<PieceShape | null>;
   updateShape: (id: string, data: Partial<{
     name: string;
@@ -49,6 +51,7 @@ interface InventoryState {
     height: number;
     isDiagonal: boolean;
     defaultRotation: number;
+    magnets: MagnetConfig[];
   }>) => Promise<boolean>;
   deleteShape: (id: string) => Promise<boolean>;
 
@@ -143,6 +146,7 @@ function dbToPieceShape(db: DbPieceShape): PieceShape {
     isDiagonal: db.is_diagonal,
     defaultRotation: db.default_rotation,
     displayOrder: db.display_order,
+    magnets: db.magnets || undefined,
   };
 }
 
@@ -226,7 +230,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     // Check if shape with same key already exists
     const existingShape = get().shapes.find(s => s.shapeKey === data.shapeKey);
     if (existingShape) {
-      set({ error: `A piece type with dimensions ${data.width}"x${data.height}" ${data.isDiagonal ? '(diagonal)' : ''} already exists`, isLoading: false });
+      set({ error: `A piece type "${existingShape.name}" with key "${data.shapeKey}" already exists. Use different dimensions or elevation.`, isLoading: false });
       return null;
     }
 
@@ -242,6 +246,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           is_diagonal: data.isDiagonal,
           default_rotation: data.defaultRotation,
           display_order: get().shapes.length + 1,
+          magnets: data.magnets || null,
         })
         .select()
         .single();
@@ -285,6 +290,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       if (data.height !== undefined) updateData.height = data.height;
       if (data.isDiagonal !== undefined) updateData.is_diagonal = data.isDiagonal;
       if (data.defaultRotation !== undefined) updateData.default_rotation = data.defaultRotation;
+      if (data.magnets !== undefined) updateData.magnets = data.magnets;
 
       const { error } = await supabase
         .from('piece_shapes')

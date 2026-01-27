@@ -250,8 +250,13 @@ export function PlacedPiece3D({
     const totalWidth = piece.size.width;
     const totalHeight = piece.size.height;
 
+    // Calculate actual cell size based on piece dimensions and grid
+    const cellWidth = totalWidth / numCols;
+    const cellDepth = totalHeight / numRows;
+
     // Apply piece rotation to the whole group
-    const rotationY = (placedPiece.rotation * Math.PI) / 180;
+    // Negate rotation because Three.js Y rotation is counter-clockwise, but 2D canvas uses clockwise
+    const rotationY = -(placedPiece.rotation * Math.PI) / 180;
 
     return (
       <group
@@ -266,11 +271,11 @@ export function PlacedPiece3D({
 
             // Calculate cell position relative to piece center
             // Row 0 is at the back (-Z/north), higher rows toward front (+Z/south)
-            const cellX = (colIdx + 0.5) * CELL_SIZE - totalWidth / 2;
-            const cellZ = (rowIdx + 0.5) * CELL_SIZE - totalHeight / 2;
+            const cellX = (colIdx + 0.5) * cellWidth - totalWidth / 2;
+            const cellZ = (rowIdx + 0.5) * cellDepth - totalHeight / 2;
 
-            // Simple box geometry for each cell
-            const cellGeometry = new THREE.BoxGeometry(CELL_SIZE - 0.05, PIECE_HEIGHT_INCHES, CELL_SIZE - 0.05);
+            // Box geometry sized to actual cell dimensions
+            const cellGeometry = new THREE.BoxGeometry(cellWidth - 0.05, PIECE_HEIGHT_INCHES, cellDepth - 0.05);
 
             return (
               <group key={`cell-${rowIdx}-${colIdx}`} position={[cellX, PIECE_HEIGHT_INCHES / 2, cellZ]}>

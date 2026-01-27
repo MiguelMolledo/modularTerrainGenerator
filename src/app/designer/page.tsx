@@ -1,27 +1,37 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { MapDesigner } from '@/components/map-designer';
 import { useMapStore } from '@/store/mapStore';
 import { useMapInventoryStore } from '@/store/mapInventoryStore';
 import { useInventoryStore } from '@/store/inventoryStore';
+import { getLastMapId } from '@/components/map-designer/UnsavedChangesGuard';
 
 function MapLoader() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const mapId = searchParams.get('mapId');
+  const [checkedLastMap, setCheckedLastMap] = useState(false);
 
   const { loadMapData, currentMapId, setAvailablePieces, setTerrainTypes, resetToNewMap } = useMapStore();
   const { loadMap } = useMapInventoryStore();
   const { terrainTypes, shapes, fetchTerrainTypes, fetchShapes, getModularPieces } = useInventoryStore();
 
-  // Reset to new map if entering /designer without mapId
+  // Check for last map on initial load (no mapId in URL)
   useEffect(() => {
-    if (!mapId) {
-      resetToNewMap();
+    if (!mapId && !checkedLastMap) {
+      const lastMapId = getLastMapId();
+      if (lastMapId) {
+        // Redirect to the last map
+        router.replace(`/designer?mapId=${lastMapId}`);
+      } else {
+        resetToNewMap();
+      }
+      setCheckedLastMap(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapId]); // Reset when mapId changes to null/undefined
+  }, [mapId, checkedLastMap]); // Check only on mount and when mapId changes
 
   // Load inventory data on mount
   useEffect(() => {

@@ -14,10 +14,14 @@ export function Scene3D() {
     terrainTypes,
     mapWidth,
     mapHeight,
-    selectedPlacedPieceId,
-    setSelectedPlacedPieceId,
+    selectedPlacedPieceIds,
+    setSelectedPlacedPieceIds,
+    toggleSelection,
     levels,
   } = useMapStore();
+
+  // Create a Set for efficient selection lookup
+  const selectedSet = useMemo(() => new Set(selectedPlacedPieceIds), [selectedPlacedPieceIds]);
 
   // Create piece lookup map
   const pieceMap = useMemo(() => {
@@ -155,8 +159,8 @@ export function Scene3D() {
             piece={piece}
             terrain={terrain}
             terrainMap={terrainMap}
-            isSelected={selectedPlacedPieceId === placedPiece.id}
-            onClick={() => setSelectedPlacedPieceId(placedPiece.id)}
+            isSelected={selectedSet.has(placedPiece.id)}
+            onClick={() => setSelectedPlacedPieceIds([placedPiece.id])}
           />
         );
       })}

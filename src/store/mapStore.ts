@@ -37,8 +37,8 @@ interface MapState {
   // Selected piece for placement (from sidebar)
   selectedPieceId: string | null;
 
-  // Selected placed piece on the map
-  selectedPlacedPieceId: string | null;
+  // Selected placed pieces on the map (supports multi-selection)
+  selectedPlacedPieceIds: string[];
 
   // Current rotation for drag preview (0, 90, 180, 270)
   currentRotation: number;
@@ -66,6 +66,10 @@ interface MapState {
   // Sidebar state
   selectedTerrainTab: string | null;
 
+  // Unsaved changes tracking
+  hasUnsavedChanges: boolean;
+  lastSavedSnapshot: string | null;
+
   // Actions
   setMapName: (name: string) => void;
   setMapDescription: (description: string) => void;
@@ -74,7 +78,16 @@ interface MapState {
   removePlacedPiece: (id: string) => void;
   updatePlacedPiece: (id: string, updates: Partial<PlacedPiece>) => void;
   setSelectedPieceId: (id: string | null) => void;
+  // Multi-selection actions
+  setSelectedPlacedPieceIds: (ids: string[]) => void;
+  addToSelection: (id: string) => void;
+  removeFromSelection: (id: string) => void;
+  toggleSelection: (id: string) => void;
+  clearSelection: () => void;
+  // Backwards compatibility
   setSelectedPlacedPieceId: (id: string | null) => void;
+  // Bulk update for moving multiple pieces
+  updatePlacedPieces: (updates: Array<{ id: string; updates: Partial<PlacedPiece> }>) => void;
   setAvailablePieces: (pieces: ModularPiece[]) => void;
   setTerrainTypes: (types: TerrainType[]) => void;
   setZoom: (zoom: number) => void;
@@ -109,6 +122,15 @@ interface MapState {
 
   // Sidebar actions
   setSelectedTerrainTab: (tab: string) => void;
+
+  // Unsaved changes actions
+  markAsSaved: () => void;
+  markAsModified: () => void;
+
+  // Map dimensions
+  setMapWidth: (width: number) => void;
+  setMapHeight: (height: number) => void;
+  setMapDimensions: (width: number, height: number) => void;
 
   // Map persistence
   setCurrentMapId: (id: string | null) => void;
@@ -624,7 +646,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   panY: 0,
   isViewLocked: false,
   selectedPieceId: null,
-  selectedPlacedPieceId: null,
+  selectedPlacedPieceIds: [],
   currentRotation: 0,
   features: [],
   isSidebarDragging: false,
@@ -635,16 +657,24 @@ export const useMapStore = create<MapState>((set, get) => ({
   isPlacementMode: false,
   is3DMode: false,
   selectedTerrainTab: null,
+  hasUnsavedChanges: false,
+  lastSavedSnapshot: null,
 
   // Actions
-  setMapName: (name) => set({ mapName: name }),
+  setMapName: (name) => set({ mapName: name, hasUnsavedChanges: true }),
 
-  setMapDescription: (description) => set({ mapDescription: description }),
+  setMapDescription: (description) => set({ mapDescription: description, hasUnsavedChanges: true }),
 
   setCurrentLevel: (level) => set({ currentLevel: level }),
 
   addPlacedPiece: (piece) =>
     set((state) => {
+      // Prevent duplicates by id
+      if (state.placedPieces.some((p) => p.id === piece.id)) {
+        console.warn(`Piece with id ${piece.id} already exists, skipping`);
+        return state;
+      }
+
       // Update recently used pieces (keep last 8, most recent first)
       const newRecentlyUsed = [
         piece.pieceId,
@@ -654,13 +684,15 @@ export const useMapStore = create<MapState>((set, get) => ({
       return {
         placedPieces: [...state.placedPieces, piece],
         recentlyUsedPieceIds: newRecentlyUsed,
+        hasUnsavedChanges: true,
       };
     }),
 
   removePlacedPiece: (id) =>
     set((state) => ({
       placedPieces: state.placedPieces.filter((p) => p.id !== id),
-      selectedPlacedPieceId: state.selectedPlacedPieceId === id ? null : state.selectedPlacedPieceId,
+      selectedPlacedPieceIds: state.selectedPlacedPieceIds.filter((pid) => pid !== id),
+      hasUnsavedChanges: true,
     })),
 
   updatePlacedPiece: (id, updates) =>
@@ -668,11 +700,50 @@ export const useMapStore = create<MapState>((set, get) => ({
       placedPieces: state.placedPieces.map((p) =>
         p.id === id ? { ...p, ...updates } : p
       ),
+      hasUnsavedChanges: true,
     })),
 
   setSelectedPieceId: (id) => set({ selectedPieceId: id, currentRotation: 0 }),
 
-  setSelectedPlacedPieceId: (id) => set({ selectedPlacedPieceId: id }),
+  // Multi-selection actions
+  setSelectedPlacedPieceIds: (ids) => set({ selectedPlacedPieceIds: ids }),
+
+  addToSelection: (id) =>
+    set((state) => ({
+      selectedPlacedPieceIds: state.selectedPlacedPieceIds.includes(id)
+        ? state.selectedPlacedPieceIds
+        : [...state.selectedPlacedPieceIds, id],
+    })),
+
+  removeFromSelection: (id) =>
+    set((state) => ({
+      selectedPlacedPieceIds: state.selectedPlacedPieceIds.filter((pid) => pid !== id),
+    })),
+
+  toggleSelection: (id) =>
+    set((state) => ({
+      selectedPlacedPieceIds: state.selectedPlacedPieceIds.includes(id)
+        ? state.selectedPlacedPieceIds.filter((pid) => pid !== id)
+        : [...state.selectedPlacedPieceIds, id],
+    })),
+
+  clearSelection: () => set({ selectedPlacedPieceIds: [] }),
+
+  // Backwards compatibility - sets single selection
+  setSelectedPlacedPieceId: (id) => set({ selectedPlacedPieceIds: id ? [id] : [] }),
+
+  // Bulk update for moving multiple pieces
+  updatePlacedPieces: (updates) =>
+    set((state) => {
+      const updateMap = new Map(updates.map((u) => [u.id, u.updates]));
+      return {
+        placedPieces: state.placedPieces.map((p) => {
+          const pieceUpdates = updateMap.get(p.id);
+          return pieceUpdates ? { ...p, ...pieceUpdates } : p;
+        }),
+        hasUnsavedChanges: true,
+      };
+    }),
 
   setAvailablePieces: (pieces) => set({ availablePieces: pieces }),
 
@@ -702,7 +773,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       availablePieces: [...state.availablePieces, piece],
     })),
 
-  clearMap: () => set({ placedPieces: [], selectedPlacedPieceId: null }),
+  clearMap: () => set({ placedPieces: [], selectedPlacedPieceIds: [], hasUnsavedChanges: true }),
 
   rotateCurrentPiece: () =>
     set((state) => ({
@@ -713,13 +784,15 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   rotateSelectedPlacedPiece: () =>
     set((state) => {
-      if (!state.selectedPlacedPieceId) return state;
+      if (state.selectedPlacedPieceIds.length === 0) return state;
+      const selectedSet = new Set(state.selectedPlacedPieceIds);
       return {
         placedPieces: state.placedPieces.map((p) =>
-          p.id === state.selectedPlacedPieceId
+          selectedSet.has(p.id)
             ? { ...p, rotation: (p.rotation + 90) % 360 }
             : p
         ),
+        hasUnsavedChanges: true,
       };
     }),
 
@@ -826,10 +899,36 @@ export const useMapStore = create<MapState>((set, get) => ({
   // Sidebar actions
   setSelectedTerrainTab: (tab) => set({ selectedTerrainTab: tab }),
 
+  // Map dimensions actions
+  setMapWidth: (width) => set({ mapWidth: width, hasUnsavedChanges: true }),
+  setMapHeight: (height) => set({ mapHeight: height, hasUnsavedChanges: true }),
+  setMapDimensions: (width, height) => set({ mapWidth: width, mapHeight: height, hasUnsavedChanges: true }),
+
+  // Unsaved changes actions
+  markAsSaved: () => {
+    const state = get();
+    const snapshot = JSON.stringify({
+      placedPieces: state.placedPieces,
+      mapName: state.mapName,
+      mapDescription: state.mapDescription,
+    });
+    set({ hasUnsavedChanges: false, lastSavedSnapshot: snapshot });
+  },
+
+  markAsModified: () => set({ hasUnsavedChanges: true }),
+
   // Map persistence actions
   setCurrentMapId: (id) => set({ currentMapId: id }),
 
-  loadMapData: (data: SavedMapData, mapId?: string) =>
+  loadMapData: (data: SavedMapData, mapId?: string) => {
+    // Deduplicate placedPieces by id (keep first occurrence)
+    const seen = new Set<string>();
+    const uniquePieces = data.placedPieces.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+
     set({
       currentMapId: mapId || null,
       mapName: data.name,
@@ -837,7 +936,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       mapWidth: data.mapWidth,
       mapHeight: data.mapHeight,
       levels: data.levels,
-      placedPieces: data.placedPieces,
+      placedPieces: uniquePieces,
       gridConfig: data.gridConfig || {
         cellSize: GRID_CELL_SIZE,
         showGrid: true,
@@ -850,11 +949,19 @@ export const useMapStore = create<MapState>((set, get) => ({
       panX: 0,
       panY: 0,
       selectedPieceId: null,
-      selectedPlacedPieceId: null,
+      selectedPlacedPieceIds: [],
       isPlacementMode: false,
       is3DMode: false,
       features: [],
-    }),
+      // Mark as saved (just loaded from storage)
+      hasUnsavedChanges: false,
+      lastSavedSnapshot: JSON.stringify({
+        placedPieces: uniquePieces,
+        mapName: data.name,
+        mapDescription: data.description || '',
+      }),
+    });
+  },
 
   getMapDataForSave: () => {
     const state = get();
@@ -889,9 +996,12 @@ export const useMapStore = create<MapState>((set, get) => ({
       panX: 0,
       panY: 0,
       selectedPieceId: null,
-      selectedPlacedPieceId: null,
+      selectedPlacedPieceIds: [],
       isPlacementMode: false,
       features: [],
       recentlyUsedPieceIds: [],
+      // New map starts with no unsaved changes
+      hasUnsavedChanges: false,
+      lastSavedSnapshot: null,
     }),
 }));

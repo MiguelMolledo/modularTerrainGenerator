@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useInventoryStore } from '@/store/inventoryStore';
 import { useElevationStore, createElevationKey } from '@/store/elevationStore';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
-import { PieceShape, CornerElevations, DEFAULT_CORNER_ELEVATIONS } from '@/types';
-import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { PieceShape, CornerElevations, DEFAULT_CORNER_ELEVATIONS, MagnetConfig } from '@/types';
+import { Loader2, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 
 interface PieceTypeFormDialogProps {
   open: boolean;
@@ -21,8 +21,8 @@ interface PieceTypeFormDialogProps {
   editingShape: PieceShape | null;
 }
 
-// Standard sizes in inches
-const STANDARD_SIZES = [1.5, 3, 6, 9, 12];
+// Standard sizes in inches (0.5 to 12 in 0.5 inch increments)
+const STANDARD_SIZES = Array.from({ length: 24 }, (_, i) => (i + 1) * 0.5);
 const BASE_HEIGHT = 0.5;  // All pieces have 0.5" minimum height
 const MAX_ELEVATION = 2.5;
 const STEP = 0.5;
@@ -32,7 +32,7 @@ export function PieceTypeFormDialog({
   onOpenChange,
   editingShape,
 }: PieceTypeFormDialogProps) {
-  const { createShape, updateShape, isLoading } = useInventoryStore();
+  const { createShape, updateShape, isLoading, shapes } = useInventoryStore();
   const { setElevation, getElevation } = useElevationStore();
 
   const [name, setName] = useState('');
@@ -44,6 +44,10 @@ export function PieceTypeFormDialog({
   // Elevation state
   const [showElevation, setShowElevation] = useState(false);
   const [elevation, setElevationState] = useState<CornerElevations>(DEFAULT_CORNER_ELEVATIONS);
+
+  // Magnets state
+  const [showMagnets, setShowMagnets] = useState(false);
+  const [magnets, setMagnets] = useState<MagnetConfig[]>([]);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -65,6 +69,14 @@ export function PieceTypeFormDialog({
           setElevationState(DEFAULT_CORNER_ELEVATIONS);
           setShowElevation(false);
         }
+        // Load existing magnets
+        if (editingShape.magnets && editingShape.magnets.length > 0) {
+          setMagnets(editingShape.magnets);
+          setShowMagnets(true);
+        } else {
+          setMagnets([]);
+          setShowMagnets(false);
+        }
       } else if (editingShape) {
         // Duplicating (has data but no id)
         setName(editingShape.name);
@@ -74,6 +86,8 @@ export function PieceTypeFormDialog({
         setDefaultRotation(editingShape.defaultRotation);
         setElevationState(DEFAULT_CORNER_ELEVATIONS);
         setShowElevation(false);
+        setMagnets(editingShape.magnets || []);
+        setShowMagnets((editingShape.magnets?.length || 0) > 0);
       } else {
         // Creating new
         setName('');
@@ -83,6 +97,8 @@ export function PieceTypeFormDialog({
         setDefaultRotation(0);
         setElevationState(DEFAULT_CORNER_ELEVATIONS);
         setShowElevation(false);
+        setMagnets([]);
+        setShowMagnets(false);
       }
     }
   }, [open, editingShape, getElevation]);
@@ -108,6 +124,16 @@ export function PieceTypeFormDialog({
 
     return key;
   };
+
+  // Real-time validation: check if shapeKey already exists
+  const shapeKey = generateShapeKey();
+  const existingConflict = useMemo(() => {
+    // Don't check conflict when editing the same shape
+    if (editingShape?.id) return null;
+
+    const conflict = shapes.find(s => s.shapeKey === shapeKey);
+    return conflict || null;
+  }, [shapes, shapeKey, editingShape?.id]);
 
   // Generate default name
   const generateDefaultName = () => {
@@ -142,6 +168,25 @@ export function PieceTypeFormDialog({
     setElevationState((prev) => ({ ...prev, [corner]: value }));
   };
 
+  // Magnet management functions
+  const addMagnet = () => {
+    setMagnets([...magnets, { size: '3x2', quantity: 1 }]);
+  };
+
+  const updateMagnet = (index: number, field: 'size' | 'quantity', value: string | number) => {
+    const updated = [...magnets];
+    if (field === 'size') {
+      updated[index].size = value as string;
+    } else {
+      updated[index].quantity = Math.max(1, value as number);
+    }
+    setMagnets(updated);
+  };
+
+  const removeMagnet = (index: number) => {
+    setMagnets(magnets.filter((_, i) => i !== index));
+  };
+
   // Quick presets for elevation
   // Ramps go from 0.5" (base) to 3" (base + 2.5" max elevation)
   const applyPreset = (preset: string) => {
@@ -169,8 +214,12 @@ export function PieceTypeFormDialog({
   };
 
   const handleSubmit = async () => {
+    // Don't submit if there's a conflict
+    if (existingConflict) return;
+
     const finalName = name.trim() || generateDefaultName();
-    const shapeKey = generateShapeKey();
+    // Filter out empty magnets
+    const validMagnets = magnets.filter(m => m.size && m.quantity > 0);
 
     let result;
     if (editingShape && editingShape.id) {
@@ -181,6 +230,7 @@ export function PieceTypeFormDialog({
         height,
         isDiagonal,
         defaultRotation: isDiagonal ? defaultRotation : 0,
+        magnets: validMagnets.length > 0 ? validMagnets : undefined,
       });
       if (result) {
         // Save elevation
@@ -196,6 +246,7 @@ export function PieceTypeFormDialog({
         height,
         isDiagonal,
         defaultRotation: isDiagonal ? defaultRotation : 0,
+        magnets: validMagnets.length > 0 ? validMagnets : undefined,
       });
       if (result) {
         // Save elevation for new shape
@@ -211,7 +262,7 @@ export function PieceTypeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Piece Type' : 'Create Piece Type'}
@@ -550,11 +601,95 @@ export function PieceTypeFormDialog({
             </div>
           )}
 
+          {/* Magnets Section */}
+          <div className="border border-gray-700 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowMagnets(!showMagnets)}
+              className="w-full px-4 py-3 flex items-center justify-between bg-gray-800/50 hover:bg-gray-800 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-300">
+                  🧲 Magnets
+                </span>
+                {magnets.length > 0 && (
+                  <span className="text-xs bg-purple-600/30 text-purple-400 px-2 py-0.5 rounded">
+                    {magnets.reduce((sum, m) => sum + m.quantity, 0)} total
+                  </span>
+                )}
+              </div>
+              {showMagnets ? (
+                <ChevronUp className="h-4 w-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              )}
+            </button>
+
+            {showMagnets && (
+              <div className="p-4 space-y-3 border-t border-gray-700">
+                {magnets.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-2">
+                    No magnets configured
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {magnets.map((magnet, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={magnet.size}
+                          onChange={(e) => updateMagnet(index, 'size', e.target.value)}
+                          placeholder="Size (e.g., 3x2)"
+                          className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        />
+                        <span className="text-gray-500 text-sm">×</span>
+                        <input
+                          type="number"
+                          value={magnet.quantity}
+                          onChange={(e) => updateMagnet(index, 'quantity', parseInt(e.target.value) || 1)}
+                          min={1}
+                          className="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-white text-center focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeMagnet(index)}
+                          className="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addMagnet}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Magnet Type
+                </Button>
+
+                <p className="text-xs text-gray-500">
+                  Enter magnet dimensions (e.g., 3x2, 5x10) and quantity per piece.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Generated key preview */}
-          <div className="bg-gray-800/50 rounded-lg p-3">
+          <div className={`rounded-lg p-3 ${existingConflict ? 'bg-red-900/30 border border-red-500/50' : 'bg-gray-800/50'}`}>
             <p className="text-xs text-gray-400">
-              Shape key: <span className="text-white font-mono">{generateShapeKey()}</span>
+              Shape key: <span className="text-white font-mono">{shapeKey}</span>
             </p>
+            {existingConflict && (
+              <p className="text-xs text-red-400 mt-1">
+                ⚠ Conflict: "{existingConflict.name}" already uses this key
+              </p>
+            )}
           </div>
         </div>
 
@@ -562,7 +697,7 @@ export function PieceTypeFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isLoading}>
+          <Button onClick={handleSubmit} disabled={isLoading || !!existingConflict}>
             {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isEditing ? 'Save Changes' : 'Create Piece Type'}
           </Button>

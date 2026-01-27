@@ -7,6 +7,7 @@ import { MapCanvas } from './MapCanvas';
 import { Toolbar } from './Toolbar';
 import { PiecesSummaryPanel } from './PiecesSummaryPanel';
 import { RadialMenu } from './RadialMenu';
+import { UnsavedChangesGuard } from './UnsavedChangesGuard';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
 
@@ -62,6 +63,7 @@ export function MapDesigner() {
 
   return (
     <div className="h-[calc(100vh-3rem)] flex flex-col bg-gray-900">
+      <UnsavedChangesGuard />
       <Toolbar />
       <div className="flex-1 flex overflow-hidden min-h-0">
         {!is3DMode && <Sidebar />}

@@ -20,9 +20,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Eye, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Grid3X3, Magnet, Lock, Unlock } from 'lucide-react';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Eye, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Grid3X3, Magnet, Lock, Unlock, Ruler } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { generateThumbnail } from '@/lib/stageRef';
+import { clearLastMapId } from './UnsavedChangesGuard';
 import type { ModularPiece, SavedMap } from '@/types';
 
 // Dropdown menu component
@@ -111,12 +112,18 @@ export function Toolbar() {
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [showExportReportDialog, setShowExportReportDialog] = useState(false);
+  const [showMapSizeDialog, setShowMapSizeDialog] = useState(false);
+  const [tempMapWidth, setTempMapWidth] = useState(60);
+  const [tempMapHeight, setTempMapHeight] = useState(60);
   const mapSelectorRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const {
     mapName,
     setMapName,
+    mapWidth,
+    mapHeight,
+    setMapDimensions,
     levels,
     currentLevel,
     setCurrentLevel,
@@ -138,6 +145,8 @@ export function Toolbar() {
     loadMapData,
     is3DMode,
     toggle3DMode,
+    markAsSaved,
+    hasUnsavedChanges,
   } = useMapStore();
 
   const { saveMap, savedMaps, fetchMaps, loadMap } = useMapInventoryStore();
@@ -179,8 +188,8 @@ export function Toolbar() {
   );
 
   const handleSelectMap = async (mapId: string) => {
-    if (placedPieces.length > 0 && currentMapId !== mapId) {
-      if (!confirm('Load this map? Unsaved changes will be lost.')) {
+    if (hasUnsavedChanges && currentMapId !== mapId) {
+      if (!confirm('Load this map? You have unsaved changes that will be lost.')) {
         return;
       }
     }
@@ -231,6 +240,8 @@ export function Toolbar() {
       if (savedMap && !currentMapId) {
         setCurrentMapId(savedMap.id);
       }
+      // Mark map as saved (no unsaved changes)
+      markAsSaved();
       setShowSaveDialog(false);
     } catch (error) {
       console.error('Failed to save map:', error);
@@ -282,13 +293,25 @@ export function Toolbar() {
   }, [currentMapId, mapName, getMapDataForSave]);
 
   const handleNewMap = () => {
-    if (placedPieces.length > 0) {
-      if (!confirm('Start a new map? Unsaved changes will be lost.')) {
+    if (hasUnsavedChanges) {
+      if (!confirm('Start a new map? You have unsaved changes that will be lost.')) {
         return;
       }
     }
+    clearLastMapId();
     resetToNewMap();
     router.push('/designer');
+  };
+
+  const handleOpenMapSizeDialog = () => {
+    setTempMapWidth(mapWidth);
+    setTempMapHeight(mapHeight);
+    setShowMapSizeDialog(true);
+  };
+
+  const handleSaveMapSize = () => {
+    setMapDimensions(tempMapWidth, tempMapHeight);
+    setShowMapSizeDialog(false);
   };
 
   return (
@@ -360,6 +383,15 @@ export function Toolbar() {
             </Button>
           }
         >
+          <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-700">
+            Map: {mapWidth}" × {mapHeight}"
+          </div>
+          <MenuItem
+            icon={Ruler}
+            label="Map Size..."
+            onClick={handleOpenMapSizeDialog}
+          />
+          <MenuDivider />
           <MenuItem
             icon={Grid3X3}
             label="Show Grid"
@@ -502,7 +534,7 @@ export function Toolbar() {
               size="sm"
               onClick={handleSaveClick}
               disabled={isSaving}
-              className="gap-1"
+              className={`gap-1 ${hasUnsavedChanges ? 'ring-2 ring-yellow-500' : ''}`}
             >
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -512,10 +544,17 @@ export function Toolbar() {
               <span className="hidden sm:inline">
                 {currentMapId ? 'Save' : 'Save'}
               </span>
+              {hasUnsavedChanges && (
+                <span className="w-2 h-2 bg-yellow-500 rounded-full" />
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {currentMapId ? 'Save changes' : 'Save as new map'}
+            {hasUnsavedChanges
+              ? 'You have unsaved changes'
+              : currentMapId
+                ? 'Save changes'
+                : 'Save as new map'}
           </TooltipContent>
         </Tooltip>
       </div>
@@ -584,6 +623,80 @@ export function Toolbar() {
         availablePieces={availablePieces}
         terrainTypes={terrainTypes}
       />
+
+      {/* Map Size Dialog */}
+      <Dialog open={showMapSizeDialog} onOpenChange={setShowMapSizeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Map Size</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-300 block mb-2">
+                  Width (inches)
+                </label>
+                <input
+                  type="number"
+                  value={tempMapWidth}
+                  onChange={(e) => setTempMapWidth(Math.max(12, Number(e.target.value)))}
+                  min={12}
+                  max={200}
+                  step={6}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-300 block mb-2">
+                  Height (inches)
+                </label>
+                <input
+                  type="number"
+                  value={tempMapHeight}
+                  onChange={(e) => setTempMapHeight(Math.max(12, Number(e.target.value)))}
+                  min={12}
+                  max={200}
+                  step={6}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <p className="text-sm text-gray-400">
+              Common sizes: 36×36, 48×48, 60×60, 72×48
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { w: 36, h: 36 },
+                { w: 48, h: 48 },
+                { w: 60, h: 60 },
+                { w: 72, h: 48 },
+                { w: 72, h: 72 },
+              ].map(({ w, h }) => (
+                <Button
+                  key={`${w}x${h}`}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setTempMapWidth(w);
+                    setTempMapHeight(h);
+                  }}
+                  className={tempMapWidth === w && tempMapHeight === h ? 'ring-2 ring-blue-500' : ''}
+                >
+                  {w}×{h}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMapSizeDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveMapSize}>
+              Apply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

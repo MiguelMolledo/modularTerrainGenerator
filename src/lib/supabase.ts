@@ -38,6 +38,11 @@ export interface DbMap {
 }
 
 // Inventory database types
+export interface DbMagnetConfig {
+  size: string;
+  quantity: number;
+}
+
 export interface DbPieceShape {
   id: string;
   shape_key: string;
@@ -47,6 +52,7 @@ export interface DbPieceShape {
   is_diagonal: boolean;
   default_rotation: number;
   display_order: number;
+  magnets: DbMagnetConfig[] | null; // JSONB: array of magnet configurations
   created_at: string;
 }
 
