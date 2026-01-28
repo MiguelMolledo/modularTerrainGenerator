@@ -7,6 +7,7 @@ import { useMapStore } from '@/store/mapStore';
 import { useMapInventoryStore } from '@/store/mapInventoryStore';
 import { useInventoryStore } from '@/store/inventoryStore';
 import { getLastMapId } from '@/components/map-designer/UnsavedChangesGuard';
+import { DEFAULT_PROPS } from '@/config/props';
 
 function MapLoader() {
   const searchParams = useSearchParams();
@@ -44,7 +45,8 @@ function MapLoader() {
     if (terrainTypes.length > 0 && shapes.length > 0) {
       const pieces = getModularPieces();
       if (pieces.length > 0) {
-        setAvailablePieces(pieces);
+        // Include DEFAULT_PROPS so props are always available
+        setAvailablePieces([...pieces, ...DEFAULT_PROPS]);
         // Also update terrain types for the sidebar
         // Include both UUID and slug so we can look up by either
         const simpleTerrainTypes = terrainTypes.map(t => ({

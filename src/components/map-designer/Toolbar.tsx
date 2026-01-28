@@ -20,7 +20,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Eye, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Grid3X3, Magnet, Lock, Unlock, Ruler } from 'lucide-react';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Eye, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Grid3X3, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import { useRouter } from 'next/navigation';
 import { generateThumbnail } from '@/lib/stageRef';
 import { clearLastMapId } from './UnsavedChangesGuard';
@@ -147,6 +148,12 @@ export function Toolbar() {
     toggle3DMode,
     markAsSaved,
     hasUnsavedChanges,
+    showReferenceLevels,
+    referenceLevelOpacity,
+    setShowReferenceLevels,
+    setReferenceLevelOpacity,
+    editMode,
+    setEditMode,
   } = useMapStore();
 
   const { saveMap, savedMaps, fetchMaps, loadMap } = useMapInventoryStore();
@@ -196,6 +203,8 @@ export function Toolbar() {
     const map = await loadMap(mapId);
     if (map) {
       loadMapData(map, map.id);
+      // Update URL to match the selected map
+      router.replace(`/designer?mapId=${mapId}`);
     }
     setShowMapSelector(false);
     setMapSearchQuery('');
@@ -327,6 +336,38 @@ export function Toolbar() {
 
         <Separator orientation="vertical" className="h-8" />
 
+        {/* Edit Mode Toggle (Terrain vs Props) */}
+        <div className="flex items-center gap-0.5 bg-gray-700 rounded-md p-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={editMode === 'terrain' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setEditMode('terrain')}
+                className={`px-2 h-7 ${editMode === 'terrain' ? '' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Mountain className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Terrain mode - Edit terrain pieces</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={editMode === 'props' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setEditMode('props')}
+                className={`px-2 h-7 ${editMode === 'props' ? '' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Users className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Props mode - Edit NPCs, furniture, items</TooltipContent>
+          </Tooltip>
+        </div>
+
+        <Separator orientation="vertical" className="h-8" />
+
         {/* Level selector - compact */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-gray-400 hidden sm:inline">Level:</span>
@@ -344,6 +385,42 @@ export function Toolbar() {
               </Button>
             ))}
           </div>
+        </div>
+
+        {/* Reference Levels Toggle + Opacity */}
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={showReferenceLevels ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setShowReferenceLevels(!showReferenceLevels)}
+                className="h-7 px-2"
+                title={showReferenceLevels ? 'Hide other levels' : 'Show other levels as reference'}
+              >
+                <Layers className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showReferenceLevels ? 'Hide' : 'Show'} other levels as reference
+            </TooltipContent>
+          </Tooltip>
+
+          {showReferenceLevels && (
+            <div className="flex items-center gap-2">
+              <Slider
+                value={[referenceLevelOpacity * 100]}
+                onValueChange={([v]) => setReferenceLevelOpacity(v / 100)}
+                min={5}
+                max={80}
+                step={5}
+                className="w-16"
+              />
+              <span className="text-xs text-gray-400 w-6">
+                {Math.round(referenceLevelOpacity * 100)}%
+              </span>
+            </div>
+          )}
         </div>
 
         <Separator orientation="vertical" className="h-8" />

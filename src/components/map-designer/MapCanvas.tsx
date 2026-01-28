@@ -5,10 +5,19 @@ import { Stage, Layer, Rect, Line, Group, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { useMapStore } from '@/store/mapStore';
 import { BASE_PIXELS_PER_INCH } from '@/config/terrain';
-import { PlacedPiece } from '@/types';
+import { PlacedPiece, ModularPiece } from '@/types';
 import { checkCollisionWithPieces } from '@/lib/collisionUtils';
+import { desaturateColor } from '@/lib/colorUtils';
 import { setStageInstance } from '@/lib/stageRef';
 import { getGridDimensions } from '@/lib/gridUtils';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Info } from 'lucide-react';
 
 interface DragPreview {
   x: number;
@@ -24,6 +33,8 @@ interface DragPreview {
   isCustom?: boolean;
   isVariant?: boolean;
   cellColors?: string[][]; // Grid of terrain IDs
+  isProp?: boolean;
+  propEmoji?: string;
 }
 
 interface MapCanvasProps {
@@ -89,6 +100,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     currentY: number;
     active: boolean;
   } | null>(null);
+
+  // Help dialog state
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
   // Ref to track selection mode (for immediate drag cancellation)
   const isSelectingRef = useRef(false);
 
@@ -149,21 +163,34 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     exitPlacementMode,
     addPlacedPiece,
     toggle3DMode,
+    showReferenceLevels,
+    referenceLevelOpacity,
+    editMode,
+    customProps,
+    openPropSearch,
+    isPropSearchOpen,
   } = useMapStore();
 
   const pixelsPerInch = BASE_PIXELS_PER_INCH * zoom;
   const canvasWidth = mapWidth * pixelsPerInch;
   const canvasHeight = mapHeight * pixelsPerInch;
 
+  // Combined pieces array (terrain pieces + custom props)
+  const allPieces = useMemo(() => {
+    return [...availablePieces, ...customProps];
+  }, [availablePieces, customProps]);
+
   // Get selected piece info for preview (from sidebar)
   const selectedPiece = selectedPieceId
-    ? availablePieces.find((p) => p.id === selectedPieceId)
+    ? allPieces.find((p) => p.id === selectedPieceId)
     : null;
   const selectedTerrain = selectedPiece
     ? terrainTypes.find((t) => t.id === selectedPiece.terrainTypeId)
     : null;
 
   // Check collision with support for diagonal (triangular) pieces
+  // Props do NOT collide with terrain (they sit on top)
+  // Props can optionally collide with other props
   const checkCollision = useCallback(
     (
       x: number,
@@ -172,11 +199,18 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       height: number,
       excludePieceId?: string,
       isDiagonal: boolean = false,
-      rotation: number = 0
+      rotation: number = 0,
+      isProp: boolean = false
     ): boolean => {
-      const currentLevelPieces = placedPieces.filter(
-        (p) => p.level === currentLevel
-      );
+      // Filter pieces on current level
+      // Props only collide with other props, terrain only collides with terrain
+      const currentLevelPieces = placedPieces.filter((p) => {
+        if (p.level !== currentLevel) return false;
+        const piece = allPieces.find((ap) => ap.id === p.pieceId);
+        const pieceIsProp = piece?.pieceType === 'prop';
+        // Only check collision with same type (prop vs prop, terrain vs terrain)
+        return isProp === pieceIsProp;
+      });
 
       const newPieceGeometry = {
         x,
@@ -188,7 +222,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       };
 
       const getPieceInfo = (pieceId: string) => {
-        const piece = availablePieces.find((p) => p.id === pieceId);
+        const piece = allPieces.find((p) => p.id === pieceId);
         if (!piece) return null;
         return {
           width: piece.size.width,
@@ -204,7 +238,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         excludePieceId
       );
     },
-    [placedPieces, availablePieces, currentLevel]
+    [placedPieces, allPieces, currentLevel]
   );
 
   // Keep dragPreviewRef in sync with dragPreview state
@@ -266,7 +300,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         let closestDistY = MAGNETIC_SNAP_THRESHOLD;
 
         for (const placed of currentLevelPieces) {
-          const piece = availablePieces.find((p) => p.id === placed.pieceId);
+          const piece = allPieces.find((p) => p.id === placed.pieceId);
           if (!piece) continue;
 
           // Calculate effective dimensions based on rotation
@@ -361,12 +395,12 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
       return { x: snappedX, y: snappedY };
     },
-    [gridConfig.snapToGrid, gridConfig.magneticSnap, gridConfig.cellSize, mapWidth, mapHeight, placedPieces, availablePieces, currentLevel]
+    [gridConfig.snapToGrid, gridConfig.magneticSnap, gridConfig.cellSize, mapWidth, mapHeight, placedPieces, allPieces, currentLevel]
   );
 
   // Function to update preview after rotation
-  const updatePreviewAfterRotation = useCallback((newRotation: number) => {
-    const piece = selectedPieceId ? availablePieces.find((p) => p.id === selectedPieceId) : null;
+  const updatePreviewAfterRotation = useCallback((newRotation: number, excludeId?: string) => {
+    const piece = selectedPieceId ? allPieces.find((p) => p.id === selectedPieceId) : null;
     if (!piece) return;
 
     const currentPreview = dragPreviewRef.current;
@@ -388,9 +422,10 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       newY,
       effectiveWidth,
       effectiveHeight,
-      undefined,
+      excludeId,
       piece.isDiagonal,
-      newRotation
+      newRotation,
+      piece.pieceType === 'prop'
     );
 
     const terrain = terrainTypes.find((t) => t.id === piece.terrainTypeId);
@@ -412,7 +447,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     dragPreviewRef.current = newPreview;
     setDragPreview(newPreview);
-  }, [selectedPieceId, availablePieces, terrainTypes, getSnappedPosition, checkCollision]);
+  }, [selectedPieceId, allPieces, terrainTypes, getSnappedPosition, checkCollision]);
 
   // Handle keyboard events
   useEffect(() => {
@@ -425,11 +460,28 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
       if (isTyping) return;
 
-      // R key only rotates already placed pieces (not during drag)
+      // R key to rotate pieces
       if (e.key === 'r' || e.key === 'R') {
-        // Only rotate if we have placed pieces selected and not dragging
-        if (selectedPlacedPieceIds.length > 0 && !draggingPieceId && !isSidebarDragging && !mapDragPiece && !isPlacementMode && !multiDragState) {
-          e.preventDefault();
+        e.preventDefault();
+
+        // Case 1: Rotate during sidebar drag or placement mode
+        if (isSidebarDragging || isPlacementMode) {
+          const newRotation = (currentRotation + 90) % 360;
+          setCurrentRotation(newRotation);
+          updatePreviewAfterRotation(newRotation);
+          return;
+        }
+
+        // Case 2: Rotate during map drag (moving existing piece)
+        if (mapDragPiece) {
+          const newRotation = (mapDragPiece.rotation + 90) % 360;
+          setMapDragPiece({ ...mapDragPiece, rotation: newRotation });
+          updatePreviewAfterRotation(newRotation, mapDragPiece.id);
+          return;
+        }
+
+        // Case 3: Rotate already placed pieces (when selected and not dragging)
+        if (selectedPlacedPieceIds.length > 0 && !draggingPieceId && !multiDragState) {
           rotateSelectedPlacedPiece();
         }
       }
@@ -454,6 +506,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         e.preventDefault();
         toggle3DMode();
       }
+      // P key to open prop search dialog
+      if ((e.key === 'p' || e.key === 'P') && !e.repeat && !isRadialMenuOpen && !isPropSearchOpen && !draggingPieceId && !isSidebarDragging && !isPlacementMode) {
+        e.preventDefault();
+        openPropSearch(mousePosRef.current.x, mousePosRef.current.y);
+      }
       // Escape to cancel placement mode or map drag
       if (e.key === 'Escape') {
         if (isPlacementMode) {
@@ -463,15 +520,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         }
         if (mapDragPiece) {
           e.preventDefault();
-          // Restore original piece
-          addPlacedPiece({
-            id: mapDragPiece.id,
-            pieceId: mapDragPiece.pieceId,
-            x: mapDragPiece.originalX,
-            y: mapDragPiece.originalY,
-            rotation: mapDragPiece.rotation,
-            level: mapDragPiece.level,
-          });
+          // Cancel the drag - piece was never removed, just hidden
+          // Simply unhide it by clearing draggingPieceId
           setMapDragPiece(null);
           setDraggingPieceId(null);
           setSelectedPieceId(null);
@@ -515,6 +565,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     setDraggingPieceId,
     setSelectedPieceId,
     toggle3DMode,
+    openPropSearch,
+    isPropSearchOpen,
   ]);
 
   // Generate grid lines
@@ -549,6 +601,25 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   // Filter pieces for current level, deduplicate, and sort so selected pieces render last (on top)
   const selectedSet = useMemo(() => new Set(selectedPlacedPieceIds), [selectedPlacedPieceIds]);
 
+  // Helper to check if a piece definition is a prop
+  const isPropPiece = useCallback((piece: ModularPiece | undefined) => {
+    return piece?.pieceType === 'prop';
+  }, []);
+
+  // Helper to check if a placed piece is a prop
+  const isPlacedPieceProp = useCallback((placedId: string) => {
+    const placed = placedPieces.find((p) => p.id === placedId);
+    if (!placed) return false;
+    const piece = allPieces.find((p) => p.id === placed.pieceId);
+    return isPropPiece(piece);
+  }, [placedPieces, allPieces, isPropPiece]);
+
+  // Check if a placed piece should be interactive based on edit mode
+  const isPlacedPieceInteractive = useCallback((placedId: string) => {
+    const isProp = isPlacedPieceProp(placedId);
+    return editMode === 'props' ? isProp : !isProp;
+  }, [editMode, isPlacedPieceProp]);
+
   const visiblePieces = useMemo(() => {
     const pieces = placedPieces.filter((p) => p.level === currentLevel);
     // Deduplicate by id (keep first occurrence)
@@ -558,15 +629,29 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       seen.add(p.id);
       return true;
     });
-    // Sort: selected pieces last so they render on top
+    // Sort: selected pieces last so they render on top, props always on top of terrain
     return uniquePieces.sort((a, b) => {
+      const pieceA = allPieces.find((p) => p.id === a.pieceId);
+      const pieceB = allPieces.find((p) => p.id === b.pieceId);
+      const aIsProp = isPropPiece(pieceA);
+      const bIsProp = isPropPiece(pieceB);
+      // Props always render on top of terrain
+      if (aIsProp && !bIsProp) return 1;
+      if (!aIsProp && bIsProp) return -1;
+      // Within same type, selected pieces on top
       const aSelected = selectedSet.has(a.id);
       const bSelected = selectedSet.has(b.id);
       if (aSelected && !bSelected) return 1;
       if (!aSelected && bSelected) return -1;
       return 0;
     });
-  }, [placedPieces, currentLevel, selectedSet]);
+  }, [placedPieces, currentLevel, selectedSet, allPieces, isPropPiece]);
+
+  // Reference level pieces (other levels shown as guides)
+  const referencePieces = useMemo(() => {
+    if (!showReferenceLevels) return [];
+    return placedPieces.filter((p) => p.level !== currentLevel);
+  }, [placedPieces, currentLevel, showReferenceLevels]);
 
   // Handle wheel zoom - using native event listener for passive: false
   useEffect(() => {
@@ -591,6 +676,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     if (isPlacementMode) {
       exitPlacementMode();
       setDragPreview((prev) => ({ ...prev, visible: false }));
+    }
+
+    // Clear sidebar piece selection to avoid accidental duplicates
+    if (selectedPieceId && !mapDragPiece) {
+      setSelectedPieceId(null);
     }
 
     const isShiftKey = e.evt?.shiftKey;
@@ -621,7 +711,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     const placed = placedPieces.find((p) => p.id === placedId);
     if (!placed) return;
 
-    const piece = availablePieces.find((p) => p.id === placed.pieceId);
+    const piece = allPieces.find((p) => p.id === placed.pieceId);
     if (!piece) return;
 
     // Check if we're dragging multiple selected pieces
@@ -701,7 +791,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       effectiveHeight
     );
 
-    const hasCollision = checkCollision(snappedX, snappedY, effectiveWidth, effectiveHeight, undefined, selectedPiece.isDiagonal, rotation);
+    const hasCollision = checkCollision(snappedX, snappedY, effectiveWidth, effectiveHeight, undefined, selectedPiece.isDiagonal, rotation, selectedPiece.pieceType === 'prop');
 
     setDragPreview({
       x: snappedX,
@@ -719,6 +809,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       isCustom: selectedPiece.isCustom,
       isVariant: selectedPiece.isVariant,
       cellColors: selectedPiece.cellColors,
+      isProp: selectedPiece.pieceType === 'prop',
+      propEmoji: selectedPiece.propEmoji,
     });
   };
 
@@ -744,6 +836,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   const handleCanvasDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Only process if this was actually a sidebar drag
+    if (!isDraggingFromSidebar) return;
 
     // Use the ref to get the latest preview position
     const currentPreview = dragPreviewRef.current;
@@ -801,7 +896,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         }
 
         // Clamp to map bounds
-        const piece = availablePieces.find((ap) => ap.id === p.pieceId);
+        const piece = allPieces.find((ap) => ap.id === p.pieceId);
         if (piece) {
           const isRotated = p.rotation === 90 || p.rotation === 270;
           const w = isRotated ? piece.size.height : piece.size.width;
@@ -856,7 +951,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     // Exclude the piece being dragged from collision check
     const excludeId = mapDragPiece?.id;
-    const hasCollision = checkCollision(snappedX, snappedY, effectiveWidth, effectiveHeight, excludeId, selectedPiece.isDiagonal, rotation);
+    const hasCollision = checkCollision(snappedX, snappedY, effectiveWidth, effectiveHeight, excludeId, selectedPiece.isDiagonal, rotation, selectedPiece.pieceType === 'prop');
     const terrain = terrainTypes.find((t) => t.id === selectedPiece.terrainTypeId);
 
     const newPreview = {
@@ -875,6 +970,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       isCustom: selectedPiece.isCustom,
       isVariant: selectedPiece.isVariant,
       cellColors: selectedPiece.cellColors,
+      isProp: selectedPiece.pieceType === 'prop',
+      propEmoji: selectedPiece.propEmoji,
     };
 
     // Update both ref and state
@@ -910,7 +1007,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         const piecesInRect = placedPieces.filter((placed) => {
           if (placed.level !== currentLevel) return false;
 
-          const piece = availablePieces.find((p) => p.id === placed.pieceId);
+          const piece = allPieces.find((p) => p.id === placed.pieceId);
           if (!piece) return false;
 
           // Calculate effective dimensions based on rotation
@@ -1030,15 +1127,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       setPendingDrag(null);
     }
     if (mapDragPiece) {
-      // Restore original piece on mouse leave
-      addPlacedPiece({
-        id: mapDragPiece.id,
-        pieceId: mapDragPiece.pieceId,
-        x: mapDragPiece.originalX,
-        y: mapDragPiece.originalY,
-        rotation: mapDragPiece.rotation,
-        level: mapDragPiece.level,
-      });
+      // Cancel the drag - piece was never removed, just hidden
+      // Simply unhide it by clearing draggingPieceId
       setMapDragPiece(null);
       setDraggingPieceId(null);
       setSelectedPieceId(null);
@@ -1219,7 +1309,31 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
               y={dragPreview.y * pixelsPerInch}
             >
               {/* Highlight area - shows actual grid position */}
-              {dragPreview.isDiagonal ? (
+              {dragPreview.isProp ? (
+                // Prop preview - circular with emoji
+                <>
+                  <Circle
+                    x={dragPreview.width * pixelsPerInch / 2}
+                    y={dragPreview.height * pixelsPerInch / 2}
+                    radius={Math.min(dragPreview.width, dragPreview.height) * pixelsPerInch / 2}
+                    fill={dragPreview.hasCollision ? 'rgba(239, 68, 68, 0.8)' : 'rgba(255, 255, 255, 0.9)'}
+                    stroke={dragPreview.hasCollision ? '#ef4444' : '#3b82f6'}
+                    strokeWidth={2}
+                    dash={[6, 3]}
+                  />
+                  <Text
+                    text={dragPreview.propEmoji || '?'}
+                    x={0}
+                    y={0}
+                    width={dragPreview.width * pixelsPerInch}
+                    height={dragPreview.height * pixelsPerInch}
+                    align="center"
+                    verticalAlign="middle"
+                    fontSize={Math.min(dragPreview.width, dragPreview.height) * pixelsPerInch * 0.6}
+                    opacity={dragPreview.hasCollision ? 0.5 : 1}
+                  />
+                </>
+              ) : dragPreview.isDiagonal ? (
                 <Group
                   offsetX={dragPreview.width * pixelsPerInch / 2}
                   offsetY={dragPreview.height * pixelsPerInch / 2}
@@ -1283,16 +1397,18 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                   cornerRadius={4}
                 />
               )}
-              {/* Size label */}
-              <Text
-                x={4}
-                y={4}
-                text={dragPreview.label}
-                fontSize={11}
-                fill="#fff"
-                fontStyle="bold"
-                opacity={0.9}
-              />
+              {/* Size label - only for terrain, not props */}
+              {!dragPreview.isProp && (
+                <Text
+                  x={4}
+                  y={4}
+                  text={dragPreview.label}
+                  fontSize={11}
+                  fill="#fff"
+                  fontStyle="bold"
+                  opacity={0.9}
+                />
+              )}
               {/* Collision warning */}
               {dragPreview.hasCollision && (
                 <Text
@@ -1310,29 +1426,215 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
         {/* Placed pieces */}
         <Layer>
-          {visiblePieces.map((placed) => {
-            const piece = availablePieces.find((p) => p.id === placed.pieceId);
+          {/* Reference pieces (other levels shown as guides, rendered first/behind) */}
+          {referencePieces.map((placed) => {
+            const piece = allPieces.find((p) => p.id === placed.pieceId);
             if (!piece) return null;
+
+            const terrain = terrainTypes.find((t) => t.id === piece.terrainTypeId || t.slug === piece.terrainTypeId);
+            const isRotated = placed.rotation === 90 || placed.rotation === 270;
+            const effectiveWidth = (isRotated ? piece.size.height : piece.size.width) * pixelsPerInch;
+            const effectiveHeight = (isRotated ? piece.size.width : piece.size.height) * pixelsPerInch;
+            const pieceWidth = piece.size.width * pixelsPerInch;
+            const pieceHeight = piece.size.height * pixelsPerInch;
+            const baseColor = terrain?.color || '#666';
+            const refColor = desaturateColor(baseColor, 0.5);
+            const levelLabel = placed.level === 0 ? 'G' : placed.level > 0 ? `${placed.level}` : `B${Math.abs(placed.level)}`;
+
+            return (
+              <Group
+                key={`ref-${placed.id}`}
+                x={placed.x * pixelsPerInch + effectiveWidth / 2}
+                y={placed.y * pixelsPerInch + effectiveHeight / 2}
+                offsetX={pieceWidth / 2}
+                offsetY={pieceHeight / 2}
+                rotation={placed.rotation}
+                opacity={referenceLevelOpacity}
+                listening={false}
+              >
+                {piece.isDiagonal ? (
+                  <Line
+                    points={[0, 0, pieceWidth, 0, 0, pieceHeight]}
+                    closed
+                    fill={refColor}
+                    stroke="rgba(255,255,255,0.3)"
+                    strokeWidth={1}
+                    dash={[4, 4]}
+                  />
+                ) : (piece.isCustom || piece.isVariant) && piece.cellColors && piece.cellColors.length > 0 ? (
+                  <>
+                    {(() => {
+                      const { rows, cols } = getGridDimensions(piece.size.width, piece.size.height);
+                      const cellWidth = pieceWidth / cols;
+                      const cellHeight = pieceHeight / rows;
+                      return piece.cellColors.map((row, rowIdx) =>
+                        row.map((terrainId, colIdx) => {
+                          const cellTerrain = terrainTypes.find((t) => t.id === terrainId);
+                          const cellColor = desaturateColor(cellTerrain?.color || '#666', 0.5);
+                          return (
+                            <Rect
+                              key={`${rowIdx}-${colIdx}`}
+                              x={colIdx * cellWidth}
+                              y={rowIdx * cellHeight}
+                              width={cellWidth}
+                              height={cellHeight}
+                              fill={cellColor}
+                              stroke="rgba(255,255,255,0.2)"
+                              strokeWidth={0.5}
+                              dash={[2, 2]}
+                            />
+                          );
+                        })
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <Rect
+                    width={pieceWidth}
+                    height={pieceHeight}
+                    fill={refColor}
+                    stroke="rgba(255,255,255,0.3)"
+                    strokeWidth={1}
+                    cornerRadius={2}
+                    dash={[4, 4]}
+                  />
+                )}
+                {/* Level badge */}
+                <Text
+                  text={levelLabel}
+                  x={2}
+                  y={2}
+                  fontSize={10}
+                  fill="#fff"
+                  fontStyle="bold"
+                />
+              </Group>
+            );
+          })}
+
+          {/* Current level pieces */}
+          {visiblePieces.map((placed) => {
+            const piece = allPieces.find((p) => p.id === placed.pieceId);
+            if (!piece) return null;
+
+            // Check if this piece is a prop
+            const isProp = piece.pieceType === 'prop';
+            // Control interactivity based on edit mode
+            const isInteractive = editMode === 'props' ? isProp : !isProp;
 
             // Look up by id (UUID) or slug for backward compatibility
             const terrain = terrainTypes.find((t) => t.id === piece.terrainTypeId || t.slug === piece.terrainTypeId);
+            // Calculate effective dimensions based on rotation (for positioning)
+            const isRotated = placed.rotation === 90 || placed.rotation === 270;
+            const effectiveWidth = (isRotated ? piece.size.height : piece.size.width) * pixelsPerInch;
+            const effectiveHeight = (isRotated ? piece.size.width : piece.size.height) * pixelsPerInch;
+            // Original dimensions (for drawing the shape inside the group)
             const pieceWidth = piece.size.width * pixelsPerInch;
             const pieceHeight = piece.size.height * pixelsPerInch;
             const isDragging = draggingPieceId === placed.id;
             const isSelected = selectedSet.has(placed.id);
 
+            // Props are rendered as circles with emojis
+            if (isProp) {
+              const propRadius = Math.min(pieceWidth, pieceHeight) / 2;
+              const emojiSize = propRadius * 1.2;
+
+              return (
+                <Group
+                  key={placed.id}
+                  x={placed.x * pixelsPerInch + effectiveWidth / 2}
+                  y={placed.y * pixelsPerInch + effectiveHeight / 2}
+                  offsetX={pieceWidth / 2}
+                  offsetY={pieceHeight / 2}
+                  listening={isInteractive}
+                  onMouseDown={isInteractive ? (e) => handlePieceMouseDown(placed.id, e) : undefined}
+                  onDblClick={isInteractive ? () => removePlacedPiece(placed.id) : undefined}
+                  onClick={isInteractive ? (e) => handlePieceClick(placed.id, e) : undefined}
+                  rotation={placed.rotation}
+                  opacity={isDragging ? 0 : (isInteractive ? 1 : 0.6)}
+                  visible={!isDragging}
+                >
+                  {/* Circular background */}
+                  <Circle
+                    x={pieceWidth / 2}
+                    y={pieceHeight / 2}
+                    radius={propRadius}
+                    fill="rgba(255, 255, 255, 0.9)"
+                    stroke={isSelected ? '#3b82f6' : '#666666'}
+                    strokeWidth={isSelected ? 3 : 2}
+                    shadowColor="black"
+                    shadowBlur={4}
+                    shadowOpacity={0.3}
+                  />
+                  {/* Emoji */}
+                  <Text
+                    text={piece.propEmoji || '?'}
+                    x={0}
+                    y={0}
+                    width={pieceWidth}
+                    height={pieceHeight}
+                    align="center"
+                    verticalAlign="middle"
+                    fontSize={emojiSize}
+                  />
+                  {/* Rotate button - appears when selected */}
+                  {isSelected && (
+                    <Group
+                      x={pieceWidth / 2}
+                      y={-12}
+                      onClick={(e) => {
+                        e.cancelBubble = true;
+                        const newRotation = (placed.rotation + 90) % 360;
+                        updatePlacedPiece(placed.id, { rotation: newRotation });
+                      }}
+                      onMouseEnter={(e) => {
+                        const stage = e.target.getStage();
+                        if (stage) stage.container().style.cursor = 'pointer';
+                      }}
+                      onMouseLeave={(e) => {
+                        const stage = e.target.getStage();
+                        if (stage) stage.container().style.cursor = 'default';
+                      }}
+                    >
+                      <Circle
+                        radius={10}
+                        fill="#3b82f6"
+                        stroke="#fff"
+                        strokeWidth={2}
+                        shadowColor="black"
+                        shadowBlur={4}
+                        shadowOpacity={0.5}
+                      />
+                      <Text
+                        text="↻"
+                        fontSize={14}
+                        fill="#fff"
+                        fontStyle="bold"
+                        x={-5}
+                        y={-7}
+                      />
+                    </Group>
+                  )}
+                </Group>
+              );
+            }
+
+            // Regular terrain piece rendering
             return (
               <Group
                 key={placed.id}
-                x={placed.x * pixelsPerInch + pieceWidth / 2}
-                y={placed.y * pixelsPerInch + pieceHeight / 2}
+                // Position using EFFECTIVE dimensions (matches drag/drop system)
+                x={placed.x * pixelsPerInch + effectiveWidth / 2}
+                y={placed.y * pixelsPerInch + effectiveHeight / 2}
+                // Offset using ORIGINAL dimensions (rotation pivot at shape center)
                 offsetX={pieceWidth / 2}
                 offsetY={pieceHeight / 2}
-                onMouseDown={(e) => handlePieceMouseDown(placed.id, e)}
-                onDblClick={() => removePlacedPiece(placed.id)}
-                onClick={(e) => handlePieceClick(placed.id, e)}
+                listening={isInteractive}
+                onMouseDown={isInteractive ? (e) => handlePieceMouseDown(placed.id, e) : undefined}
+                onDblClick={isInteractive ? () => removePlacedPiece(placed.id) : undefined}
+                onClick={isInteractive ? (e) => handlePieceClick(placed.id, e) : undefined}
                 rotation={placed.rotation}
-                opacity={isDragging ? 0 : 1}
+                opacity={isDragging ? 0 : (isInteractive ? 1 : 0.6)}
                 visible={!isDragging}
               >
                 {piece.isDiagonal ? (
@@ -1531,6 +1833,68 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
           })}
         </Layer>
       </Stage>
+
+      {/* Help button */}
+      <Button
+        variant="outline"
+        size="icon"
+        className="absolute top-2 right-2 h-8 w-8 bg-gray-800/80 hover:bg-gray-700 border-gray-600 z-50"
+        onClick={() => setShowHelpDialog(true)}
+      >
+        <Info className="h-4 w-4" />
+      </Button>
+
+      {/* Help Dialog */}
+      <Dialog open={showHelpDialog} onOpenChange={setShowHelpDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Keyboard Shortcuts</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+              <div className="font-medium text-gray-400">Mouse</div>
+              <div className="text-white"></div>
+
+              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Left Click</div>
+              <div className="text-gray-300 flex items-center">Select piece</div>
+
+              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Left Drag</div>
+              <div className="text-gray-300 flex items-center">Selection rectangle / Move piece</div>
+
+              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Right Drag</div>
+              <div className="text-gray-300 flex items-center">Pan the map</div>
+
+              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Shift+Click</div>
+              <div className="text-gray-300 flex items-center">Add to selection</div>
+
+              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Double Click</div>
+              <div className="text-gray-300 flex items-center">Delete piece</div>
+            </div>
+
+            <div className="border-t border-gray-700 pt-3">
+              <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                <div className="font-medium text-gray-400">Keyboard</div>
+                <div className="text-white"></div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs font-mono">R</div>
+                <div className="text-gray-300 flex items-center">Rotate piece (selected or while dragging)</div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs font-mono">T</div>
+                <div className="text-gray-300 flex items-center">Quick piece selector (radial menu)</div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs font-mono">V</div>
+                <div className="text-gray-300 flex items-center">Toggle 2D / 3D view</div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs font-mono">Delete</div>
+                <div className="text-gray-300 flex items-center">Delete selected pieces</div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs font-mono">Escape</div>
+                <div className="text-gray-300 flex items-center">Cancel / Deselect</div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Coordinates overlay */}
       <div className="absolute bottom-2 right-2 bg-black/50 px-2 py-1 rounded text-xs text-white">

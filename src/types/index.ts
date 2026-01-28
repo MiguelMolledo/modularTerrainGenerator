@@ -8,6 +8,15 @@ export interface TerrainType {
   description?: string;
 }
 
+// Piece type discriminator
+export type PieceType = 'terrain' | 'prop';
+
+// Prop categories
+export type PropCategory = 'furniture' | 'npc' | 'creature' | 'hero' | 'boss' | 'item' | 'custom';
+
+// Edit mode (what can be interacted with)
+export type EditMode = 'terrain' | 'props';
+
 // Supported piece sizes in inches
 export interface PieceSize {
   width: number;  // in inches
@@ -46,6 +55,8 @@ export interface ModularPiece {
   imageUrl?: string;
   quantity: number; // how many the user has crafted
   defaultRotation?: number; // pre-defined rotation for diagonal pieces (0, 90, 180, 270)
+  // 3D properties
+  baseHeight?: number; // Base height in inches (default 0.5")
   // 3D elevation - height at each corner (in inches, 0-2.5 range)
   // If not specified, piece is flat with base height only
   elevation?: CornerElevations;
@@ -56,6 +67,10 @@ export interface ModularPiece {
   isVariant?: boolean;
   variantId?: string;
   tags?: string[];
+  // Props system
+  pieceType?: PieceType;      // 'terrain' (default) or 'prop'
+  propEmoji?: string;          // Emoji for props (e.g., "🪑", "👤", "🗡️")
+  propCategory?: PropCategory; // Category for organizing props
 }
 
 // A piece placed on the map
@@ -118,6 +133,7 @@ export interface SavedMapData {
   thumbnail?: string;
   snapshot?: string;
   isCustomThumbnail?: boolean;
+  customProps?: ModularPiece[]; // User-created props saved with the map
 }
 
 // =============================================

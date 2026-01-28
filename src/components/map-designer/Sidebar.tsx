@@ -1,16 +1,32 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useMapStore } from '@/store/mapStore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ChevronLeft, ChevronRight, Puzzle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { ChevronLeft, ChevronRight, Puzzle, Plus, Trash2 } from 'lucide-react';
 import { getGridDimensions } from '@/lib/gridUtils';
+import { PROP_CATEGORIES, PROP_SIZES, COMMON_PROP_EMOJIS, DEFAULT_PROPS } from '@/config/props';
+import type { ModularPiece, PropCategory } from '@/types';
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
+  const [showCreatePropDialog, setShowCreatePropDialog] = useState(false);
+  const [newPropName, setNewPropName] = useState('');
+  const [newPropEmoji, setNewPropEmoji] = useState('👤');
+  const [newPropCategory, setNewPropCategory] = useState<PropCategory>('custom');
+  const [newPropSize, setNewPropSize] = useState('medium');
+
   const {
     terrainTypes,
     availablePieces,
@@ -22,16 +38,69 @@ export function Sidebar() {
     endSidebarDrag,
     selectedTerrainTab,
     setSelectedTerrainTab,
+    editMode,
+    customProps,
+    addCustomProp,
+    removeCustomProp,
   } = useMapStore();
 
   // Get first terrain tab as default
   const defaultTab = terrainTypes[0]?.slug || terrainTypes[0]?.id || '';
   const activeTab = selectedTerrainTab || defaultTab;
 
-  // Separate custom pieces, variants, and regular pieces
-  const regularPieces = availablePieces.filter((p) => !p.isCustom && !p.isVariant);
-  const variantPieces = availablePieces.filter((p) => p.isVariant);
-  const customPieces = availablePieces.filter((p) => p.isCustom);
+  // Separate custom pieces, variants, regular pieces, and props
+  const regularPieces = availablePieces.filter((p) => !p.isCustom && !p.isVariant && p.pieceType !== 'prop');
+  const variantPieces = availablePieces.filter((p) => p.isVariant && p.pieceType !== 'prop');
+  const customPieces = availablePieces.filter((p) => p.isCustom && p.pieceType !== 'prop');
+
+  // Get all props (built-in + custom)
+  const allProps = useMemo(() => {
+    return [...DEFAULT_PROPS, ...customProps];
+  }, [customProps]);
+
+  // Group props by category
+  const propsByCategory = useMemo(() => {
+    const grouped: Record<PropCategory, ModularPiece[]> = {
+      furniture: [],
+      npc: [],
+      creature: [],
+      hero: [],
+      boss: [],
+      item: [],
+      custom: [],
+    };
+    for (const prop of allProps) {
+      const category = prop.propCategory || 'custom';
+      if (grouped[category]) {
+        grouped[category].push(prop);
+      }
+    }
+    return grouped;
+  }, [allProps]);
+
+  // Handle creating a new custom prop
+  const handleCreateProp = () => {
+    if (!newPropName.trim()) return;
+
+    const newProp: ModularPiece = {
+      id: `custom-prop-${Date.now()}`,
+      name: newPropName.trim(),
+      pieceType: 'prop',
+      propEmoji: newPropEmoji,
+      propCategory: newPropCategory,
+      terrainTypeId: 'props',
+      size: PROP_SIZES[newPropSize],
+      isDiagonal: false,
+      quantity: 99,
+    };
+
+    addCustomProp(newProp);
+    setShowCreatePropDialog(false);
+    setNewPropName('');
+    setNewPropEmoji('👤');
+    setNewPropCategory('custom');
+    setNewPropSize('medium');
+  };
 
   // End drag on mouseup anywhere (cleanup)
   useEffect(() => {
@@ -67,6 +136,26 @@ export function Sidebar() {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
+        {/* Mode indicator header */}
+        <div className="px-3 py-2 bg-gray-900 border-b border-gray-700 flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-400">
+            {editMode === 'terrain' ? 'Terrain Pieces' : 'Props & NPCs'}
+          </span>
+          {editMode === 'props' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => setShowCreatePropDialog(true)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              New
+            </Button>
+          )}
+        </div>
+
+        {/* TERRAIN MODE CONTENT */}
+        {editMode === 'terrain' && (
         <Tabs value={activeTab} onValueChange={setSelectedTerrainTab} className="flex-1 flex flex-col min-h-0">
           <div className="mx-2 mt-2 shrink-0 overflow-x-auto scrollbar-thin">
             <TabsList className="inline-flex w-max gap-1 bg-gray-900 p-1">
@@ -428,6 +517,82 @@ export function Sidebar() {
             </TabsContent>
           </ScrollArea>
         </Tabs>
+        )}
+
+        {/* PROPS MODE CONTENT */}
+        {editMode === 'props' && (
+          <ScrollArea className="flex-1 min-h-0 custom-scrollbar">
+            <div className="p-2 space-y-4">
+              {PROP_CATEGORIES.map((category) => {
+                const categoryProps = propsByCategory[category.id] || [];
+                if (categoryProps.length === 0 && category.id !== 'custom') return null;
+
+                return (
+                  <div key={category.id}>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-lg">{category.icon}</span>
+                      <span className="text-xs font-medium text-gray-400">{category.name}</span>
+                      <span className="text-xs text-gray-500">({categoryProps.length})</span>
+                    </div>
+                    <div className="space-y-1">
+                      {categoryProps.map((prop) => {
+                        const isSelected = selectedPieceId === prop.id;
+                        const isCustom = customProps.some((p) => p.id === prop.id);
+
+                        return (
+                          <Card
+                            key={prop.id}
+                            onMouseDown={(e) => handleMouseDown(e, prop.id)}
+                            className={`cursor-grab active:cursor-grabbing transition-all select-none ${
+                              isSelected ? 'ring-2 ring-blue-500' : 'hover:bg-gray-700'
+                            }`}
+                            style={{
+                              borderLeft: '4px solid #6366f1',
+                            }}
+                          >
+                            <CardContent className="p-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl">{prop.propEmoji}</span>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-medium text-sm text-white truncate">
+                                    {prop.name}
+                                  </h3>
+                                  <p className="text-xs text-gray-400">
+                                    {prop.size.label}
+                                  </p>
+                                </div>
+                                {isCustom && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-gray-500 hover:text-red-400"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeCustomProp(prop.id);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                      {category.id === 'custom' && categoryProps.length === 0 && (
+                        <div className="text-center py-4 text-gray-500 text-xs">
+                          No custom props yet.
+                          <br />
+                          Click &quot;New&quot; to create one.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        )}
 
         <Separator />
 
@@ -448,6 +613,10 @@ export function Sidebar() {
                   : `Basement ${Math.abs(currentLevel)}`}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span>Mode:</span>
+              <span className="text-white capitalize">{editMode}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -466,6 +635,99 @@ export function Sidebar() {
           <ChevronRight className="w-4 h-4 text-gray-300" />
         )}
       </button>
+
+      {/* Create Custom Prop Dialog */}
+      <Dialog open={showCreatePropDialog} onOpenChange={setShowCreatePropDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Custom Prop</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Name */}
+            <div>
+              <label className="text-sm font-medium text-gray-300 block mb-2">Name</label>
+              <input
+                type="text"
+                value={newPropName}
+                onChange={(e) => setNewPropName(e.target.value)}
+                placeholder="Enter prop name..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Emoji */}
+            <div>
+              <label className="text-sm font-medium text-gray-300 block mb-2">
+                Emoji: <span className="text-2xl ml-2">{newPropEmoji}</span>
+              </label>
+              <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto bg-gray-900 p-2 rounded-lg">
+                {COMMON_PROP_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setNewPropEmoji(emoji)}
+                    className={`text-xl p-1 rounded hover:bg-gray-700 ${
+                      newPropEmoji === emoji ? 'bg-blue-600' : ''
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="text-sm font-medium text-gray-300 block mb-2">Category</label>
+              <div className="flex flex-wrap gap-2">
+                {PROP_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setNewPropCategory(cat.id)}
+                    className={`px-3 py-1 rounded text-sm ${
+                      newPropCategory === cat.id
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {cat.icon} {cat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Size */}
+            <div>
+              <label className="text-sm font-medium text-gray-300 block mb-2">Size (D&D)</label>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(PROP_SIZES).map(([key, size]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setNewPropSize(key)}
+                    className={`px-3 py-1 rounded text-sm ${
+                      newPropSize === key
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {size.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreatePropDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateProp} disabled={!newPropName.trim()}>
+              Create Prop
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

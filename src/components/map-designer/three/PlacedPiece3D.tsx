@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { PlacedPiece, ModularPiece, TerrainType, CornerElevations, DEFAULT_CORNER_ELEVATIONS } from '@/types';
 import { PIECE_HEIGHT_INCHES, LEVEL_HEIGHT_INCHES } from '@/config/terrain';
+import { desaturateColor } from '@/lib/colorUtils';
 import * as THREE from 'three';
 
 interface PlacedPiece3DProps {
@@ -11,6 +12,8 @@ interface PlacedPiece3DProps {
   terrain: TerrainType | undefined;
   terrainMap: Map<string, TerrainType>;
   isSelected: boolean;
+  isReference?: boolean;
+  referenceOpacity?: number;
   onClick: () => void;
 }
 
@@ -143,8 +146,13 @@ export function PlacedPiece3D({
   terrain,
   terrainMap,
   isSelected,
+  isReference = false,
+  referenceOpacity = 0.3,
   onClick,
 }: PlacedPiece3DProps) {
+  // Get piece height (use piece's baseHeight or default)
+  const pieceHeight = piece.baseHeight ?? PIECE_HEIGHT_INCHES;
+
   // Get corner elevations (default to flat if not specified)
   const baseElevation = piece.elevation || DEFAULT_CORNER_ELEVATIONS;
 
@@ -153,16 +161,25 @@ export function PlacedPiece3D({
     return rotateCornerElevations(baseElevation, placedPiece.rotation);
   }, [baseElevation, placedPiece.rotation]);
 
+  // Calculate effective dimensions based on rotation
+  const isRotated = placedPiece.rotation === 90 || placedPiece.rotation === 270;
+  const effectiveWidth = isRotated ? piece.size.height : piece.size.width;
+  const effectiveHeight = isRotated ? piece.size.width : piece.size.height;
+
   // Calculate 3D position
   // 2D: x goes right, y goes down (north at top, y=0)
   // 3D: x goes right, y goes up (height), z goes forward
   // North (2D y=0) should be at back (-Z), South (2D y=max) at front (+Z)
+  // Use EFFECTIVE dimensions for positioning (matches 2D canvas behavior)
   const position = useMemo(() => {
-    const centerX = placedPiece.x + piece.size.width / 2;
-    const centerZ = placedPiece.y + piece.size.height / 2;
+    const centerX = placedPiece.x + effectiveWidth / 2;
+    const centerZ = placedPiece.y + effectiveHeight / 2;
     const heightY = placedPiece.level * LEVEL_HEIGHT_INCHES;
     return new THREE.Vector3(centerX, heightY, centerZ);
-  }, [placedPiece.x, placedPiece.y, placedPiece.level, piece.size.width, piece.size.height]);
+  }, [placedPiece.x, placedPiece.y, placedPiece.level, effectiveWidth, effectiveHeight]);
+
+  // Rotation in radians (negate because Three.js Y rotation is counter-clockwise)
+  const rotationY = -(placedPiece.rotation * Math.PI) / 180;
 
   // Check if piece has cell colors (multi-terrain)
   const hasCellColors = piece.cellColors && piece.cellColors.length > 0;
@@ -178,7 +195,7 @@ export function PlacedPiece3D({
       const h = piece.size.height;
 
       // For diagonal pieces, we use the average height of involved corners
-      let avgHeight = PIECE_HEIGHT_INCHES;
+      let avgHeight = pieceHeight;
 
       // Triangle based on rotation (defaultRotation for diagonal pieces)
       const diagRotation = piece.defaultRotation || 0;
@@ -188,21 +205,21 @@ export function PlacedPiece3D({
           shape.lineTo(w / 2, -h / 2);   // SE... wait, this is NE for diagonal
           shape.lineTo(-w / 2, h / 2);   // NW
           shape.closePath();
-          avgHeight = PIECE_HEIGHT_INCHES + (rotatedElevation.nw + rotatedElevation.ne + rotatedElevation.sw) / 3;
+          avgHeight = pieceHeight + (rotatedElevation.nw + rotatedElevation.ne + rotatedElevation.sw) / 3;
           break;
         case 90: // Top-right corner (NW, NE, SE)
           shape.moveTo(-w / 2, -h / 2);
           shape.lineTo(w / 2, -h / 2);
           shape.lineTo(w / 2, h / 2);
           shape.closePath();
-          avgHeight = PIECE_HEIGHT_INCHES + (rotatedElevation.nw + rotatedElevation.ne + rotatedElevation.se) / 3;
+          avgHeight = pieceHeight + (rotatedElevation.nw + rotatedElevation.ne + rotatedElevation.se) / 3;
           break;
         case 180: // Bottom-right corner (NE, SE, SW)
           shape.moveTo(w / 2, -h / 2);
           shape.lineTo(w / 2, h / 2);
           shape.lineTo(-w / 2, h / 2);
           shape.closePath();
-          avgHeight = PIECE_HEIGHT_INCHES + (rotatedElevation.ne + rotatedElevation.se + rotatedElevation.sw) / 3;
+          avgHeight = pieceHeight + (rotatedElevation.ne + rotatedElevation.se + rotatedElevation.sw) / 3;
           break;
         case 270: // Bottom-left corner (NW, SE, SW)
         default:
@@ -210,7 +227,7 @@ export function PlacedPiece3D({
           shape.lineTo(-w / 2, h / 2);
           shape.lineTo(w / 2, h / 2);
           shape.closePath();
-          avgHeight = PIECE_HEIGHT_INCHES + (rotatedElevation.nw + rotatedElevation.se + rotatedElevation.sw) / 3;
+          avgHeight = pieceHeight + (rotatedElevation.nw + rotatedElevation.se + rotatedElevation.sw) / 3;
           break;
       }
 
@@ -228,19 +245,25 @@ export function PlacedPiece3D({
       return createElevatedBoxGeometry(
         piece.size.width,
         piece.size.height,
-        PIECE_HEIGHT_INCHES,
+        pieceHeight,
         rotatedElevation
       );
     }
-  }, [piece.size.width, piece.size.height, piece.isDiagonal, piece.defaultRotation, rotatedElevation, hasCellColors]);
+  }, [piece.size.width, piece.size.height, piece.isDiagonal, piece.defaultRotation, rotatedElevation, hasCellColors, pieceHeight]);
 
-  // Parse terrain color
+  // Parse terrain color (desaturated for reference pieces)
   const color = useMemo(() => {
-    return terrain?.color || '#888888';
-  }, [terrain?.color]);
+    const baseColor = terrain?.color || '#888888';
+    return isReference ? desaturateColor(baseColor, 0.5) : baseColor;
+  }, [terrain?.color, isReference]);
 
   // Edge color for outline
   const edgeColor = isSelected ? '#ffffff' : '#000000';
+
+  // Material props for transparency
+  const materialProps = isReference
+    ? { transparent: true, opacity: referenceOpacity }
+    : {};
 
   // Render multi-colored cells for pieces with cellColors
   if (hasCellColors && piece.cellColors) {
@@ -254,20 +277,17 @@ export function PlacedPiece3D({
     const cellWidth = totalWidth / numCols;
     const cellDepth = totalHeight / numRows;
 
-    // Apply piece rotation to the whole group
-    // Negate rotation because Three.js Y rotation is counter-clockwise, but 2D canvas uses clockwise
-    const rotationY = -(placedPiece.rotation * Math.PI) / 180;
-
     return (
       <group
         position={position}
         rotation={[0, rotationY, 0]}
-        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        onClick={isReference ? undefined : (e) => { e.stopPropagation(); onClick(); }}
       >
         {cells.map((row, rowIdx) =>
           row.map((cellTerrainId, colIdx) => {
             const cellTerrain = terrainMap.get(cellTerrainId);
-            const cellColor = cellTerrain?.color || '#888888';
+            const baseCellColor = cellTerrain?.color || '#888888';
+            const cellColor = isReference ? desaturateColor(baseCellColor, 0.5) : baseCellColor;
 
             // Calculate cell position relative to piece center
             // Row 0 is at the back (-Z/north), higher rows toward front (+Z/south)
@@ -275,12 +295,12 @@ export function PlacedPiece3D({
             const cellZ = (rowIdx + 0.5) * cellDepth - totalHeight / 2;
 
             // Box geometry sized to actual cell dimensions
-            const cellGeometry = new THREE.BoxGeometry(cellWidth - 0.05, PIECE_HEIGHT_INCHES, cellDepth - 0.05);
+            const cellGeometry = new THREE.BoxGeometry(cellWidth - 0.05, pieceHeight, cellDepth - 0.05);
 
             return (
-              <group key={`cell-${rowIdx}-${colIdx}`} position={[cellX, PIECE_HEIGHT_INCHES / 2, cellZ]}>
+              <group key={`cell-${rowIdx}-${colIdx}`} position={[cellX, pieceHeight / 2, cellZ]}>
                 <mesh geometry={cellGeometry}>
-                  <meshBasicMaterial color={cellColor} />
+                  <meshBasicMaterial color={cellColor} {...materialProps} />
                 </mesh>
                 <lineSegments>
                   <edgesGeometry args={[cellGeometry]} />
@@ -291,9 +311,9 @@ export function PlacedPiece3D({
           })
         )}
         {/* Selection outline for the whole piece */}
-        {isSelected && (
+        {isSelected && !isReference && (
           <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(totalWidth, PIECE_HEIGHT_INCHES, totalHeight)]} />
+            <edgesGeometry args={[new THREE.BoxGeometry(totalWidth, pieceHeight, totalHeight)]} />
             <lineBasicMaterial color="#ffffff" linewidth={2} />
           </lineSegments>
         )}
@@ -303,10 +323,10 @@ export function PlacedPiece3D({
 
   // Render single-color piece
   return (
-    <group position={position} onClick={(e) => { e.stopPropagation(); onClick(); }}>
+    <group position={position} rotation={[0, rotationY, 0]} onClick={isReference ? undefined : (e) => { e.stopPropagation(); onClick(); }}>
       {/* Main mesh - flat color */}
       <mesh geometry={geometry!}>
-        <meshBasicMaterial color={color} />
+        <meshBasicMaterial color={color} {...materialProps} />
       </mesh>
       {/* Edge outline */}
       <lineSegments>

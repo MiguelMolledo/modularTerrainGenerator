@@ -7,6 +7,7 @@ import { MapCanvas } from './MapCanvas';
 import { Toolbar } from './Toolbar';
 import { PiecesSummaryPanel } from './PiecesSummaryPanel';
 import { RadialMenu } from './RadialMenu';
+import { PropSearchDialog } from './PropSearchDialog';
 import { UnsavedChangesGuard } from './UnsavedChangesGuard';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
@@ -33,15 +34,21 @@ export function MapDesigner() {
     currentLevel,
     addPlacedPiece,
     availablePieces,
+    customProps,
     placedPieces,
     setCurrentRotation,
     is3DMode,
+    isPropSearchOpen,
+    propSearchPosition,
+    closePropSearch,
   } = useMapStore();
 
   const handleDrop = (x: number, y: number, rotation: number) => {
     if (!selectedPieceId) return;
 
-    const piece = availablePieces.find((p) => p.id === selectedPieceId);
+    // Check both availablePieces and customProps for the piece
+    const piece = availablePieces.find((p) => p.id === selectedPieceId)
+      || customProps.find((p) => p.id === selectedPieceId);
     if (!piece) return;
 
     // Use defaultRotation for diagonal pieces, otherwise use the provided rotation
@@ -81,6 +88,13 @@ export function MapDesigner() {
         </div>
       </div>
       {!is3DMode && <RadialMenu />}
+      {!is3DMode && (
+        <PropSearchDialog
+          isOpen={isPropSearchOpen}
+          onClose={closePropSearch}
+          position={propSearchPosition}
+        />
+      )}
     </div>
   );
 }

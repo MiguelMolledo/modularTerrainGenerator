@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { PlacedPiece, ModularPiece, TerrainType, GridConfig, SavedMapData } from '@/types';
+import { PlacedPiece, ModularPiece, TerrainType, GridConfig, SavedMapData, EditMode } from '@/types';
 import { MapTemplate, MapFeature } from '@/types/templates';
 import { DEFAULT_TERRAIN_TYPES, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, GRID_CELL_SIZE, DEFAULT_LEVELS } from '@/config/terrain';
+import { DEFAULT_PROPS } from '@/config/props';
 import { placeTemplate, PlaceTemplateResult } from '@/lib/templateEngine';
 
 interface MapState {
@@ -63,8 +64,22 @@ interface MapState {
   // 3D View State
   is3DMode: boolean;
 
+  // Reference levels (for viewing other levels as guides)
+  showReferenceLevels: boolean;
+  referenceLevelOpacity: number; // 0-1 range
+
   // Sidebar state
   selectedTerrainTab: string | null;
+
+  // Edit mode (terrain vs props)
+  editMode: EditMode;
+
+  // Custom props created by user
+  customProps: ModularPiece[];
+
+  // Prop search dialog state
+  isPropSearchOpen: boolean;
+  propSearchPosition: { x: number; y: number };
 
   // Unsaved changes tracking
   hasUnsavedChanges: boolean;
@@ -120,8 +135,24 @@ interface MapState {
   // 3D View Actions
   toggle3DMode: () => void;
 
+  // Reference levels actions
+  setShowReferenceLevels: (show: boolean) => void;
+  setReferenceLevelOpacity: (opacity: number) => void;
+
   // Sidebar actions
   setSelectedTerrainTab: (tab: string) => void;
+
+  // Edit mode actions
+  setEditMode: (mode: EditMode) => void;
+
+  // Prop search dialog actions
+  openPropSearch: (x: number, y: number) => void;
+  closePropSearch: () => void;
+
+  // Custom props actions
+  addCustomProp: (prop: ModularPiece) => void;
+  removeCustomProp: (id: string) => void;
+  updateCustomProp: (id: string, updates: Partial<ModularPiece>) => void;
 
   // Unsaved changes actions
   markAsSaved: () => void;
@@ -633,7 +664,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   levels: DEFAULT_LEVELS,
   currentLevel: 0,
   placedPieces: [],
-  availablePieces: demoPieces,
+  availablePieces: [...demoPieces, ...DEFAULT_PROPS],
   terrainTypes: DEFAULT_TERRAIN_TYPES,
   gridConfig: {
     cellSize: GRID_CELL_SIZE,
@@ -656,7 +687,13 @@ export const useMapStore = create<MapState>((set, get) => ({
   radialMenuPosition: { x: 0, y: 0 },
   isPlacementMode: false,
   is3DMode: false,
+  showReferenceLevels: false,
+  referenceLevelOpacity: 0.3,
   selectedTerrainTab: null,
+  editMode: 'terrain',
+  customProps: [],
+  isPropSearchOpen: false,
+  propSearchPosition: { x: 0, y: 0 },
   hasUnsavedChanges: false,
   lastSavedSnapshot: null,
 
@@ -896,8 +933,45 @@ export const useMapStore = create<MapState>((set, get) => ({
       is3DMode: !state.is3DMode,
     })),
 
+  // Reference levels actions
+  setShowReferenceLevels: (show) => set({ showReferenceLevels: show }),
+  setReferenceLevelOpacity: (opacity) => set({ referenceLevelOpacity: Math.max(0, Math.min(1, opacity)) }),
+
   // Sidebar actions
   setSelectedTerrainTab: (tab) => set({ selectedTerrainTab: tab }),
+
+  // Edit mode actions
+  setEditMode: (mode) => set({ editMode: mode }),
+
+  // Prop search dialog actions
+  openPropSearch: (x, y) => set({
+    isPropSearchOpen: true,
+    propSearchPosition: { x, y },
+  }),
+  closePropSearch: () => set({
+    isPropSearchOpen: false,
+  }),
+
+  // Custom props actions
+  addCustomProp: (prop) =>
+    set((state) => ({
+      customProps: [...state.customProps, prop],
+      hasUnsavedChanges: true,
+    })),
+
+  removeCustomProp: (id) =>
+    set((state) => ({
+      customProps: state.customProps.filter((p) => p.id !== id),
+      hasUnsavedChanges: true,
+    })),
+
+  updateCustomProp: (id, updates) =>
+    set((state) => ({
+      customProps: state.customProps.map((p) =>
+        p.id === id ? { ...p, ...updates } : p
+      ),
+      hasUnsavedChanges: true,
+    })),
 
   // Map dimensions actions
   setMapWidth: (width) => set({ mapWidth: width, hasUnsavedChanges: true }),
@@ -929,6 +1003,9 @@ export const useMapStore = create<MapState>((set, get) => ({
       return true;
     });
 
+    // Load custom props from saved data
+    const loadedCustomProps = data.customProps || [];
+
     set({
       currentMapId: mapId || null,
       mapName: data.name,
@@ -937,6 +1014,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       mapHeight: data.mapHeight,
       levels: data.levels,
       placedPieces: uniquePieces,
+      customProps: loadedCustomProps,
       gridConfig: data.gridConfig || {
         cellSize: GRID_CELL_SIZE,
         showGrid: true,
@@ -952,6 +1030,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       selectedPlacedPieceIds: [],
       isPlacementMode: false,
       is3DMode: false,
+      editMode: 'terrain',
       features: [],
       // Mark as saved (just loaded from storage)
       hasUnsavedChanges: false,
@@ -959,6 +1038,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         placedPieces: uniquePieces,
         mapName: data.name,
         mapDescription: data.description || '',
+        customProps: loadedCustomProps,
       }),
     });
   },
@@ -973,6 +1053,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       levels: state.levels,
       placedPieces: state.placedPieces,
       gridConfig: state.gridConfig,
+      customProps: state.customProps.length > 0 ? state.customProps : undefined,
     };
   },
 
@@ -986,6 +1067,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       levels: DEFAULT_LEVELS,
       currentLevel: 0,
       placedPieces: [],
+      customProps: [],
       gridConfig: {
         cellSize: GRID_CELL_SIZE,
         showGrid: true,
@@ -998,6 +1080,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       selectedPieceId: null,
       selectedPlacedPieceIds: [],
       isPlacementMode: false,
+      editMode: 'terrain',
       features: [],
       recentlyUsedPieceIds: [],
       // New map starts with no unsaved changes

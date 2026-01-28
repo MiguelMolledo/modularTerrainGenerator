@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Grid, OrbitControls } from '@react-three/drei';
+import { Grid, OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useMapStore } from '@/store/mapStore';
 import { PlacedPiece3D } from './PlacedPiece3D';
+import { Prop3D } from './Prop3D';
 import { LEVEL_HEIGHT_INCHES } from '@/config/terrain';
 
 export function Scene3D() {
@@ -18,19 +19,27 @@ export function Scene3D() {
     setSelectedPlacedPieceIds,
     toggleSelection,
     levels,
+    currentLevel,  // Read directly from store
+    showReferenceLevels,
+    referenceLevelOpacity,
+    customProps,
   } = useMapStore();
 
   // Create a Set for efficient selection lookup
   const selectedSet = useMemo(() => new Set(selectedPlacedPieceIds), [selectedPlacedPieceIds]);
 
-  // Create piece lookup map
+  // Create piece lookup map (includes custom props)
   const pieceMap = useMemo(() => {
     const map = new Map<string, typeof availablePieces[0]>();
     for (const piece of availablePieces) {
       map.set(piece.id, piece);
     }
+    // Also include custom props
+    for (const piece of customProps) {
+      map.set(piece.id, piece);
+    }
     return map;
-  }, [availablePieces]);
+  }, [availablePieces, customProps]);
 
   // Create terrain lookup map (by both id and slug for compatibility)
   const terrainMap = useMemo(() => {
@@ -45,18 +54,48 @@ export function Scene3D() {
     return map;
   }, [terrainTypes]);
 
+  // Filter pieces by current level and separate terrain from props
+  const { visibleTerrainPieces, visibleProps } = useMemo(() => {
+    const levelPieces = placedPieces.filter((p) => p.level === currentLevel);
+    const terrain: typeof levelPieces = [];
+    const props: typeof levelPieces = [];
+
+    for (const placed of levelPieces) {
+      const piece = pieceMap.get(placed.pieceId);
+      if (piece?.pieceType === 'prop') {
+        props.push(placed);
+      } else {
+        terrain.push(placed);
+      }
+    }
+
+    return { visibleTerrainPieces: terrain, visibleProps: props };
+  }, [placedPieces, currentLevel, pieceMap]);
+
+  // Reference level pieces (other levels shown as guides)
+  const referencePieces = useMemo(() => {
+    if (!showReferenceLevels) return [];
+    return placedPieces.filter((p) => p.level !== currentLevel);
+  }, [placedPieces, showReferenceLevels, currentLevel]);
+
+  // Calculate the Y position for the current view level (for camera target and ground plane)
+  const viewLevelY = currentLevel * LEVEL_HEIGHT_INCHES;
+
   // Grid center offset (north at back/-Z, south at front/+Z)
   const gridCenterX = mapWidth / 2;
   const gridCenterZ = mapHeight / 2;
 
-  // Calculate camera target (center of map)
+  // Calculate camera target (center of map, adjusted for current view level)
   const cameraTarget = useMemo(() => {
-    return [gridCenterX, 0, gridCenterZ] as [number, number, number];
-  }, [gridCenterX, gridCenterZ]);
+    return [gridCenterX, viewLevelY, gridCenterZ] as [number, number, number];
+  }, [gridCenterX, gridCenterZ, viewLevelY]);
 
   // Get min/max levels for grid planes
   const minLevel = Math.min(...levels);
   const maxLevel = Math.max(...levels);
+
+  // Ground plane Y position: slightly below the lowest level
+  const groundPlaneY = minLevel * LEVEL_HEIGHT_INCHES - 0.5;
 
   // Boundary box geometry
   const boundaryGeometry = useMemo(() => {
@@ -108,9 +147,9 @@ export function Scene3D() {
         maxPolarAngle={Math.PI / 2 - 0.1}
       />
 
-      {/* Ground grid at level 0 - solid lines, no fade */}
+      {/* Ground grid - solid lines, no fade, positioned at current view level */}
       <Grid
-        position={[gridCenterX, 0.01, gridCenterZ]}
+        position={[gridCenterX, viewLevelY + 0.01, gridCenterZ]}
         args={[mapWidth, mapHeight]}
         cellSize={1.5}
         cellThickness={1}
@@ -135,9 +174,9 @@ export function Scene3D() {
         </lineSegments>
       ))}
 
-      {/* Ground plane - solid dark surface */}
+      {/* Ground plane - solid dark surface, positioned below the lowest level */}
       <mesh
-        position={[gridCenterX, -0.02, gridCenterZ]}
+        position={[gridCenterX, groundPlaneY, gridCenterZ]}
         rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
       >
@@ -145,8 +184,30 @@ export function Scene3D() {
         <meshStandardMaterial color="#252530" roughness={0.9} metalness={0} />
       </mesh>
 
-      {/* Render all placed pieces */}
-      {placedPieces.map((placedPiece) => {
+      {/* Render reference level pieces (behind current level) */}
+      {referencePieces.map((placedPiece) => {
+        const piece = pieceMap.get(placedPiece.pieceId);
+        if (!piece) return null;
+
+        const terrain = terrainMap.get(piece.terrainTypeId);
+
+        return (
+          <PlacedPiece3D
+            key={`ref-${placedPiece.id}`}
+            placedPiece={placedPiece}
+            piece={piece}
+            terrain={terrain}
+            terrainMap={terrainMap}
+            isSelected={false}
+            isReference={true}
+            referenceOpacity={referenceLevelOpacity}
+            onClick={() => {}}
+          />
+        );
+      })}
+
+      {/* Render current level terrain pieces */}
+      {visibleTerrainPieces.map((placedPiece) => {
         const piece = pieceMap.get(placedPiece.pieceId);
         if (!piece) return null;
 
@@ -161,6 +222,22 @@ export function Scene3D() {
             terrainMap={terrainMap}
             isSelected={selectedSet.has(placedPiece.id)}
             onClick={() => setSelectedPlacedPieceIds([placedPiece.id])}
+          />
+        );
+      })}
+
+      {/* Render current level props */}
+      {visibleProps.map((placedProp) => {
+        const piece = pieceMap.get(placedProp.pieceId);
+        if (!piece) return null;
+
+        return (
+          <Prop3D
+            key={placedProp.id}
+            placedPiece={placedProp}
+            piece={piece}
+            isSelected={selectedSet.has(placedProp.id)}
+            onClick={() => setSelectedPlacedPieceIds([placedProp.id])}
           />
         );
       })}
