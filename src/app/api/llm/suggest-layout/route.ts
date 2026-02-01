@@ -6,16 +6,18 @@ const LAYOUT_SUGGESTION_SYSTEM = `You are a D&D/tabletop RPG map designer assist
 
 Your task is to define rectangular regions where different terrain types should be placed. Our system will automatically fill each region with the appropriate terrain pieces.
 
-IMPORTANT RULES:
-- Define 3-8 terrain regions that create an interesting battle map
-- Regions can overlap slightly at edges for natural transitions
-- Leave some areas empty (no region) for open combat space
-- Consider tactical interest: cover, chokepoints, elevation changes
-- Regions should make sense for the scene (forests cluster, rivers flow, etc.)
+CRITICAL RULES:
+- COVER THE ENTIRE MAP with terrain regions - NO empty spaces allowed
+- Define 6-12 terrain regions that together cover 100% of the map area
+- REGIONS MUST NOT OVERLAP - each area of the map should only belong to one region
+- Regions must tile perfectly to fill the entire map (like a puzzle)
+- Consider tactical interest: cover, chokepoints, flanking routes
+- Regions should make sense for the scene (forests cluster, water flows naturally, etc.)
 - Coordinates are in inches, starting from (0,0) at top-left
+- Use coordinates that are multiples of 6 for better piece alignment (0, 6, 12, 18, 24, etc.)
 
 For each region, provide:
-- terrain: The terrain type slug (e.g., "forest", "water", "rock", "grass")
+- terrain: The terrain type slug (must match available types exactly)
 - x: X position in inches (left edge of region)
 - y: Y position in inches (top edge of region)
 - width: Width of the region in inches
@@ -26,7 +28,7 @@ Format:
 {
   "regions": [
     {"terrain": "forest", "x": 0, "y": 0, "width": 18, "height": 12},
-    {"terrain": "water", "x": 24, "y": 10, "width": 12, "height": 20}
+    {"terrain": "water", "x": 24, "y": 18, "width": 12, "height": 18}
   ],
   "description": "Brief description of the layout strategy"
 }`;
@@ -77,12 +79,64 @@ interface ErrorResponse {
   error: string;
 }
 
+// Global occupancy grid for the entire map
+class OccupancyGrid {
+  private grid: boolean[][];
+  private width: number;
+  private height: number;
+
+  constructor(width: number, height: number) {
+    this.width = Math.ceil(width);
+    this.height = Math.ceil(height);
+    this.grid = Array(this.height).fill(null).map(() =>
+      Array(this.width).fill(false)
+    );
+  }
+
+  canPlace(x: number, y: number, pieceW: number, pieceH: number): boolean {
+    const startX = Math.floor(x);
+    const startY = Math.floor(y);
+    const endX = Math.ceil(x + pieceW);
+    const endY = Math.ceil(y + pieceH);
+
+    if (endX > this.width || endY > this.height || startX < 0 || startY < 0) {
+      return false;
+    }
+
+    for (let dy = startY; dy < endY; dy++) {
+      for (let dx = startX; dx < endX; dx++) {
+        if (this.grid[dy]?.[dx]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  markOccupied(x: number, y: number, pieceW: number, pieceH: number) {
+    const startX = Math.floor(x);
+    const startY = Math.floor(y);
+    const endX = Math.ceil(x + pieceW);
+    const endY = Math.ceil(y + pieceH);
+
+    for (let dy = startY; dy < endY && dy < this.height; dy++) {
+      for (let dx = startX; dx < endX && dx < this.width; dx++) {
+        if (dy >= 0 && dx >= 0) {
+          this.grid[dy][dx] = true;
+        }
+      }
+    }
+  }
+}
+
 // Fill a region with available pieces using greedy bin-packing
+// Uses a GLOBAL occupancy grid to prevent overlaps between regions
 function fillRegionWithPieces(
   region: TerrainRegion,
   pieces: AvailablePiece[],
   mapWidth: number,
-  mapHeight: number
+  mapHeight: number,
+  globalOccupancy: OccupancyGrid
 ): PlacementSuggestion[] {
   const placements: PlacementSuggestion[] = [];
 
@@ -103,69 +157,36 @@ function fillRegionWithPieces(
     (b.width * b.height) - (a.width * a.height)
   );
 
-  // Create a grid to track occupied cells (1 inch resolution)
-  const gridWidth = Math.ceil(region.width);
-  const gridHeight = Math.ceil(region.height);
-  const occupied: boolean[][] = Array(gridHeight).fill(null).map(() =>
-    Array(gridWidth).fill(false)
-  );
-
-  // Helper to check if a piece fits at a position
-  const canPlace = (pieceW: number, pieceH: number, gridX: number, gridY: number): boolean => {
-    if (gridX + pieceW > gridWidth || gridY + pieceH > gridHeight) {
-      return false;
-    }
-    for (let dy = 0; dy < pieceH; dy++) {
-      for (let dx = 0; dx < pieceW; dx++) {
-        if (occupied[gridY + dy]?.[gridX + dx]) {
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  // Helper to mark cells as occupied
-  const markOccupied = (pieceW: number, pieceH: number, gridX: number, gridY: number) => {
-    for (let dy = 0; dy < pieceH; dy++) {
-      for (let dx = 0; dx < pieceW; dx++) {
-        if (occupied[gridY + dy]) {
-          occupied[gridY + dy][gridX + dx] = true;
-        }
-      }
-    }
-  };
+  // Calculate region bounds
+  const regionEndX = Math.min(region.x + region.width, mapWidth);
+  const regionEndY = Math.min(region.y + region.height, mapHeight);
 
   // Try to place pieces using a greedy approach
   // Multiple passes to fill gaps with smaller pieces
   for (let pass = 0; pass < 3; pass++) {
     for (const piece of sortedPieces) {
-      // Try both orientations
-      const orientations = [
-        { w: piece.width, h: piece.height, rotation: 0 },
-        { w: piece.height, h: piece.width, rotation: 90 }
-      ];
+      // Try both orientations (only if piece is not square)
+      const orientations = piece.width === piece.height
+        ? [{ w: piece.width, h: piece.height, rotation: 0 }]
+        : [
+            { w: piece.width, h: piece.height, rotation: 0 },
+            { w: piece.height, h: piece.width, rotation: 90 }
+          ];
 
       for (const { w, h, rotation } of orientations) {
-        // Scan for available positions
-        for (let gridY = 0; gridY <= gridHeight - h; gridY++) {
-          for (let gridX = 0; gridX <= gridWidth - w; gridX++) {
-            if (canPlace(w, h, gridX, gridY)) {
-              // Calculate actual map position
-              const mapX = region.x + gridX;
-              const mapY = region.y + gridY;
-
-              // Verify within map bounds
-              if (mapX >= 0 && mapY >= 0 &&
-                  mapX + w <= mapWidth && mapY + h <= mapHeight) {
-                placements.push({
-                  pieceId: piece.id,
-                  x: mapX,
-                  y: mapY,
-                  rotation
-                });
-                markOccupied(w, h, gridX, gridY);
-              }
+        // Scan positions within the region
+        for (let mapY = region.y; mapY + h <= regionEndY; mapY += 1) {
+          for (let mapX = region.x; mapX + w <= regionEndX; mapX += 1) {
+            // Check global occupancy (not just local region)
+            if (globalOccupancy.canPlace(mapX, mapY, w, h)) {
+              placements.push({
+                pieceId: piece.id,
+                x: mapX,
+                y: mapY,
+                rotation
+              });
+              // Mark globally occupied
+              globalOccupancy.markOccupied(mapX, mapY, w, h);
             }
           }
         }
@@ -230,28 +251,38 @@ export async function POST(
     const terrainSummary = terrainTypes.map(terrain => {
       const piecesOfType = body.availablePieces.filter(p => p.terrainType === terrain);
       const sizes = [...new Set(piecesOfType.map(p => `${p.width}x${p.height}`))].join(', ');
-      return `- ${terrain}: available sizes ${sizes}`;
+      return `- "${terrain}": sizes ${sizes}`;
     }).join('\n');
 
-    // Build user prompt
-    const userPrompt = `Create a tactical battle map layout for this scene:
+    console.log('Available terrain types:', terrainTypes);
+    console.log('Map size:', body.mapWidth, 'x', body.mapHeight);
 
-Scene: ${body.sceneDescription}
+    // Build user prompt - rules appended at the end for clarity
+    const userPrompt = `Scene: "${body.sceneDescription}"
 
-Map Size: ${body.mapWidth}" x ${body.mapHeight}" (inches)
+Map dimensions: ${body.mapWidth}" x ${body.mapHeight}" (width x height in inches)
 
-Available Terrain Types and their piece sizes:
+Available terrain types and piece sizes:
 ${terrainSummary}
 
-Define rectangular regions for each terrain type. Our system will automatically fill each region with appropriately-sized pieces.
+---
+CRITICAL GUIDELINES (follow these exactly):
 
-Guidelines:
-- Regions can be any size, our system will pack pieces optimally
-- Cover 40-70% of the map with terrain, leaving open areas for movement
-- Create natural-looking groupings (forests together, water connected, etc.)
-- Consider tactical gameplay with cover and chokepoints
+1. TERRAIN NAMES: Use ONLY the exact terrain names listed above. Example: "${terrainTypes[0] || 'forest'}" not just "forest".
 
-Return JSON with regions array and description.`;
+2. NO OVERLAPS: Regions must NOT overlap with each other. Plan coordinates carefully.
+
+3. FULL COVERAGE: Define 6-12 terrain regions that COVER THE ENTIRE MAP (100%). NO empty spaces allowed. Regions must tile like a puzzle.
+
+4. COORDINATES: Use multiples of 6 for all coordinates (0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60, etc.)
+
+5. REGION SIZES: Make regions large enough to fit multiple pieces. Minimum 6x6 inches per region.
+
+6. VARIETY: Use different terrain types to create an interesting tactical map.
+
+7. MATH CHECK: Sum of all region areas must equal map area (${body.mapWidth} x ${body.mapHeight} = ${body.mapWidth * body.mapHeight} square inches).
+
+Return ONLY valid JSON with "regions" array and "description" field.`;
 
     // Call OpenRouter
     const response = await callOpenRouter(
@@ -306,15 +337,24 @@ Return JSON with regions array and description.`;
         height: Math.min(r.height, body.mapHeight - r.y)
       }));
 
-    // Fill each region with pieces
+    // Create a GLOBAL occupancy grid for the entire map
+    const globalOccupancy = new OccupancyGrid(body.mapWidth, body.mapHeight);
+
+    // Sort regions by area (larger first) for better packing
+    const sortedRegions = [...validRegions].sort((a, b) =>
+      (b.width * b.height) - (a.width * a.height)
+    );
+
+    // Fill each region with pieces, using the shared global occupancy grid
     const allPlacements: PlacementSuggestion[] = [];
 
-    for (const region of validRegions) {
+    for (const region of sortedRegions) {
       const regionPlacements = fillRegionWithPieces(
         region,
         body.availablePieces,
         body.mapWidth,
-        body.mapHeight
+        body.mapHeight,
+        globalOccupancy // Pass global grid to prevent overlaps between regions
       );
       allPlacements.push(...regionPlacements);
     }
