@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useInventoryStore } from '@/store/inventoryStore';
 import { Button } from '@/components/ui/button';
+import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-const TERRAIN_EMOJIS = ['🏜️', '🌲', '🏔️', '🌊', '🐊', '🌋', '❄️', '🌾', '🏛️', '🌙', '☀️', '🌸'];
 const TERRAIN_COLORS = [
   '#E5C07B', '#98C379', '#D19A66', '#61AFEF', '#56B6C2', '#E06C75',
   '#C678DD', '#ABB2BF', '#282C34', '#5C6370', '#BE5046', '#4EC9B0',
@@ -118,21 +118,11 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
             <label className="text-sm font-medium text-gray-300 block mb-1">
               Icon
             </label>
-            <div className="flex flex-wrap gap-2">
-              {TERRAIN_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setIcon(emoji)}
-                  className={`w-10 h-10 text-xl rounded-lg transition-all ${
-                    icon === emoji
-                      ? 'bg-blue-600 ring-2 ring-blue-400'
-                      : 'bg-gray-800 hover:bg-gray-700'
-                  }`}
-                >
-                  {emoji}
-                </button>
-              ))}
+            <div className="flex items-center gap-3">
+              <EmojiPicker value={icon} onChange={setIcon} />
+              <span className="text-sm text-gray-400">
+                Click to select an emoji
+              </span>
             </div>
           </div>
 

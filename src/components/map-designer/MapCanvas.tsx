@@ -761,15 +761,18 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle mousedown on placed piece - prepare for potential drag
   const handlePieceMouseDown = (placedId: string, e: any) => {
+    console.log('[DEBUG handlePieceMouseDown] Called for placedId:', placedId, 'isSidebarDragging:', isSidebarDragging, 'isPlacementMode:', isPlacementMode);
     e.cancelBubble = true;
 
     // If in sidebar drag mode (placing new piece), don't intercept - let the piece be placed
     if (isSidebarDragging) {
+      console.log('[DEBUG handlePieceMouseDown] In sidebar drag mode, returning');
       return;
     }
 
     // If in placement mode, exit it first
     if (isPlacementMode) {
+      console.log('[DEBUG handlePieceMouseDown] Exiting placement mode');
       exitPlacementMode();
       setDragPreview((prev) => ({ ...prev, visible: false }));
     }
@@ -804,11 +807,19 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Actually start the drag (called after threshold is met)
   const startMapDrag = (placedId: string) => {
+    console.log('[DEBUG startMapDrag] Starting drag for placedId:', placedId);
     const placed = placedPieces.find((p) => p.id === placedId);
-    if (!placed) return;
+    if (!placed) {
+      console.log('[DEBUG startMapDrag] Placed piece not found!');
+      return;
+    }
 
     const piece = allPieces.find((p) => p.id === placed.pieceId);
-    if (!piece) return;
+    if (!piece) {
+      console.log('[DEBUG startMapDrag] Piece definition not found for pieceId:', placed.pieceId);
+      return;
+    }
+    console.log('[DEBUG startMapDrag] Found placed piece at:', placed.x, placed.y, 'pieceId:', placed.pieceId);
 
     // Check if we're dragging multiple selected pieces
     if (selectedPlacedPieceIds.length > 1 && selectedSet.has(placedId)) {
@@ -931,11 +942,15 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle drop from sidebar
   const handleCanvasDrop = (e: React.DragEvent) => {
+    console.log('[DEBUG handleCanvasDrop] Called, isDraggingFromSidebar:', isDraggingFromSidebar);
     e.preventDefault();
     e.stopPropagation();
 
     // Only process if this was actually a sidebar drag
-    if (!isDraggingFromSidebar) return;
+    if (!isDraggingFromSidebar) {
+      console.log('[DEBUG handleCanvasDrop] Not dragging from sidebar, returning');
+      return;
+    }
 
     // Use the ref to get the latest preview position
     const currentPreview = dragPreviewRef.current;
@@ -944,11 +959,18 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     setIsDraggingFromSidebar(false);
 
     // Don't place if there's a collision
-    if (currentPreview.hasCollision) return;
+    if (currentPreview.hasCollision) {
+      console.log('[DEBUG handleCanvasDrop] Has collision, returning');
+      return;
+    }
 
-    if (!selectedPiece) return;
+    if (!selectedPiece) {
+      console.log('[DEBUG handleCanvasDrop] No selected piece, returning');
+      return;
+    }
 
     // Always use the preview position (already snapped)
+    console.log('[DEBUG handleCanvasDrop] Calling onDrop at:', currentPreview.x, currentPreview.y);
     onDrop(currentPreview.x, currentPreview.y, currentRotation);
   };
 
@@ -1080,6 +1102,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   // Handle mouse up to place piece from sidebar drag or map drag
   // KEY INSIGHT: The preview is ALWAYS accurate, so we just use its position directly
   const handleMouseUp = (e: React.MouseEvent) => {
+    console.log('[DEBUG handleMouseUp] Called, isSidebarDragging:', isSidebarDragging, 'isPlacementMode:', isPlacementMode, 'mapDragPiece:', !!mapDragPiece);
+
     // Handle right-click panning end
     if (isPanning) {
       setIsPanning(false);
@@ -1188,19 +1212,23 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     // Handle sidebar drag - use preview position directly
     if (!isSidebarDragging || !selectedPiece) {
+      console.log('[DEBUG handleMouseUp] Not sidebar dragging or no selected piece, returning');
       return;
     }
 
+    console.log('[DEBUG handleMouseUp] Processing sidebar drag drop at:', preview.x, preview.y);
     setDragPreview((prev) => ({ ...prev, visible: false }));
 
     // Don't place if there's a collision or preview not visible
     if (preview.hasCollision || !preview.visible) {
+      console.log('[DEBUG handleMouseUp] Collision or not visible, cancelling');
       endSidebarDrag();
       return;
     }
 
     // Use the preview position directly - it's always correct!
     // Call onDrop BEFORE endSidebarDrag because onDrop needs selectedPieceId
+    console.log('[DEBUG handleMouseUp] Calling onDrop for sidebar drag');
     onDrop(preview.x, preview.y, preview.rotation);
     endSidebarDrag();
   };
@@ -1244,20 +1272,27 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle click on canvas background to deselect or place piece in placement mode
   const handleCanvasClick = (e: any) => {
+    console.log('[DEBUG handleCanvasClick] Called, isPlacementMode:', isPlacementMode, 'selectedPieceId:', selectedPieceId);
+
     // Check if clicking on background (not on a piece)
     const isBackground = e.target === e.currentTarget || e.target.attrs?.name === 'background';
 
     // Only handle clicks on background - piece clicks are handled by their own handlers
-    if (!isBackground) return;
+    if (!isBackground) {
+      console.log('[DEBUG handleCanvasClick] Not on background, returning');
+      return;
+    }
 
     // Use the ref to get the latest preview position
     const currentPreview = dragPreviewRef.current;
 
     // If in placement mode, place the piece (only if preview is visible and valid)
     if (isPlacementMode && selectedPiece && currentPreview.visible && !currentPreview.hasCollision) {
+      console.log('[DEBUG handleCanvasClick] Placing piece in placement mode at:', currentPreview.x, currentPreview.y, 'rotation:', currentRotation);
       onDrop(currentPreview.x, currentPreview.y, currentRotation);
       exitPlacementMode();
       setDragPreview((prev) => ({ ...prev, visible: false }));
+      console.log('[DEBUG handleCanvasClick] Piece placed, exited placement mode');
       return;
     }
 
@@ -1271,6 +1306,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   const handleStageMouseDown = (e: any) => {
     const isBackground = e.target === e.currentTarget || e.target.attrs?.name === 'background';
     const mouseButton = e.evt?.button;
+    console.log('[DEBUG handleStageMouseDown] Called, isBackground:', isBackground, 'mouseButton:', mouseButton, 'isPlacementMode:', isPlacementMode, 'isSidebarDragging:', isSidebarDragging);
 
     // Right click (button 2): start panning
     if (mouseButton === 2 && !isViewLocked) {
@@ -1387,7 +1423,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
             width={canvasWidth}
             height={canvasHeight}
             fill="#1f2937"
-            onClick={handleCanvasClick}
+            // Note: onClick removed - Stage handles clicks to prevent double-firing
           />
         </Layer>
 

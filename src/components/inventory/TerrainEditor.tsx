@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import { useInventoryStore } from '@/store/inventoryStore';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PiecesGrid } from './PiecesGrid';
 import { ObjectsList } from './ObjectsList';
 import { Save, ChevronDown, ChevronUp, Wand2 } from 'lucide-react';
 
-const TERRAIN_EMOJIS = ['🏜️', '🌲', '🏔️', '🌊', '🐊', '🌋', '❄️', '🌾', '🏛️', '🌙', '☀️', '🌸'];
 const TERRAIN_COLORS = [
   '#E5C07B', '#98C379', '#D19A66', '#61AFEF', '#56B6C2', '#E06C75',
   '#C678DD', '#ABB2BF', '#282C34', '#5C6370', '#BE5046', '#4EC9B0',
@@ -28,10 +28,7 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
   const [editedIcon, setEditedIcon] = useState(terrain?.icon || '🗺️');
   const [editedDescription, setEditedDescription] = useState(terrain?.description || '');
   const [hasChanges, setHasChanges] = useState(false);
-  const [showIconPicker, setShowIconPicker] = useState(false);
   const [showDescriptionEditor, setShowDescriptionEditor] = useState(false);
-  const [pickerPosition, setPickerPosition] = useState({ top: 0, left: 0 });
-  const iconButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Update local state when terrain changes
   React.useEffect(() => {
@@ -43,21 +40,6 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
       setHasChanges(false);
     }
   }, [terrain]);
-
-  // Close icon picker when clicking outside
-  React.useEffect(() => {
-    if (!showIconPicker) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.icon-picker-container')) {
-        setShowIconPicker(false);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showIconPicker]);
 
   if (!terrain) {
     return (
@@ -84,51 +66,13 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
       <CardHeader className="border-b border-gray-800 overflow-visible">
         <div className="flex items-start gap-4">
           {/* Icon picker */}
-          <div className="relative icon-picker-container">
-            <button
-              ref={iconButtonRef}
-              onClick={() => {
-                if (!showIconPicker && iconButtonRef.current) {
-                  const rect = iconButtonRef.current.getBoundingClientRect();
-                  setPickerPosition({
-                    top: rect.bottom + 8,
-                    left: rect.left,
-                  });
-                }
-                setShowIconPicker(!showIconPicker);
-              }}
-              className="text-4xl p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              {editedIcon}
-            </button>
-            {showIconPicker && (
-              <div
-                className="fixed bg-gray-900 border border-gray-600 rounded-lg p-3 grid grid-cols-4 gap-2 shadow-2xl"
-                style={{
-                  zIndex: 9999,
-                  top: pickerPosition.top,
-                  left: pickerPosition.left,
-                }}
-              >
-                {TERRAIN_EMOJIS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => {
-                      setEditedIcon(emoji);
-                      setHasChanges(true);
-                      setShowIconPicker(false);
-                    }}
-                    className={`w-12 h-12 text-2xl rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors ${
-                      editedIcon === emoji ? 'bg-blue-600 ring-2 ring-blue-400' : 'bg-gray-800'
-                    }`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <EmojiPicker
+            value={editedIcon}
+            onChange={(emoji) => {
+              setEditedIcon(emoji);
+              setHasChanges(true);
+            }}
+          />
 
           <div className="flex-1">
             {/* Name input */}

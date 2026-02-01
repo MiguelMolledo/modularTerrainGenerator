@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Puzzle, Plus, Trash2, Sparkles, Search, X, FileText, Upload, Image as ImageIcon, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Puzzle, Plus, Trash2, Sparkles, Search, X, FileText, Upload, Image as ImageIcon, Pencil, Layers, List } from 'lucide-react';
 import { getGridDimensions } from '@/lib/gridUtils';
 import { PROP_CATEGORIES, PROP_SIZES, COMMON_PROP_EMOJIS, DEFAULT_PROPS } from '@/config/props';
 import type { ModularPiece, PropCategory, CellColors } from '@/types';
@@ -153,6 +153,8 @@ export function Sidebar() {
   const [expandedTerrainSubCategories, setExpandedTerrainSubCategories] = useState<Set<string>>(
     new Set()
   );
+  // Toggle between grouped view (with tags) and flat view (without tags)
+  const [showTagGroups, setShowTagGroups] = useState(true);
 
   const togglePropCategory = (categoryId: PropCategory) => {
     setExpandedPropCategories(prev => {
@@ -516,6 +518,27 @@ export function Sidebar() {
           <span className="text-xs font-medium text-gray-400">
             {editMode === 'terrain' ? 'Terrain Pieces' : 'Props & NPCs'}
           </span>
+          {editMode === 'terrain' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+              onClick={() => setShowTagGroups(!showTagGroups)}
+              title={showTagGroups ? 'Show flat list' : 'Show grouped by tags'}
+            >
+              {showTagGroups ? (
+                <>
+                  <List className="h-3 w-3 mr-1" />
+                  Flat
+                </>
+              ) : (
+                <>
+                  <Layers className="h-3 w-3 mr-1" />
+                  Tags
+                </>
+              )}
+            </Button>
+          )}
           {editMode === 'props' && (
             <div className="flex items-center gap-1">
               <Button
@@ -618,8 +641,8 @@ export function Sidebar() {
                       />
                     </button>
 
-                    {/* Tag Categories within Terrain */}
-                    {isTerrainExpanded && (
+                    {/* Tag Categories within Terrain (Grouped View) */}
+                    {isTerrainExpanded && showTagGroups && (
                       <div className="border-t border-gray-700 bg-gray-800/50">
                         {TERRAIN_TAG_CATEGORIES.map((category) => {
                           const categoryPieces = terrainPieces[category.id] || [];
@@ -696,6 +719,60 @@ export function Sidebar() {
                                 </div>
                               )}
                             </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Flat View (without tag groups) */}
+                    {isTerrainExpanded && !showTagGroups && (
+                      <div className="border-t border-gray-700 bg-gray-800/50 space-y-1 p-2">
+                        {/* Get all pieces for this terrain, flattened */}
+                        {Object.values(terrainPieces).flat().map((piece) => {
+                          const totalUsed = getTotalUsed(piece.id);
+                          const available = piece.quantity - totalUsed;
+                          const isSelected = selectedPieceId === piece.id;
+                          const isOverused = available < 0;
+
+                          return (
+                            <Card
+                              key={piece.id}
+                              onMouseDown={(e) => handleMouseDown(e, piece.id)}
+                              className={`cursor-grab active:cursor-grabbing transition-all select-none ${
+                                isSelected ? 'ring-2 ring-blue-500' : ''
+                              } ${isOverused ? 'border-red-500 bg-red-950/30' : 'hover:bg-gray-700'}`}
+                              style={{
+                                borderLeft: `4px solid ${isOverused ? '#ef4444' : terrain.color}`,
+                              }}
+                            >
+                              <CardContent className="p-2">
+                                <div className="flex items-center gap-2">
+                                  {/* Visual preview */}
+                                  <PiecePreview
+                                    piece={piece}
+                                    terrainColor={terrain.color}
+                                    terrainTypes={terrainTypes}
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className={`font-medium text-sm truncate ${isOverused ? 'text-red-300' : 'text-white'}`}>
+                                      {piece.size.label}
+                                      {piece.isDiagonal && ' △'}
+                                    </h3>
+                                    <p className="text-xs text-gray-500">
+                                      {piece.elevation && (piece.elevation.nw !== 0 || piece.elevation.ne !== 0 || piece.elevation.sw !== 0 || piece.elevation.se !== 0)
+                                        ? `↗ ${Math.max(piece.elevation.nw, piece.elevation.ne, piece.elevation.sw, piece.elevation.se)}"`
+                                        : ''}
+                                    </p>
+                                  </div>
+                                  <div className="text-right ml-2">
+                                    <span className={`text-sm font-bold ${available > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                      {available}
+                                    </span>
+                                    <span className="text-xs text-gray-500">/{piece.quantity}</span>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
                           );
                         })}
                       </div>

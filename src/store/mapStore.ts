@@ -727,10 +727,34 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   addPlacedPiece: (piece) =>
     set((state) => {
+      // DEBUG: Log every piece addition attempt
+      console.log('[DEBUG addPlacedPiece] Adding piece:', {
+        id: piece.id,
+        pieceId: piece.pieceId,
+        x: piece.x,
+        y: piece.y,
+        rotation: piece.rotation,
+        level: piece.level,
+        currentPiecesCount: state.placedPieces.length,
+        timestamp: Date.now(),
+        stack: new Error().stack?.split('\n').slice(1, 5).join('\n'),
+      });
+
       // Prevent duplicates by id
       if (state.placedPieces.some((p) => p.id === piece.id)) {
-        console.warn(`Piece with id ${piece.id} already exists, skipping`);
+        console.warn(`[DEBUG addPlacedPiece] Piece with id ${piece.id} already exists, skipping`);
         return state;
+      }
+
+      // DEBUG: Check if there's already a piece at this exact position
+      const existingAtPosition = state.placedPieces.filter(
+        (p) => p.x === piece.x && p.y === piece.y && p.level === piece.level
+      );
+      if (existingAtPosition.length > 0) {
+        console.warn('[DEBUG addPlacedPiece] WARNING: Adding piece at position with existing pieces:', {
+          newPiece: piece,
+          existingPieces: existingAtPosition,
+        });
       }
 
       // Update recently used pieces (keep last 8, most recent first)
@@ -738,6 +762,8 @@ export const useMapStore = create<MapState>((set, get) => ({
         piece.pieceId,
         ...state.recentlyUsedPieceIds.filter((id) => id !== piece.pieceId),
       ].slice(0, 8);
+
+      console.log('[DEBUG addPlacedPiece] Piece added successfully, new total:', state.placedPieces.length + 1);
 
       return {
         placedPieces: [...state.placedPieces, piece],
@@ -953,8 +979,10 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   selectPieceFromRadialMenu: () => {
     const state = get();
+    console.log('[DEBUG selectPieceFromRadialMenu] Called, selectedIndex:', state.radialMenuSelectedIndex);
     if (state.radialMenuSelectedIndex !== null && state.recentlyUsedPieceIds[state.radialMenuSelectedIndex]) {
       const pieceId = state.recentlyUsedPieceIds[state.radialMenuSelectedIndex];
+      console.log('[DEBUG selectPieceFromRadialMenu] Entering placement mode for pieceId:', pieceId);
       set({
         selectedPieceId: pieceId,
         isRadialMenuOpen: false,
@@ -963,6 +991,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         isPlacementMode: true,
       });
     } else {
+      console.log('[DEBUG selectPieceFromRadialMenu] No piece selected, closing menu');
       set({
         isRadialMenuOpen: false,
         radialMenuSelectedIndex: null,
@@ -970,18 +999,22 @@ export const useMapStore = create<MapState>((set, get) => ({
     }
   },
 
-  enterPlacementMode: (pieceId: string) =>
+  enterPlacementMode: (pieceId: string) => {
+    console.log('[DEBUG enterPlacementMode] Entering placement mode for pieceId:', pieceId);
     set({
       selectedPieceId: pieceId,
       isPlacementMode: true,
       currentRotation: 0,
-    }),
+    });
+  },
 
-  exitPlacementMode: () =>
+  exitPlacementMode: () => {
+    console.log('[DEBUG exitPlacementMode] Exiting placement mode');
     set({
       isPlacementMode: false,
       selectedPieceId: null,
-    }),
+    });
+  },
 
   // 3D View Actions
   toggle3DMode: () =>

@@ -45,20 +45,31 @@ export function MapDesigner() {
   } = useMapStore();
 
   const handleDrop = (x: number, y: number, rotation: number) => {
-    if (!selectedPieceId) return;
+    console.log('[DEBUG handleDrop] Called with:', { x, y, rotation, selectedPieceId, currentLevel, timestamp: Date.now() });
+
+    if (!selectedPieceId) {
+      console.log('[DEBUG handleDrop] No selectedPieceId, returning early');
+      return;
+    }
 
     // Check availablePieces, DEFAULT_PROPS, and customProps for the piece
     const piece = availablePieces.find((p) => p.id === selectedPieceId)
       || DEFAULT_PROPS.find((p) => p.id === selectedPieceId)
       || customProps.find((p) => p.id === selectedPieceId);
-    if (!piece) return;
+    if (!piece) {
+      console.log('[DEBUG handleDrop] Piece not found for id:', selectedPieceId);
+      return;
+    }
 
     // Use defaultRotation for diagonal pieces, otherwise use the provided rotation
     const finalRotation = piece.defaultRotation !== undefined ? piece.defaultRotation : rotation;
 
+    const newPieceId = uuidv4();
+    console.log('[DEBUG handleDrop] Creating piece with UUID:', newPieceId, 'at position:', x, y);
+
     // Allow placing pieces even beyond available quantity (will show negative in sidebar)
     addPlacedPiece({
-      id: uuidv4(),
+      id: newPieceId,
       pieceId: selectedPieceId,
       x,
       y,
@@ -68,6 +79,7 @@ export function MapDesigner() {
 
     // Reset rotation after placing
     setCurrentRotation(0);
+    console.log('[DEBUG handleDrop] Finished');
   };
 
   return (

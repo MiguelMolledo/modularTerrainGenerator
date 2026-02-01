@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { Search, X, Plus, Minus, Wand2, Image, Trash2, Pencil } from 'lucide-react';
+import { Search, X, Plus, Minus, Wand2, Image as ImageIcon, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import {
   Dialog,
   DialogContent,
@@ -481,7 +482,7 @@ export function PropsInventory({
                     <>Processing...</>
                   ) : (
                     <>
-                      <Image className="h-4 w-4" />
+                      <ImageIcon className="h-4 w-4" />
                       Upload Image
                     </>
                   )}
@@ -498,20 +499,11 @@ export function PropsInventory({
                 <label className="text-sm font-medium text-gray-300 block mb-2">
                   Emoji
                 </label>
-                <div className="flex items-center gap-2">
-                  <div className="text-3xl w-12 h-12 flex items-center justify-center bg-gray-800 border border-gray-700 rounded-lg">
-                    {newPropEmoji}
-                  </div>
-                  <input
-                    type="text"
-                    value={newPropEmoji}
-                    onChange={(e) => {
-                      const emoji = e.target.value.slice(-2);
-                      if (emoji) setNewPropEmoji(emoji);
-                    }}
-                    className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-center text-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    maxLength={2}
-                  />
+                <div className="flex items-center gap-3">
+                  <EmojiPicker value={newPropEmoji} onChange={setNewPropEmoji} />
+                  <span className="text-sm text-gray-400">
+                    Click to select an emoji
+                  </span>
                 </div>
               </div>
             )}
