@@ -199,9 +199,10 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
     // Small delay to ensure canvas is ready
     setTimeout(() => {
       // Use appropriate snapshot function based on current view mode
+      // For 2D mode, hide text labels since they're not useful for art generation
       const snapshot = is3DMode
         ? generate3DSnapshot(1200, 900)
-        : generateFullMapSnapshot(1200, 900);
+        : generateFullMapSnapshot(1200, 900, { hideText: true });
 
       if (snapshot) {
         setMapPreview(snapshot);

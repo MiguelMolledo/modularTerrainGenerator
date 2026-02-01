@@ -51,13 +51,24 @@ export function generateThumbnail(maxWidth = 400, maxHeight = 300): string | nul
   }
 }
 
+export interface SnapshotOptions {
+  hideText?: boolean;
+}
+
 /**
  * Generate a snapshot of the full map area, regardless of current zoom/pan.
  * This captures the entire map from (0,0) to (mapWidth, mapHeight) in inches.
  * The map will be centered in the output with no black margins.
+ * @param maxWidth - Maximum width of the output image
+ * @param maxHeight - Maximum height of the output image
+ * @param options - Optional settings for the snapshot
+ * @param options.hideText - If true, hides all text elements before capturing (useful for art generation)
  */
-export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900): string | null {
+export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900, options?: SnapshotOptions): string | null {
   if (!stageInstance) return null;
+
+  // Track hidden text nodes for cleanup
+  const hiddenTextNodes: Konva.Text[] = [];
 
   try {
     // The actual rendered canvas size depends on the current zoom level
@@ -74,6 +85,20 @@ export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900): strin
     const savedY = stageInstance.y();
     const savedWidth = stageInstance.width();
     const savedHeight = stageInstance.height();
+
+    // If hideText is enabled, find all Text nodes and hide them temporarily
+    if (options?.hideText) {
+      const textNodes = stageInstance.find('Text') as Konva.Text[];
+      console.log(`Hiding ${textNodes.length} text nodes for snapshot`);
+      textNodes.forEach((textNode) => {
+        if (textNode.visible()) {
+          hiddenTextNodes.push(textNode);
+          textNode.visible(false);
+        }
+      });
+      // Apply visibility changes before capture
+      stageInstance.batchDraw();
+    }
 
     // Calculate the scale to fit map within max dimensions while maintaining aspect ratio
     const scaleX = maxWidth / renderedWidthPx;
@@ -99,6 +124,11 @@ export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900): strin
       quality: 0.9,
     });
 
+    // Restore text visibility
+    hiddenTextNodes.forEach((textNode) => {
+      textNode.visible(true);
+    });
+
     // Restore original transform and size
     stageInstance.width(savedWidth);
     stageInstance.height(savedHeight);
@@ -110,6 +140,17 @@ export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900): strin
     return dataUrl;
   } catch (error) {
     console.error('Failed to generate full map snapshot:', error);
+    // Ensure text nodes are restored even on error
+    if (hiddenTextNodes.length > 0) {
+      hiddenTextNodes.forEach((textNode) => {
+        try {
+          textNode.visible(true);
+        } catch {
+          // Ignore errors during cleanup
+        }
+      });
+      stageInstance?.batchDraw();
+    }
     return null;
   }
 }

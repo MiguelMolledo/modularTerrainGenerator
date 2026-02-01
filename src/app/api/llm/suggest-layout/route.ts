@@ -1,34 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callOpenRouter, OPENROUTER_MODELS } from '@/lib/openrouter';
 
-// System prompt for region-based layout suggestions
-const LAYOUT_SUGGESTION_SYSTEM = `You are a D&D/tabletop RPG map designer assistant. Given a scene description, available terrain types, and map dimensions, define terrain REGIONS for a tactical battle map.
+// System prompt for region-based layout suggestions with path support
+const LAYOUT_SUGGESTION_SYSTEM = `You are a D&D/tabletop RPG map designer assistant. Given a scene description, available terrain types, and map dimensions, define terrain REGIONS and PATHS for a tactical battle map.
 
-Your task is to define rectangular regions where different terrain types should be placed. Our system will automatically fill each region with the appropriate terrain pieces.
+Your task is to define:
+1. RECTANGULAR REGIONS where terrain types fill large areas
+2. PATHS for rivers, roads, or streams that can snake across the map
+
+Our system will automatically fill each region/path with the appropriate terrain pieces.
 
 CRITICAL RULES:
 - COVER THE ENTIRE MAP with terrain regions - NO empty spaces allowed
-- Define 6-12 terrain regions that together cover 100% of the map area
-- REGIONS MUST NOT OVERLAP - each area of the map should only belong to one region
+- Define 4-10 terrain regions that together cover 100% of the map area
+- You can also define PATHS that cut through regions (paths have priority over regions)
+- REGIONS MUST NOT OVERLAP with each other (but paths can cross regions)
 - Regions must tile perfectly to fill the entire map (like a puzzle)
 - Consider tactical interest: cover, chokepoints, flanking routes
-- Regions should make sense for the scene (forests cluster, water flows naturally, etc.)
 - Coordinates are in inches, starting from (0,0) at top-left
-- Use coordinates that are multiples of 6 for better piece alignment (0, 6, 12, 18, 24, etc.)
+- Use coordinates that are multiples of 6 for alignment (0, 6, 12, 18, 24, etc.)
 
-For each region, provide:
-- terrain: The terrain type slug (must match available types exactly)
-- x: X position in inches (left edge of region)
-- y: Y position in inches (top edge of region)
-- width: Width of the region in inches
-- height: Height of the region in inches
+PATH FORMAT:
+- A path is defined by waypoints that the path follows
+- Paths have a width (typically 6 inches for rivers)
+- Paths are great for rivers, roads, streams that snake across the map
+- The system will create rectangular segments connecting waypoints
 
 Respond ONLY with valid JSON. No explanations or markdown.
 Format:
 {
   "regions": [
-    {"terrain": "forest", "x": 0, "y": 0, "width": 18, "height": 12},
-    {"terrain": "water", "x": 24, "y": 18, "width": 12, "height": 18}
+    {"terrain": "forest", "x": 0, "y": 0, "width": 60, "height": 60}
+  ],
+  "paths": [
+    {
+      "terrain": "water",
+      "width": 6,
+      "waypoints": [
+        {"x": 0, "y": 30},
+        {"x": 30, "y": 15},
+        {"x": 60, "y": 30}
+      ]
+    }
   ],
   "description": "Brief description of the layout strategy"
 }`;
@@ -50,8 +63,20 @@ interface TerrainRegion {
   height: number;
 }
 
-interface RegionResult {
+interface PathWaypoint {
+  x: number;
+  y: number;
+}
+
+interface TerrainPath {
+  terrain: string;
+  width: number;
+  waypoints: PathWaypoint[];
+}
+
+interface LayoutResult {
   regions: TerrainRegion[];
+  paths?: TerrainPath[];
   description: string;
 }
 
@@ -73,6 +98,7 @@ interface SuccessResponse {
   placements: PlacementSuggestion[];
   description: string;
   regions?: TerrainRegion[];
+  paths?: TerrainPath[];
 }
 
 interface ErrorResponse {
@@ -127,6 +153,60 @@ class OccupancyGrid {
       }
     }
   }
+}
+
+// Convert a path with waypoints into rectangular segments
+function pathToSegments(path: TerrainPath, mapWidth: number, mapHeight: number): TerrainRegion[] {
+  const segments: TerrainRegion[] = [];
+  const waypoints = path.waypoints;
+
+  if (waypoints.length < 2) {
+    return segments;
+  }
+
+  const pathWidth = Math.max(6, path.width || 6); // Minimum 6 inches wide
+
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const start = waypoints[i];
+    const end = waypoints[i + 1];
+
+    // Calculate direction
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+
+    // Determine if this segment is more horizontal or vertical
+    const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+
+    if (isHorizontal) {
+      // Horizontal segment: width along X, height is pathWidth
+      const minX = Math.min(start.x, end.x);
+      const maxX = Math.max(start.x, end.x);
+      const centerY = (start.y + end.y) / 2;
+
+      segments.push({
+        terrain: path.terrain,
+        x: Math.max(0, Math.floor(minX / 6) * 6),
+        y: Math.max(0, Math.floor((centerY - pathWidth / 2) / 6) * 6),
+        width: Math.min(mapWidth, Math.ceil((maxX - minX + pathWidth) / 6) * 6),
+        height: pathWidth
+      });
+    } else {
+      // Vertical segment: height along Y, width is pathWidth
+      const minY = Math.min(start.y, end.y);
+      const maxY = Math.max(start.y, end.y);
+      const centerX = (start.x + end.x) / 2;
+
+      segments.push({
+        terrain: path.terrain,
+        x: Math.max(0, Math.floor((centerX - pathWidth / 2) / 6) * 6),
+        y: Math.max(0, Math.floor(minY / 6) * 6),
+        width: pathWidth,
+        height: Math.min(mapHeight, Math.ceil((maxY - minY + pathWidth) / 6) * 6)
+      });
+    }
+  }
+
+  return segments;
 }
 
 // Fill a region with available pieces using greedy bin-packing
@@ -270,19 +350,20 @@ CRITICAL GUIDELINES (follow these exactly):
 
 1. TERRAIN NAMES: Use ONLY the exact terrain names listed above. Example: "${terrainTypes[0] || 'forest'}" not just "forest".
 
-2. NO OVERLAPS: Regions must NOT overlap with each other. Plan coordinates carefully.
+2. REGIONS: Define rectangular regions that COVER THE ENTIRE MAP. Use regions as the "background" terrain.
 
-3. FULL COVERAGE: Define 6-12 terrain regions that COVER THE ENTIRE MAP (100%). NO empty spaces allowed. Regions must tile like a puzzle.
+3. PATHS (optional): For rivers, roads, or streams, use "paths" with waypoints. Paths cut through regions.
+   - A river should use 2-4 waypoints to create an S-curve or natural flow
+   - Path width is typically 6 inches
+   - Example S-shaped river: waypoints at (0,30), (20,15), (40,45), (60,30)
 
-4. COORDINATES: Use multiples of 6 for all coordinates (0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60, etc.)
+4. COORDINATES: Use multiples of 6 for all coordinates (0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60)
 
-5. REGION SIZES: Make regions large enough to fit multiple pieces. Minimum 6x6 inches per region.
+5. FULL COVERAGE: Regions must cover entire map (${body.mapWidth * body.mapHeight} sq inches). Paths are placed on top.
 
-6. VARIETY: Use different terrain types to create an interesting tactical map.
+6. VARIETY: Use different terrain types for an interesting tactical map.
 
-7. MATH CHECK: Sum of all region areas must equal map area (${body.mapWidth} x ${body.mapHeight} = ${body.mapWidth * body.mapHeight} square inches).
-
-Return ONLY valid JSON with "regions" array and "description" field.`;
+Return ONLY valid JSON with "regions" array, optional "paths" array, and "description" field.`;
 
     // Call OpenRouter
     const response = await callOpenRouter(
@@ -291,12 +372,12 @@ Return ONLY valid JSON with "regions" array and "description" field.`;
         { role: 'user', content: userPrompt },
       ],
       OPENROUTER_MODELS.quality,
-      2000, // Regions need fewer tokens than individual placements
+      2500, // Slightly more tokens for paths
       openRouterKey || undefined
     );
 
     // Parse the response
-    let result: RegionResult;
+    let result: LayoutResult;
     try {
       // Clean up response - remove markdown code blocks if present
       let cleanResponse = response.trim();
@@ -337,24 +418,63 @@ Return ONLY valid JSON with "regions" array and "description" field.`;
         height: Math.min(r.height, body.mapHeight - r.y)
       }));
 
+    // Validate and process paths
+    const validPaths: TerrainPath[] = (result.paths || [])
+      .filter((p): p is TerrainPath => {
+        if (!p || typeof p !== 'object') return false;
+        if (typeof p.terrain !== 'string' || !p.terrain) return false;
+        if (!Array.isArray(p.waypoints) || p.waypoints.length < 2) return false;
+        return p.waypoints.every(wp =>
+          typeof wp.x === 'number' && typeof wp.y === 'number'
+        );
+      })
+      .map(p => ({
+        terrain: p.terrain.toLowerCase(),
+        width: Math.max(6, p.width || 6),
+        waypoints: p.waypoints.map(wp => ({
+          x: Math.max(0, Math.min(wp.x, body.mapWidth)),
+          y: Math.max(0, Math.min(wp.y, body.mapHeight))
+        }))
+      }));
+
+    // Convert paths to segments
+    const pathSegments: TerrainRegion[] = [];
+    for (const path of validPaths) {
+      const segments = pathToSegments(path, body.mapWidth, body.mapHeight);
+      pathSegments.push(...segments);
+    }
+
     // Create a GLOBAL occupancy grid for the entire map
     const globalOccupancy = new OccupancyGrid(body.mapWidth, body.mapHeight);
-
-    // Sort regions by area (larger first) for better packing
-    const sortedRegions = [...validRegions].sort((a, b) =>
-      (b.width * b.height) - (a.width * a.height)
-    );
 
     // Fill each region with pieces, using the shared global occupancy grid
     const allPlacements: PlacementSuggestion[] = [];
 
+    // FIRST: Process path segments (they have priority)
+    for (const segment of pathSegments) {
+      const segmentPlacements = fillRegionWithPieces(
+        segment,
+        body.availablePieces,
+        body.mapWidth,
+        body.mapHeight,
+        globalOccupancy
+      );
+      allPlacements.push(...segmentPlacements);
+    }
+
+    // THEN: Sort remaining regions by area (larger first) for better packing
+    const sortedRegions = [...validRegions].sort((a, b) =>
+      (b.width * b.height) - (a.width * a.height)
+    );
+
+    // Fill regions (paths already marked as occupied, so no overlap)
     for (const region of sortedRegions) {
       const regionPlacements = fillRegionWithPieces(
         region,
         body.availablePieces,
         body.mapWidth,
         body.mapHeight,
-        globalOccupancy // Pass global grid to prevent overlaps between regions
+        globalOccupancy
       );
       allPlacements.push(...regionPlacements);
     }
@@ -362,7 +482,8 @@ Return ONLY valid JSON with "regions" array and "description" field.`;
     return NextResponse.json({
       placements: allPlacements,
       description: typeof result.description === 'string' ? result.description.slice(0, 500) : '',
-      regions: validRegions
+      regions: validRegions,
+      paths: validPaths.length > 0 ? validPaths : undefined
     });
   } catch (error) {
     console.error('Layout suggestion error:', error);
