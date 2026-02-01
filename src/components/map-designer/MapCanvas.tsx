@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { Stage, Layer, Rect, Line, Group, Text, Circle, Image as KonvaImage } from 'react-konva';
 import Konva from 'konva';
 import { useMapStore } from '@/store/mapStore';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { BASE_PIXELS_PER_INCH } from '@/config/terrain';
 import { PlacedPiece, ModularPiece } from '@/types';
 import { DEFAULT_PROPS } from '@/config/props';
@@ -232,6 +233,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     showProps,
   } = useMapStore();
 
+  const { recordRemovePiece, recordRemovePieces, recordMovePiece, recordMovePieces } = useUndoRedo();
+
   const pixelsPerInch = BASE_PIXELS_PER_INCH * zoom;
   const canvasWidth = mapWidth * pixelsPerInch;
   const canvasHeight = mapHeight * pixelsPerInch;
@@ -259,6 +262,15 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   const selectedTerrain = selectedPiece
     ? terrainTypes.find((t) => t.id === selectedPiece.terrainTypeId)
     : null;
+
+  // Helper to delete a piece with undo recording
+  const handleDeletePiece = useCallback((pieceId: string) => {
+    const piece = placedPieces.find((p) => p.id === pieceId);
+    if (piece) {
+      recordRemovePiece(piece);
+      removePlacedPiece(pieceId);
+    }
+  }, [placedPieces, recordRemovePiece, removePlacedPiece]);
 
   // Check collision with support for diagonal (triangular) pieces
   // Props do NOT collide with terrain (they sit on top)
@@ -560,6 +572,13 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       // Delete selected pieces with Delete or Backspace
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedPlacedPieceIds.length > 0) {
         e.preventDefault();
+        // Record pieces for undo before removing
+        const piecesToRemove = placedPieces.filter((p) => selectedPlacedPieceIds.includes(p.id));
+        if (piecesToRemove.length > 1) {
+          recordRemovePieces(piecesToRemove);
+        } else if (piecesToRemove.length === 1) {
+          recordRemovePiece(piecesToRemove[0]);
+        }
         // Remove all selected pieces
         selectedPlacedPieceIds.forEach((id) => removePlacedPiece(id));
       }
@@ -761,18 +780,15 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle mousedown on placed piece - prepare for potential drag
   const handlePieceMouseDown = (placedId: string, e: any) => {
-    console.log('[DEBUG handlePieceMouseDown] Called for placedId:', placedId, 'isSidebarDragging:', isSidebarDragging, 'isPlacementMode:', isPlacementMode);
     e.cancelBubble = true;
 
     // If in sidebar drag mode (placing new piece), don't intercept - let the piece be placed
     if (isSidebarDragging) {
-      console.log('[DEBUG handlePieceMouseDown] In sidebar drag mode, returning');
       return;
     }
 
     // If in placement mode, exit it first
     if (isPlacementMode) {
-      console.log('[DEBUG handlePieceMouseDown] Exiting placement mode');
       exitPlacementMode();
       setDragPreview((prev) => ({ ...prev, visible: false }));
     }
@@ -807,19 +823,15 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Actually start the drag (called after threshold is met)
   const startMapDrag = (placedId: string) => {
-    console.log('[DEBUG startMapDrag] Starting drag for placedId:', placedId);
     const placed = placedPieces.find((p) => p.id === placedId);
     if (!placed) {
-      console.log('[DEBUG startMapDrag] Placed piece not found!');
       return;
     }
 
     const piece = allPieces.find((p) => p.id === placed.pieceId);
     if (!piece) {
-      console.log('[DEBUG startMapDrag] Piece definition not found for pieceId:', placed.pieceId);
       return;
     }
-    console.log('[DEBUG startMapDrag] Found placed piece at:', placed.x, placed.y, 'pieceId:', placed.pieceId);
 
     // Check if we're dragging multiple selected pieces
     if (selectedPlacedPieceIds.length > 1 && selectedSet.has(placedId)) {
@@ -942,13 +954,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle drop from sidebar
   const handleCanvasDrop = (e: React.DragEvent) => {
-    console.log('[DEBUG handleCanvasDrop] Called, isDraggingFromSidebar:', isDraggingFromSidebar);
     e.preventDefault();
     e.stopPropagation();
 
     // Only process if this was actually a sidebar drag
     if (!isDraggingFromSidebar) {
-      console.log('[DEBUG handleCanvasDrop] Not dragging from sidebar, returning');
       return;
     }
 
@@ -960,17 +970,14 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     // Don't place if there's a collision
     if (currentPreview.hasCollision) {
-      console.log('[DEBUG handleCanvasDrop] Has collision, returning');
       return;
     }
 
     if (!selectedPiece) {
-      console.log('[DEBUG handleCanvasDrop] No selected piece, returning');
       return;
     }
 
     // Always use the preview position (already snapped)
-    console.log('[DEBUG handleCanvasDrop] Calling onDrop at:', currentPreview.x, currentPreview.y);
     onDrop(currentPreview.x, currentPreview.y, currentRotation);
   };
 
@@ -1102,8 +1109,6 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   // Handle mouse up to place piece from sidebar drag or map drag
   // KEY INSIGHT: The preview is ALWAYS accurate, so we just use its position directly
   const handleMouseUp = (e: React.MouseEvent) => {
-    console.log('[DEBUG handleMouseUp] Called, isSidebarDragging:', isSidebarDragging, 'isPlacementMode:', isPlacementMode, 'mapDragPiece:', !!mapDragPiece);
-
     // Handle right-click panning end
     if (isPanning) {
       setIsPanning(false);
@@ -1174,6 +1179,25 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     // Handle multi-drag finalization
     if (multiDragState) {
+      // Record the move for undo/redo - compare original positions with current positions
+      const moves = multiDragState.pieces
+        .map((p) => {
+          const currentPiece = placedPieces.find((pp) => pp.id === p.id);
+          if (currentPiece && (currentPiece.x !== p.originalX || currentPiece.y !== p.originalY)) {
+            return {
+              id: p.id,
+              from: { x: p.originalX, y: p.originalY },
+              to: { x: currentPiece.x, y: currentPiece.y },
+            };
+          }
+          return null;
+        })
+        .filter((m): m is NonNullable<typeof m> => m !== null);
+
+      if (moves.length > 0) {
+        recordMovePieces(moves);
+      }
+
       setMultiDragState(null);
       return;
     }
@@ -1191,6 +1215,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     if (mapDragPiece && selectedPiece) {
       setDragPreview((prev) => ({ ...prev, visible: false }));
       const pieceId = mapDragPiece.id;
+      const originalX = mapDragPiece.originalX;
+      const originalY = mapDragPiece.originalY;
       setMapDragPiece(null);
       setDraggingPieceId(null);
       setSelectedPieceId(null);
@@ -1199,6 +1225,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       if (preview.hasCollision || !preview.visible) {
         // Piece stays where it was - no update needed
         return;
+      }
+
+      // Only record move if position actually changed
+      if (preview.x !== originalX || preview.y !== originalY) {
+        recordMovePiece(pieceId, { x: originalX, y: originalY }, { x: preview.x, y: preview.y });
       }
 
       // Update piece position in place (no delete/recreate)
@@ -1212,23 +1243,19 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     // Handle sidebar drag - use preview position directly
     if (!isSidebarDragging || !selectedPiece) {
-      console.log('[DEBUG handleMouseUp] Not sidebar dragging or no selected piece, returning');
       return;
     }
 
-    console.log('[DEBUG handleMouseUp] Processing sidebar drag drop at:', preview.x, preview.y);
     setDragPreview((prev) => ({ ...prev, visible: false }));
 
     // Don't place if there's a collision or preview not visible
     if (preview.hasCollision || !preview.visible) {
-      console.log('[DEBUG handleMouseUp] Collision or not visible, cancelling');
       endSidebarDrag();
       return;
     }
 
     // Use the preview position directly - it's always correct!
     // Call onDrop BEFORE endSidebarDrag because onDrop needs selectedPieceId
-    console.log('[DEBUG handleMouseUp] Calling onDrop for sidebar drag');
     onDrop(preview.x, preview.y, preview.rotation);
     endSidebarDrag();
   };
@@ -1272,14 +1299,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle click on canvas background to deselect or place piece in placement mode
   const handleCanvasClick = (e: any) => {
-    console.log('[DEBUG handleCanvasClick] Called, isPlacementMode:', isPlacementMode, 'selectedPieceId:', selectedPieceId);
-
     // Check if clicking on background (not on a piece)
     const isBackground = e.target === e.currentTarget || e.target.attrs?.name === 'background';
 
     // Only handle clicks on background - piece clicks are handled by their own handlers
     if (!isBackground) {
-      console.log('[DEBUG handleCanvasClick] Not on background, returning');
       return;
     }
 
@@ -1288,11 +1312,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     // If in placement mode, place the piece (only if preview is visible and valid)
     if (isPlacementMode && selectedPiece && currentPreview.visible && !currentPreview.hasCollision) {
-      console.log('[DEBUG handleCanvasClick] Placing piece in placement mode at:', currentPreview.x, currentPreview.y, 'rotation:', currentRotation);
       onDrop(currentPreview.x, currentPreview.y, currentRotation);
       exitPlacementMode();
       setDragPreview((prev) => ({ ...prev, visible: false }));
-      console.log('[DEBUG handleCanvasClick] Piece placed, exited placement mode');
       return;
     }
 
@@ -1306,7 +1328,6 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   const handleStageMouseDown = (e: any) => {
     const isBackground = e.target === e.currentTarget || e.target.attrs?.name === 'background';
     const mouseButton = e.evt?.button;
-    console.log('[DEBUG handleStageMouseDown] Called, isBackground:', isBackground, 'mouseButton:', mouseButton, 'isPlacementMode:', isPlacementMode, 'isSidebarDragging:', isSidebarDragging);
 
     // Right click (button 2): start panning
     if (mouseButton === 2 && !isViewLocked) {
@@ -1700,7 +1721,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                 offsetY={pieceHeight / 2}
                 listening={isInteractive}
                 onMouseDown={isInteractive ? (e) => handlePieceMouseDown(placed.id, e) : undefined}
-                onDblClick={isInteractive ? () => removePlacedPiece(placed.id) : undefined}
+                onDblClick={isInteractive ? () => handleDeletePiece(placed.id) : undefined}
                 onClick={isInteractive ? (e) => handlePieceClick(placed.id, e) : undefined}
                 rotation={placed.rotation}
                 opacity={isDragging ? 0 : (isInteractive ? 1 : 0.75)}
@@ -1933,7 +1954,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                 offsetY={pieceHeight / 2}
                 listening={isInteractive}
                 onMouseDown={isInteractive ? (e) => handlePieceMouseDown(placed.id, e) : undefined}
-                onDblClick={isInteractive ? () => removePlacedPiece(placed.id) : undefined}
+                onDblClick={isInteractive ? () => handleDeletePiece(placed.id) : undefined}
                 onClick={isInteractive ? (e) => handlePieceClick(placed.id, e) : undefined}
                 rotation={placed.rotation}
                 opacity={isDragging ? 0 : (isInteractive ? 1 : 0.75)}

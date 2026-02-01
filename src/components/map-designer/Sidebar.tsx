@@ -154,7 +154,7 @@ export function Sidebar() {
     new Set()
   );
   // Toggle between grouped view (with tags) and flat view (without tags)
-  const [showTagGroups, setShowTagGroups] = useState(true);
+  const [showTagGroups, setShowTagGroups] = useState(false);
 
   const togglePropCategory = (categoryId: PropCategory) => {
     setExpandedPropCategories(prev => {
@@ -282,12 +282,17 @@ export function Sidebar() {
     return grouped;
   }, [filteredTerrainPieces]);
 
-  // Get terrain types that have pieces (in display order)
-  const terrainTypesWithPieces = useMemo(() => {
-    return terrainTypes.filter(t =>
-      (t.slug && terrainByTypeAndTag.has(t.slug)) || terrainByTypeAndTag.has(t.id)
-    );
-  }, [terrainTypes, terrainByTypeAndTag]);
+  // Get all terrain types for display (show all, even without pieces)
+  const terrainTypesForDisplay = useMemo(() => {
+    // If searching, only show terrain types that have matching pieces
+    if (searchQuery.trim()) {
+      return terrainTypes.filter(t =>
+        (t.slug && terrainByTypeAndTag.has(t.slug)) || terrainByTypeAndTag.has(t.id)
+      );
+    }
+    // Otherwise show all terrain types
+    return terrainTypes;
+  }, [terrainTypes, terrainByTypeAndTag, searchQuery]);
 
   // Separate custom pieces, variants, regular pieces, and props (keeping for backwards compatibility)
   const regularPieces = availablePieces.filter((p) => !p.isCustom && !p.isVariant && p.pieceType !== 'prop');
@@ -608,14 +613,14 @@ export function Sidebar() {
         {editMode === 'terrain' && (
           <ScrollArea className="flex-1 min-h-0 custom-scrollbar">
             <div className="p-2 space-y-1">
-              {terrainTypesWithPieces.map((terrain) => {
+              {terrainTypesForDisplay.map((terrain) => {
                 const terrainId = terrain.slug || terrain.id;
                 const terrainPieces = (terrain.slug && terrainByTypeAndTag.get(terrain.slug)) || terrainByTypeAndTag.get(terrain.id);
-                if (!terrainPieces) return null;
 
                 // Count total pieces for this terrain
-                const totalPieces = Object.values(terrainPieces).reduce((sum, arr) => sum + arr.length, 0);
-                if (totalPieces === 0) return null;
+                const totalPieces = terrainPieces
+                  ? Object.values(terrainPieces).reduce((sum, arr) => sum + arr.length, 0)
+                  : 0;
 
                 const isTerrainExpanded = isSearching || expandedTerrainTypes.has(terrainId);
 
@@ -644,7 +649,14 @@ export function Sidebar() {
                     {/* Tag Categories within Terrain (Grouped View) */}
                     {isTerrainExpanded && showTagGroups && (
                       <div className="border-t border-gray-700 bg-gray-800/50">
-                        {TERRAIN_TAG_CATEGORIES.map((category) => {
+                        {totalPieces === 0 && (
+                          <div className="text-center py-4 px-3 text-gray-500 text-xs">
+                            No pieces for this terrain yet.
+                            <br />
+                            Go to Settings → Inventory to add pieces.
+                          </div>
+                        )}
+                        {terrainPieces && TERRAIN_TAG_CATEGORIES.map((category) => {
                           const categoryPieces = terrainPieces[category.id] || [];
                           if (categoryPieces.length === 0) return null;
 
@@ -727,8 +739,15 @@ export function Sidebar() {
                     {/* Flat View (without tag groups) */}
                     {isTerrainExpanded && !showTagGroups && (
                       <div className="border-t border-gray-700 bg-gray-800/50 space-y-1 p-2">
+                        {totalPieces === 0 && (
+                          <div className="text-center py-4 px-3 text-gray-500 text-xs">
+                            No pieces for this terrain yet.
+                            <br />
+                            Go to Settings → Inventory to add pieces.
+                          </div>
+                        )}
                         {/* Get all pieces for this terrain, flattened */}
-                        {Object.values(terrainPieces).flat().map((piece) => {
+                        {terrainPieces && Object.values(terrainPieces).flat().map((piece) => {
                           const totalUsed = getTotalUsed(piece.id);
                           const available = piece.quantity - totalUsed;
                           const isSelected = selectedPieceId === piece.id;

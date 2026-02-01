@@ -21,11 +21,12 @@ import {
 } from '@/components/ui/dialog';
 import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
 import { GenerateArtDialog } from './GenerateArtDialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2 } from 'lucide-react';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2, Undo2, Redo2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { useRouter } from 'next/navigation';
 import { generateThumbnail, generateFullMapSnapshot } from '@/lib/stageRef';
 import { clearLastMapId } from './UnsavedChangesGuard';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 import type { ModularPiece, SavedMap } from '@/types';
 
 // Dropdown menu component
@@ -106,6 +107,10 @@ function MenuDivider() {
   return <hr className="my-1 border-gray-700" />;
 }
 
+// Detect Mac platform for keyboard shortcut display
+const isMac = typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+const modKey = isMac ? '⌘' : 'Ctrl';
+
 export function Toolbar() {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
@@ -168,6 +173,7 @@ export function Toolbar() {
 
   const { saveMap, savedMaps, fetchMaps, loadMap, deleteMap } = useMapInventoryStore();
   const { terrainTypes, shapes, fetchTerrainTypes, fetchShapes, getModularPieces } = useInventoryStore();
+  const { undo, redo, canUndo, canRedo, undoDescription, redoDescription } = useUndoRedo();
 
   // Fetch maps, terrain types, and shapes on mount
   useEffect(() => {
@@ -376,6 +382,44 @@ export function Toolbar() {
           onChange={(e) => setMapName(e.target.value)}
           className="bg-transparent border-b border-transparent hover:border-gray-600 focus:border-blue-500 outline-none text-white font-semibold text-base px-1 min-w-0 max-w-[150px]"
         />
+
+        <Separator orientation="vertical" className="h-8" />
+
+        {/* Undo/Redo Buttons */}
+        <div className="flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={undo}
+                disabled={!canUndo}
+                className="h-7 px-2"
+              >
+                <Undo2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {canUndo ? `Undo: ${undoDescription}` : 'Nothing to undo'} ({modKey}+Z)
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={redo}
+                disabled={!canRedo}
+                className="h-7 px-2"
+              >
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {canRedo ? `Redo: ${redoDescription}` : 'Nothing to redo'} ({modKey}+Shift+Z)
+            </TooltipContent>
+          </Tooltip>
+        </div>
 
         <Separator orientation="vertical" className="h-8" />
 

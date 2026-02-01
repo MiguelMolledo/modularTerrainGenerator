@@ -9,6 +9,7 @@ import { PiecesSummaryPanel } from './PiecesSummaryPanel';
 import { RadialMenu } from './RadialMenu';
 import { PropSearchDialog } from './PropSearchDialog';
 import { UnsavedChangesGuard } from './UnsavedChangesGuard';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
 import { DEFAULT_PROPS } from '@/config/props';
@@ -36,7 +37,6 @@ export function MapDesigner() {
     addPlacedPiece,
     availablePieces,
     customProps,
-    placedPieces,
     setCurrentRotation,
     is3DMode,
     isPropSearchOpen,
@@ -44,11 +44,10 @@ export function MapDesigner() {
     closePropSearch,
   } = useMapStore();
 
-  const handleDrop = (x: number, y: number, rotation: number) => {
-    console.log('[DEBUG handleDrop] Called with:', { x, y, rotation, selectedPieceId, currentLevel, timestamp: Date.now() });
+  const { recordAddPiece } = useUndoRedo();
 
+  const handleDrop = (x: number, y: number, rotation: number) => {
     if (!selectedPieceId) {
-      console.log('[DEBUG handleDrop] No selectedPieceId, returning early');
       return;
     }
 
@@ -57,7 +56,6 @@ export function MapDesigner() {
       || DEFAULT_PROPS.find((p) => p.id === selectedPieceId)
       || customProps.find((p) => p.id === selectedPieceId);
     if (!piece) {
-      console.log('[DEBUG handleDrop] Piece not found for id:', selectedPieceId);
       return;
     }
 
@@ -65,21 +63,24 @@ export function MapDesigner() {
     const finalRotation = piece.defaultRotation !== undefined ? piece.defaultRotation : rotation;
 
     const newPieceId = uuidv4();
-    console.log('[DEBUG handleDrop] Creating piece with UUID:', newPieceId, 'at position:', x, y);
 
-    // Allow placing pieces even beyond available quantity (will show negative in sidebar)
-    addPlacedPiece({
+    const newPlacedPiece = {
       id: newPieceId,
       pieceId: selectedPieceId,
       x,
       y,
       rotation: finalRotation,
       level: currentLevel,
-    });
+    };
+
+    // Allow placing pieces even beyond available quantity (will show negative in sidebar)
+    addPlacedPiece(newPlacedPiece);
+
+    // Record for undo/redo
+    recordAddPiece(newPlacedPiece);
 
     // Reset rotation after placing
     setCurrentRotation(0);
-    console.log('[DEBUG handleDrop] Finished');
   };
 
   return (

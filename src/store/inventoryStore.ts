@@ -1220,15 +1220,15 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     const elevations = useElevationStore.getState().elevations;
     const pieces: ModularPiece[] = [];
 
-    // Add predefined terrain pieces
+    // Add ALL shapes for ALL terrain types
+    // This ensures every terrain type shows all available piece shapes
     for (const terrain of terrainTypes) {
-      for (const pieceConfig of terrain.pieces) {
-        // Skip if quantity is 0 or if disabled
-        if (pieceConfig.quantity <= 0) continue;
-        if (pieceConfig.enabled === false) continue;
+      for (const shape of shapes) {
+        // Find the piece config for this terrain+shape combination (if exists)
+        const pieceConfig = terrain.pieces.find((p) => p.shapeId === shape.id);
 
-        const shape = pieceConfig.shape || shapes.find((s) => s.id === pieceConfig.shapeId);
-        if (!shape) continue;
+        // Skip only if explicitly disabled
+        if (pieceConfig?.enabled === false) continue;
 
         // Get elevation from elevation store
         // First try terrain-specific, then fall back to default
@@ -1256,7 +1256,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
             label: shape.name,
           },
           isDiagonal: shape.isDiagonal,
-          quantity: pieceConfig.quantity,
+          quantity: pieceConfig?.quantity ?? 0, // Use 0 if not configured
           defaultRotation: shape.defaultRotation,
           baseHeight: shape.baseHeight,
           elevation,
@@ -1267,8 +1267,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
     // Add custom pieces
     for (const custom of customPieces) {
-      if (custom.quantity <= 0) continue;
-
       // Get the first terrain ID from cellColors to determine the primary terrain
       const firstTerrainId = custom.cellColors[0]?.[0];
       const primaryTerrain = terrainTypes.find((t) => t.id === firstTerrainId);
@@ -1297,7 +1295,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
     for (const terrain of terrainTypes) {
       for (const variant of terrain.variants) {
-        if (variant.quantity <= 0) continue;
         if (processedVariants.has(variant.id)) continue;
         processedVariants.add(variant.id);
 
