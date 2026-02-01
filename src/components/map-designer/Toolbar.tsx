@@ -22,7 +22,7 @@ import {
 import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
 import { GenerateArtDialog } from './GenerateArtDialog';
 import { AILayoutDialog } from './AILayoutDialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2, Undo2, Redo2, Sparkles } from 'lucide-react';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2, Undo2, Redo2, Sparkles, AlertTriangle } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { useRouter } from 'next/navigation';
 import { generateThumbnail, generateFullMapSnapshot } from '@/lib/stageRef';
@@ -129,6 +129,8 @@ export function Toolbar() {
   const [tempMapHeight, setTempMapHeight] = useState(60);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  const [isCreatingMap, setIsCreatingMap] = useState(false);
   const mapSelectorRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -345,22 +347,65 @@ export function Toolbar() {
 
   const handleNewMap = () => {
     if (hasUnsavedChanges) {
-      if (!confirm('Start a new map? You have unsaved changes that will be lost.')) {
-        return;
-      }
+      // Show confirmation dialog for unsaved changes
+      setShowUnsavedChangesDialog(true);
+    } else {
+      // No unsaved changes, proceed to name dialog
+      setNewMapName('');
+      setShowNewMapDialog(true);
     }
+  };
+
+  const handleConfirmDiscardChanges = () => {
+    setShowUnsavedChangesDialog(false);
     setNewMapName('');
     setShowNewMapDialog(true);
   };
 
-  const handleCreateNewMap = () => {
-    clearLastMapId();
-    resetToNewMap();
-    if (newMapName.trim()) {
-      setMapName(newMapName.trim());
+  const handleCreateNewMap = async () => {
+    if (!newMapName.trim()) return;
+
+    setIsCreatingMap(true);
+    try {
+      // Clear current map state and cache
+      clearLastMapId();
+      resetToNewMap();
+
+      // Set the new map name
+      const trimmedName = newMapName.trim();
+      setMapName(trimmedName);
+
+      // Create the map in the database immediately
+      const mapData = {
+        name: trimmedName,
+        mapWidth: mapWidth,
+        mapHeight: mapHeight,
+        placedPieces: [],
+        terrainTypes: [],
+        customPieces: [],
+        customProps: [],
+        levels: [{ id: 'ground', name: 'Ground Floor', elevation: 0 }],
+        currentLevel: 'ground',
+        gridConfig: gridConfig,
+      };
+
+      const savedMap = await saveMap(mapData, undefined);
+
+      if (savedMap) {
+        // Update the current map ID
+        setCurrentMapId(savedMap.id);
+        // Mark as saved (no unsaved changes)
+        markAsSaved();
+        // Navigate to the new map URL
+        router.replace(`/designer?mapId=${savedMap.id}`);
+      }
+
+      setShowNewMapDialog(false);
+    } catch (error) {
+      console.error('Failed to create new map:', error);
+    } finally {
+      setIsCreatingMap(false);
     }
-    setShowNewMapDialog(false);
-    router.push('/designer');
   };
 
   const handleOpenMapSizeDialog = () => {
@@ -1001,8 +1046,36 @@ export function Toolbar() {
         </DialogContent>
       </Dialog>
 
+      {/* Unsaved Changes Confirmation Dialog */}
+      <Dialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-yellow-400">
+              <AlertTriangle className="h-5 w-5" />
+              Unsaved Changes
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-300">
+              You have unsaved changes on the current map.
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              If you create a new map, these changes will be lost. Do you want to continue?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDiscardChanges} className="bg-yellow-600 hover:bg-yellow-700">
+              Discard & Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* New Map Dialog */}
-      <Dialog open={showNewMapDialog} onOpenChange={setShowNewMapDialog}>
+      <Dialog open={showNewMapDialog} onOpenChange={(open) => !isCreatingMap && setShowNewMapDialog(open)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New Map</DialogTitle>
@@ -1019,8 +1092,9 @@ export function Toolbar() {
                 placeholder="Enter map name..."
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
+                disabled={isCreatingMap}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newMapName.trim()) {
+                  if (e.key === 'Enter' && newMapName.trim() && !isCreatingMap) {
                     handleCreateNewMap();
                   }
                 }}
@@ -1028,12 +1102,16 @@ export function Toolbar() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewMapDialog(false)}>
+            <Button variant="outline" onClick={() => setShowNewMapDialog(false)} disabled={isCreatingMap}>
               Cancel
             </Button>
-            <Button onClick={handleCreateNewMap} disabled={!newMapName.trim()}>
-              <FilePlus className="h-4 w-4 mr-1" />
-              Create
+            <Button onClick={handleCreateNewMap} disabled={!newMapName.trim() || isCreatingMap}>
+              {isCreatingMap ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <FilePlus className="h-4 w-4 mr-1" />
+              )}
+              {isCreatingMap ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
