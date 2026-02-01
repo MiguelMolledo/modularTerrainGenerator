@@ -1803,7 +1803,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                   <>
                     {/* NW corner (top-left) */}
                     {piece.elevation.nw > 0 && (
-                      <Group x={0} y={0}>
+                      <Group x={0} y={0} name="elevation-indicator">
                         <Circle
                           radius={isSelected ? 10 : 8}
                           fill={isSelected ? '#facc15' : '#3b82f6'}
@@ -1822,7 +1822,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                     )}
                     {/* NE corner (top-right) */}
                     {piece.elevation.ne > 0 && (
-                      <Group x={pieceWidth} y={0}>
+                      <Group x={pieceWidth} y={0} name="elevation-indicator">
                         <Circle
                           radius={isSelected ? 10 : 8}
                           fill={isSelected ? '#facc15' : '#3b82f6'}
@@ -1841,7 +1841,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                     )}
                     {/* SW corner (bottom-left) */}
                     {piece.elevation.sw > 0 && (
-                      <Group x={0} y={pieceHeight}>
+                      <Group x={0} y={pieceHeight} name="elevation-indicator">
                         <Circle
                           radius={isSelected ? 10 : 8}
                           fill={isSelected ? '#facc15' : '#3b82f6'}
@@ -1860,7 +1860,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                     )}
                     {/* SE corner (bottom-right) */}
                     {piece.elevation.se > 0 && (
-                      <Group x={pieceWidth} y={pieceHeight}>
+                      <Group x={pieceWidth} y={pieceHeight} name="elevation-indicator">
                         <Circle
                           radius={isSelected ? 10 : 8}
                           fill={isSelected ? '#facc15' : '#3b82f6'}

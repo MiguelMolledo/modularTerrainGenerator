@@ -72,7 +72,9 @@ export function AILayoutDialog({ open, onOpenChange }: AILayoutDialogProps) {
       width: piece.size.width,
       height: piece.size.height,
       isDiagonal: piece.isDiagonal,
-      available: piece.quantity, // Report total quantity, but don't limit
+      available: piece.quantity,
+      // Include elevation data for intelligent placement
+      elevation: piece.elevation || { nw: 0, ne: 0, sw: 0, se: 0 },
     }));
   }, [availablePieces]);
 

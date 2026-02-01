@@ -52,7 +52,10 @@ export function generateThumbnail(maxWidth = 400, maxHeight = 300): string | nul
 }
 
 export interface SnapshotOptions {
+  /** Hide all text labels */
   hideText?: boolean;
+  /** Hide elevation indicator circles */
+  hideElevationIndicators?: boolean;
 }
 
 /**
@@ -67,8 +70,9 @@ export interface SnapshotOptions {
 export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900, options?: SnapshotOptions): string | null {
   if (!stageInstance) return null;
 
-  // Track hidden text nodes for cleanup
+  // Track hidden nodes for cleanup
   const hiddenTextNodes: Konva.Text[] = [];
+  const hiddenElevationGroups: Konva.Group[] = [];
 
   try {
     // The actual rendered canvas size depends on the current zoom level
@@ -96,7 +100,22 @@ export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900, option
           textNode.visible(false);
         }
       });
-      // Apply visibility changes before capture
+    }
+
+    // If hideElevationIndicators is enabled, find all elevation indicator groups and hide them
+    if (options?.hideElevationIndicators) {
+      const elevationGroups = stageInstance.find('.elevation-indicator') as Konva.Group[];
+      console.log(`Hiding ${elevationGroups.length} elevation indicators for snapshot`);
+      elevationGroups.forEach((group) => {
+        if (group.visible()) {
+          hiddenElevationGroups.push(group);
+          group.visible(false);
+        }
+      });
+    }
+
+    // Apply visibility changes before capture
+    if (options?.hideText || options?.hideElevationIndicators) {
       stageInstance.batchDraw();
     }
 
@@ -129,6 +148,11 @@ export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900, option
       textNode.visible(true);
     });
 
+    // Restore elevation indicator visibility
+    hiddenElevationGroups.forEach((group) => {
+      group.visible(true);
+    });
+
     // Restore original transform and size
     stageInstance.width(savedWidth);
     stageInstance.height(savedHeight);
@@ -140,15 +164,22 @@ export function generateFullMapSnapshot(maxWidth = 1200, maxHeight = 900, option
     return dataUrl;
   } catch (error) {
     console.error('Failed to generate full map snapshot:', error);
-    // Ensure text nodes are restored even on error
-    if (hiddenTextNodes.length > 0) {
-      hiddenTextNodes.forEach((textNode) => {
-        try {
-          textNode.visible(true);
-        } catch {
-          // Ignore errors during cleanup
-        }
-      });
+    // Ensure nodes are restored even on error
+    hiddenTextNodes.forEach((textNode) => {
+      try {
+        textNode.visible(true);
+      } catch {
+        // Ignore errors during cleanup
+      }
+    });
+    hiddenElevationGroups.forEach((group) => {
+      try {
+        group.visible(true);
+      } catch {
+        // Ignore errors during cleanup
+      }
+    });
+    if (hiddenTextNodes.length > 0 || hiddenElevationGroups.length > 0) {
       stageInstance?.batchDraw();
     }
     return null;
