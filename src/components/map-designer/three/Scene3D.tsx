@@ -23,6 +23,8 @@ export function Scene3D() {
     showReferenceLevels,
     referenceLevelOpacity,
     customProps,
+    showTerrain,
+    showProps,
   } = useMapStore();
 
   // Create a Set for efficient selection lookup
@@ -63,14 +65,14 @@ export function Scene3D() {
     for (const placed of levelPieces) {
       const piece = pieceMap.get(placed.pieceId);
       if (piece?.pieceType === 'prop') {
-        props.push(placed);
+        if (showProps) props.push(placed);  // Only add if visible
       } else {
-        terrain.push(placed);
+        if (showTerrain) terrain.push(placed);  // Only add if visible
       }
     }
 
     return { visibleTerrainPieces: terrain, visibleProps: props };
-  }, [placedPieces, currentLevel, pieceMap]);
+  }, [placedPieces, currentLevel, pieceMap, showTerrain, showProps]);
 
   // Reference level pieces (other levels shown as guides)
   const referencePieces = useMemo(() => {

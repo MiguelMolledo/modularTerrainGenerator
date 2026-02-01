@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { SavedMap, ModularPiece, TerrainType, PlacedPiece } from '@/types';
+import type { SavedMap, ModularPiece, TerrainType, PlacedPiece, PieceShape } from '@/types';
 
 export interface PieceUsage {
   pieceId: string;
@@ -13,6 +13,21 @@ export interface PieceUsage {
   available: number;
   remaining: number;
   status: 'ok' | 'warning' | 'overused';
+  // Magnets for this piece type (size -> quantity per piece)
+  magnetsPerPiece?: { size: string; quantity: number }[];
+}
+
+// Magnet usage by size
+export interface MagnetUsage {
+  size: string;
+  totalNeeded: number;
+}
+
+// Magnet usage grouped by terrain
+export interface MagnetsByTerrain {
+  terrainName: string;
+  terrainIcon: string;
+  magnets: MagnetUsage[];
 }
 
 export interface ReportData {
@@ -21,6 +36,9 @@ export interface ReportData {
   totalUsed: number;
   totalOverused: number;
   totalWithinBudget: number;
+  // Magnet totals
+  magnetTotals: MagnetUsage[];
+  magnetsByTerrain: MagnetsByTerrain[];
 }
 
 /**
@@ -29,7 +47,8 @@ export interface ReportData {
 export function calculatePieceUsage(
   placedPieces: PlacedPiece[],
   availablePieces: ModularPiece[],
-  terrainTypes: TerrainType[]
+  terrainTypes: TerrainType[],
+  shapes?: PieceShape[]
 ): PieceUsage[] {
   // Count how many of each piece is used
   const usageCount = new Map<string, number>();
@@ -60,6 +79,21 @@ export function calculatePieceUsage(
       status = 'warning';
     }
 
+    // Look up magnets from shape if shapes are provided
+    // The pieceId format is typically "terrain-shapeKey" or "custom-xxx" or "variant-xxx"
+    let magnetsPerPiece: { size: string; quantity: number }[] | undefined;
+    if (shapes) {
+      // Extract shapeKey from pieceId (e.g., "forest-6x6-flat" -> "6x6-flat")
+      const parts = pieceId.split('-');
+      if (parts.length >= 2) {
+        const shapeKey = parts.slice(1).join('-'); // Everything after terrain slug
+        const shape = shapes.find(s => s.shapeKey === shapeKey);
+        if (shape?.magnets && shape.magnets.length > 0) {
+          magnetsPerPiece = shape.magnets.map(m => ({ size: m.size, quantity: m.quantity }));
+        }
+      }
+    }
+
     usageList.push({
       pieceId,
       name: piece.name,
@@ -71,6 +105,7 @@ export function calculatePieceUsage(
       available,
       remaining,
       status,
+      magnetsPerPiece,
     });
   }
 
@@ -91,13 +126,59 @@ export function calculatePieceUsage(
 export function prepareReportData(
   map: SavedMap,
   availablePieces: ModularPiece[],
-  terrainTypes: TerrainType[]
+  terrainTypes: TerrainType[],
+  shapes?: PieceShape[]
 ): ReportData {
-  const pieceUsage = calculatePieceUsage(map.placedPieces, availablePieces, terrainTypes);
+  const pieceUsage = calculatePieceUsage(map.placedPieces, availablePieces, terrainTypes, shapes);
 
   const totalUsed = pieceUsage.reduce((sum, p) => sum + p.used, 0);
   const totalOverused = pieceUsage.filter(p => p.status === 'overused').length;
   const totalWithinBudget = pieceUsage.filter(p => p.status !== 'overused').length;
+
+  // Calculate magnet totals
+  const magnetTotalsMap = new Map<string, number>();
+  const magnetsByTerrainMap = new Map<string, { terrainIcon: string; magnets: Map<string, number> }>();
+
+  for (const piece of pieceUsage) {
+    if (piece.magnetsPerPiece && piece.magnetsPerPiece.length > 0) {
+      // Get or create terrain entry
+      const terrainKey = piece.terrainName;
+      if (!magnetsByTerrainMap.has(terrainKey)) {
+        magnetsByTerrainMap.set(terrainKey, {
+          terrainIcon: piece.terrainIcon,
+          magnets: new Map(),
+        });
+      }
+      const terrainEntry = magnetsByTerrainMap.get(terrainKey)!;
+
+      for (const magnet of piece.magnetsPerPiece) {
+        const totalForPiece = magnet.quantity * piece.used;
+
+        // Add to overall totals
+        const currentTotal = magnetTotalsMap.get(magnet.size) || 0;
+        magnetTotalsMap.set(magnet.size, currentTotal + totalForPiece);
+
+        // Add to terrain-specific totals
+        const terrainMagnetTotal = terrainEntry.magnets.get(magnet.size) || 0;
+        terrainEntry.magnets.set(magnet.size, terrainMagnetTotal + totalForPiece);
+      }
+    }
+  }
+
+  // Convert maps to arrays
+  const magnetTotals: MagnetUsage[] = Array.from(magnetTotalsMap.entries())
+    .map(([size, totalNeeded]) => ({ size, totalNeeded }))
+    .sort((a, b) => a.size.localeCompare(b.size));
+
+  const magnetsByTerrain: MagnetsByTerrain[] = Array.from(magnetsByTerrainMap.entries())
+    .map(([terrainName, data]) => ({
+      terrainName,
+      terrainIcon: data.terrainIcon,
+      magnets: Array.from(data.magnets.entries())
+        .map(([size, totalNeeded]) => ({ size, totalNeeded }))
+        .sort((a, b) => a.size.localeCompare(b.size)),
+    }))
+    .sort((a, b) => a.terrainName.localeCompare(b.terrainName));
 
   return {
     map,
@@ -105,6 +186,8 @@ export function prepareReportData(
     totalUsed,
     totalOverused,
     totalWithinBudget,
+    magnetTotals,
+    magnetsByTerrain,
   };
 }
 
@@ -135,7 +218,7 @@ function formatDate(dateStr: string): string {
  * Generate Markdown report
  */
 export function generateMarkdownReport(data: ReportData): string {
-  const { map, pieceUsage, totalUsed, totalOverused, totalWithinBudget } = data;
+  const { map, pieceUsage, totalUsed, totalOverused, totalWithinBudget, magnetTotals, magnetsByTerrain } = data;
 
   let md = '';
 
@@ -180,6 +263,34 @@ export function generateMarkdownReport(data: ReportData): string {
 
   md += '\n---\n\n';
 
+  // Magnets Summary (if any magnets needed)
+  if (magnetTotals.length > 0) {
+    md += '## 🧲 Magnets Needed\n\n';
+
+    // Total magnets table
+    md += '### Total Magnets\n\n';
+    md += '| Magnet Size | Quantity Needed |\n';
+    md += '|-------------|----------------|\n';
+    for (const magnet of magnetTotals) {
+      md += `| ${magnet.size} | ${magnet.totalNeeded} |\n`;
+    }
+    md += '\n';
+
+    // Magnets by terrain
+    if (magnetsByTerrain.length > 0) {
+      md += '### Magnets by Terrain\n\n';
+      for (const terrain of magnetsByTerrain) {
+        md += `#### ${terrain.terrainIcon} ${terrain.terrainName}\n\n`;
+        for (const magnet of terrain.magnets) {
+          md += `- **${magnet.size}**: ${magnet.totalNeeded} magnets\n`;
+        }
+        md += '\n';
+      }
+    }
+
+    md += '---\n\n';
+  }
+
   // Pieces grouped by terrain
   md += '## Pieces by Terrain\n\n';
 
@@ -212,7 +323,7 @@ export function generateMarkdownReport(data: ReportData): string {
  * Generate PDF report
  */
 export async function generatePDFReport(data: ReportData): Promise<Blob> {
-  const { map, pieceUsage, totalUsed, totalOverused, totalWithinBudget } = data;
+  const { map, pieceUsage, totalUsed, totalOverused, totalWithinBudget, magnetTotals, magnetsByTerrain } = data;
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -343,13 +454,108 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     },
   });
 
-  // Footer
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const finalY = (doc as any).lastAutoTable?.finalY || yPos + 50;
+  let currentY = (doc as any).lastAutoTable?.finalY || yPos + 50;
+
+  // Magnets section (if any magnets needed)
+  if (magnetTotals.length > 0) {
+    currentY += 15;
+
+    // Check if we need a new page
+    if (currentY > 250) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Magnets Needed', 20, currentY);
+    currentY += 8;
+
+    // Total magnets table
+    const magnetTableData = magnetTotals.map(m => [m.size, m.totalNeeded.toString()]);
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Magnet Size', 'Quantity Needed']],
+      body: magnetTableData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [80, 80, 120],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 9,
+      },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 40, halign: 'center' },
+      },
+      tableWidth: 'auto',
+      margin: { left: 20 },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    currentY = (doc as any).lastAutoTable?.finalY || currentY + 30;
+
+    // Magnets by terrain (if multiple terrains)
+    if (magnetsByTerrain.length > 1) {
+      currentY += 10;
+
+      // Check if we need a new page
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Magnets by Terrain Type', 20, currentY);
+      currentY += 8;
+
+      const terrainMagnetData: string[][] = [];
+      for (const terrain of magnetsByTerrain) {
+        for (const magnet of terrain.magnets) {
+          terrainMagnetData.push([terrain.terrainName, magnet.size, magnet.totalNeeded.toString()]);
+        }
+      }
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Terrain', 'Magnet Size', 'Quantity']],
+        body: terrainMagnetData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [80, 100, 80],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9,
+        },
+        bodyStyles: {
+          fontSize: 8,
+        },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 30, halign: 'center' },
+        },
+        tableWidth: 'auto',
+        margin: { left: 20 },
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      currentY = (doc as any).lastAutoTable?.finalY || currentY + 30;
+    }
+  }
+
+  // Footer
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(128, 128, 128);
-  doc.text('Generated with Modular Terrain Creator', pageWidth / 2, finalY + 15, { align: 'center' });
+  doc.text('Generated with Modular Terrain Creator', pageWidth / 2, currentY + 15, { align: 'center' });
 
   return doc.output('blob');
 }

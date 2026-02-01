@@ -5,7 +5,7 @@ export interface TerrainType {
   name: string;
   color: string;
   icon: string;
-  description?: string;
+  description: string; // Required for AI image generation
 }
 
 // Piece type discriminator
@@ -70,6 +70,7 @@ export interface ModularPiece {
   // Props system
   pieceType?: PieceType;      // 'terrain' (default) or 'prop'
   propEmoji?: string;          // Emoji for props (e.g., "🪑", "👤", "🗡️")
+  propImage?: string;          // Custom image for props (base64 data URL)
   propCategory?: PropCategory; // Category for organizing props
 }
 
@@ -156,6 +157,7 @@ export interface PieceShape {
   isDiagonal: boolean;
   defaultRotation: number;
   displayOrder: number;
+  baseHeight?: number; // Base height in inches (default 0.5")
   magnets?: MagnetConfig[]; // Array of magnet configurations
 }
 
@@ -165,6 +167,7 @@ export interface TerrainPieceConfig {
   terrainTypeId: string;
   shapeId: string;
   quantity: number;
+  enabled?: boolean; // If false, piece won't appear in designer (defaults to true)
   shape?: PieceShape;
 }
 
@@ -188,7 +191,7 @@ export interface TerrainTypeWithInventory {
   name: string;
   color: string;
   icon: string;
-  description?: string;
+  description: string; // Required for AI image generation
   isDefault: boolean;
   displayOrder: number;
   pieces: TerrainPieceConfig[];

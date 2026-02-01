@@ -1,6 +1,34 @@
+/**
+ * Map Inventory Store - LocalStorage Version
+ * Manages saved maps using browser localStorage
+ */
+
 import { create } from 'zustand';
-import { supabase, DbMap, isSupabaseConfigured } from '@/lib/supabase';
-import { SavedMap, SavedMapData, PlacedPiece, GridConfig } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
+import type { SavedMap, SavedMapData } from '@/types';
+
+// Storage key
+const MAPS_STORAGE_KEY = 'mtc_maps';
+
+// LocalStorage helpers
+function getMapsFromStorage(): SavedMap[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const item = localStorage.getItem(MAPS_STORAGE_KEY);
+    return item ? JSON.parse(item) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMapsToStorage(maps: SavedMap[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(MAPS_STORAGE_KEY, JSON.stringify(maps));
+  } catch (error) {
+    console.error('Failed to save maps to localStorage:', error);
+  }
+}
 
 interface MapInventoryState {
   savedMaps: SavedMap[];
@@ -19,46 +47,17 @@ interface MapInventoryState {
   clearError: () => void;
 }
 
-// Convert database row to SavedMap
-function dbToSavedMap(db: DbMap): SavedMap {
-  return {
-    id: db.id,
-    name: db.name,
-    description: db.description || undefined,
-    mapWidth: db.map_width,
-    mapHeight: db.map_height,
-    levels: db.levels,
-    placedPieces: db.placed_pieces as PlacedPiece[],
-    gridConfig: db.grid_config as GridConfig | undefined,
-    thumbnail: db.thumbnail || undefined,
-    snapshot: db.snapshot || undefined,
-    isCustomThumbnail: db.is_custom_thumbnail || false,
-    createdAt: db.created_at,
-    updatedAt: db.updated_at,
-  };
-}
-
 export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
   savedMaps: [],
   isLoading: false,
   error: null,
 
   fetchMaps: async () => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured. Please add credentials to .env.local', isLoading: false });
-      return;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
-        .from('maps')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-
-      const maps = (data as DbMap[]).map(dbToSavedMap);
+      const maps = getMapsFromStorage();
+      // Sort by updated date, most recent first
+      maps.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       set({ savedMaps: maps, isLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch maps';
@@ -67,11 +66,6 @@ export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
   },
 
   saveMap: async (mapData: SavedMapData, existingId?: string) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured. Please add credentials to .env.local', isLoading: false });
-      return null;
-    }
-
     set({ isLoading: true, error: null });
     try {
       // Check if existing map has a custom thumbnail
@@ -83,56 +77,63 @@ export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
       // Always save snapshot (auto-generated), only update thumbnail if not custom
       const hasCustomThumbnail = existingMap?.isCustomThumbnail;
 
-      const dbData: Record<string, unknown> = {
-        name: mapData.name,
-        description: mapData.description || null,
-        map_width: mapData.mapWidth,
-        map_height: mapData.mapHeight,
-        levels: mapData.levels,
-        placed_pieces: mapData.placedPieces,
-        grid_config: mapData.gridConfig || null,
-        updated_at: new Date().toISOString(),
-      };
+      const now = new Date().toISOString();
+      let savedMap: SavedMap;
 
-      // Always save snapshot (the auto-generated canvas image)
-      if (mapData.snapshot) {
-        dbData.snapshot = mapData.snapshot;
-      }
-
-      // Only update thumbnail if there's no custom thumbnail
-      if (!hasCustomThumbnail && mapData.snapshot) {
-        dbData.thumbnail = mapData.snapshot;
-        dbData.is_custom_thumbnail = false;
-      }
-
-      let result;
-      if (existingId) {
+      if (existingId && existingMap) {
         // Update existing map
-        result = await supabase
-          .from('maps')
-          .update(dbData)
-          .eq('id', existingId)
-          .select()
-          .single();
+        savedMap = {
+          ...existingMap,
+          name: mapData.name,
+          description: mapData.description,
+          mapWidth: mapData.mapWidth,
+          mapHeight: mapData.mapHeight,
+          levels: mapData.levels,
+          placedPieces: mapData.placedPieces,
+          gridConfig: mapData.gridConfig,
+          snapshot: mapData.snapshot || existingMap.snapshot,
+          // Only update thumbnail if not custom
+          thumbnail: hasCustomThumbnail ? existingMap.thumbnail : (mapData.snapshot || existingMap.thumbnail),
+          isCustomThumbnail: hasCustomThumbnail,
+          updatedAt: now,
+        };
       } else {
         // Create new map
-        result = await supabase
-          .from('maps')
-          .insert(dbData)
-          .select()
-          .single();
+        savedMap = {
+          id: uuidv4(),
+          name: mapData.name,
+          description: mapData.description,
+          mapWidth: mapData.mapWidth,
+          mapHeight: mapData.mapHeight,
+          levels: mapData.levels,
+          placedPieces: mapData.placedPieces,
+          gridConfig: mapData.gridConfig,
+          thumbnail: mapData.snapshot || mapData.thumbnail,
+          snapshot: mapData.snapshot,
+          isCustomThumbnail: false,
+          createdAt: now,
+          updatedAt: now,
+        };
       }
 
-      if (result.error) throw result.error;
-
-      const savedMap = dbToSavedMap(result.data as DbMap);
+      // Save to localStorage
+      const maps = getMapsFromStorage();
+      if (existingId) {
+        const index = maps.findIndex(m => m.id === existingId);
+        if (index !== -1) {
+          maps[index] = savedMap;
+        }
+      } else {
+        maps.unshift(savedMap);
+      }
+      saveMapsToStorage(maps);
 
       // Update local state
       set((state) => {
-        const maps = existingId
+        const updatedMaps = existingId
           ? state.savedMaps.map((m) => (m.id === existingId ? savedMap : m))
           : [savedMap, ...state.savedMaps];
-        return { savedMaps: maps, isLoading: false };
+        return { savedMaps: updatedMaps, isLoading: false };
       });
 
       return savedMap;
@@ -144,23 +145,12 @@ export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
   },
 
   loadMap: async (id: string) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return null;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
-        .from('maps')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-
+      const maps = getMapsFromStorage();
+      const map = maps.find(m => m.id === id) || null;
       set({ isLoading: false });
-      return dbToSavedMap(data as DbMap);
+      return map;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load map';
       set({ error: message, isLoading: false });
@@ -169,19 +159,11 @@ export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
   },
 
   deleteMap: async (id: string) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase
-        .from('maps')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const maps = getMapsFromStorage();
+      const filtered = maps.filter(m => m.id !== id);
+      saveMapsToStorage(filtered);
 
       set((state) => ({
         savedMaps: state.savedMaps.filter((m) => m.id !== id),
@@ -197,7 +179,7 @@ export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
   },
 
   duplicateMap: async (id: string, newName: string) => {
-    const { savedMaps } = get();
+    const { savedMaps, saveMap } = get();
     const original = savedMaps.find((m) => m.id === id);
     if (!original) {
       set({ error: 'Map not found' });
@@ -213,25 +195,28 @@ export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
       placedPieces: original.placedPieces,
       gridConfig: original.gridConfig,
       thumbnail: original.thumbnail,
+      snapshot: original.snapshot,
     };
 
-    return get().saveMap(mapData);
+    return saveMap(mapData);
   },
 
   renameMap: async (id: string, name: string) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase
-        .from('maps')
-        .update({ name, updated_at: new Date().toISOString() })
-        .eq('id', id);
+      const maps = getMapsFromStorage();
+      const index = maps.findIndex(m => m.id === id);
+      if (index === -1) {
+        set({ error: 'Map not found', isLoading: false });
+        return false;
+      }
 
-      if (error) throw error;
+      maps[index] = {
+        ...maps[index],
+        name,
+        updatedAt: new Date().toISOString(),
+      };
+      saveMapsToStorage(maps);
 
       set((state) => ({
         savedMaps: state.savedMaps.map((m) =>
@@ -249,26 +234,25 @@ export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
   },
 
   uploadCustomThumbnail: async (id: string, file: File) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      // Optimize image: resize and compress
+      // Optimize image
       const optimizedDataUrl = await optimizeImage(file, 400, 300, 0.8);
 
-      const { error } = await supabase
-        .from('maps')
-        .update({
-          thumbnail: optimizedDataUrl,
-          is_custom_thumbnail: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
+      const maps = getMapsFromStorage();
+      const index = maps.findIndex(m => m.id === id);
+      if (index === -1) {
+        set({ error: 'Map not found', isLoading: false });
+        return false;
+      }
 
-      if (error) throw error;
+      maps[index] = {
+        ...maps[index],
+        thumbnail: optimizedDataUrl,
+        isCustomThumbnail: true,
+        updatedAt: new Date().toISOString(),
+      };
+      saveMapsToStorage(maps);
 
       set((state) => ({
         savedMaps: state.savedMaps.map((m) =>
@@ -288,27 +272,23 @@ export const useMapInventoryStore = create<MapInventoryState>((set, get) => ({
   },
 
   removeCustomThumbnail: async (id: string) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      // Get the existing map to restore snapshot as thumbnail
-      const existingMap = get().savedMaps.find((m) => m.id === id);
-      const snapshotToRestore = existingMap?.snapshot || null;
+      const maps = getMapsFromStorage();
+      const index = maps.findIndex(m => m.id === id);
+      if (index === -1) {
+        set({ error: 'Map not found', isLoading: false });
+        return false;
+      }
 
-      const { error } = await supabase
-        .from('maps')
-        .update({
-          thumbnail: snapshotToRestore,
-          is_custom_thumbnail: false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
-
-      if (error) throw error;
+      const snapshotToRestore = maps[index].snapshot || undefined;
+      maps[index] = {
+        ...maps[index],
+        thumbnail: snapshotToRestore,
+        isCustomThumbnail: false,
+        updatedAt: new Date().toISOString(),
+      };
+      saveMapsToStorage(maps);
 
       set((state) => ({
         savedMaps: state.savedMaps.map((m) =>

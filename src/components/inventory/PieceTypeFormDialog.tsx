@@ -23,7 +23,8 @@ interface PieceTypeFormDialogProps {
 
 // Standard sizes in inches (0.5 to 12 in 0.5 inch increments)
 const STANDARD_SIZES = Array.from({ length: 24 }, (_, i) => (i + 1) * 0.5);
-const BASE_HEIGHT = 0.5;  // All pieces have 0.5" minimum height
+const DEFAULT_BASE_HEIGHT = 0.5;  // Default base height for pieces
+const BASE_HEIGHT_OPTIONS = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3]; // Available base heights in inches
 const MAX_ELEVATION = 2.5;
 const STEP = 0.5;
 
@@ -49,6 +50,9 @@ export function PieceTypeFormDialog({
   const [showMagnets, setShowMagnets] = useState(false);
   const [magnets, setMagnets] = useState<MagnetConfig[]>([]);
 
+  // Base height state
+  const [baseHeight, setBaseHeight] = useState(DEFAULT_BASE_HEIGHT);
+
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
@@ -59,6 +63,7 @@ export function PieceTypeFormDialog({
         setHeight(editingShape.height);
         setIsDiagonal(editingShape.isDiagonal);
         setDefaultRotation(editingShape.defaultRotation);
+        setBaseHeight(editingShape.baseHeight ?? DEFAULT_BASE_HEIGHT);
         // Load existing elevation
         const key = createElevationKey('_default', editingShape.shapeKey);
         const existingElevation = getElevation(key);
@@ -84,6 +89,7 @@ export function PieceTypeFormDialog({
         setHeight(editingShape.height);
         setIsDiagonal(editingShape.isDiagonal);
         setDefaultRotation(editingShape.defaultRotation);
+        setBaseHeight(editingShape.baseHeight ?? DEFAULT_BASE_HEIGHT);
         setElevationState(DEFAULT_CORNER_ELEVATIONS);
         setShowElevation(false);
         setMagnets(editingShape.magnets || []);
@@ -95,6 +101,7 @@ export function PieceTypeFormDialog({
         setHeight(3);
         setIsDiagonal(false);
         setDefaultRotation(0);
+        setBaseHeight(DEFAULT_BASE_HEIGHT);
         setElevationState(DEFAULT_CORNER_ELEVATIONS);
         setShowElevation(false);
         setMagnets([]);
@@ -230,6 +237,7 @@ export function PieceTypeFormDialog({
         height,
         isDiagonal,
         defaultRotation: isDiagonal ? defaultRotation : 0,
+        baseHeight: baseHeight !== DEFAULT_BASE_HEIGHT ? baseHeight : undefined,
         magnets: validMagnets.length > 0 ? validMagnets : undefined,
       });
       if (result) {
@@ -246,6 +254,7 @@ export function PieceTypeFormDialog({
         height,
         isDiagonal,
         defaultRotation: isDiagonal ? defaultRotation : 0,
+        baseHeight: baseHeight !== DEFAULT_BASE_HEIGHT ? baseHeight : undefined,
         magnets: validMagnets.length > 0 ? validMagnets : undefined,
       });
       if (result) {
@@ -449,6 +458,32 @@ export function PieceTypeFormDialog({
             </div>
           )}
 
+          {/* Base Height */}
+          <div>
+            <label className="text-sm font-medium text-gray-300 block mb-2">
+              Base Height (3D thickness)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {BASE_HEIGHT_OPTIONS.map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => setBaseHeight(h)}
+                  className={`px-3 py-1.5 rounded-lg border text-sm ${
+                    baseHeight === h
+                      ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500 text-white'
+                      : 'bg-gray-800 border-gray-700 hover:border-gray-600 text-gray-300'
+                  }`}
+                >
+                  {h}&quot;
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Thickness of the piece in 3D view (default: 0.5&quot;)
+            </p>
+          </div>
+
           {/* Elevation Section (only for non-diagonal) */}
           {!isDiagonal && (
             <div className="border border-gray-700 rounded-lg overflow-hidden">
@@ -531,7 +566,7 @@ export function PieceTypeFormDialog({
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-400">NW</span>
                         <span className="text-white font-mono">
-                          {(BASE_HEIGHT + elevation.nw).toFixed(1)}&quot;
+                          {(baseHeight + elevation.nw).toFixed(1)}&quot;
                           <span className="text-gray-500 text-xs ml-1">(+{elevation.nw.toFixed(1)})</span>
                         </span>
                       </div>
@@ -547,7 +582,7 @@ export function PieceTypeFormDialog({
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-400">NE</span>
                         <span className="text-white font-mono">
-                          {(BASE_HEIGHT + elevation.ne).toFixed(1)}&quot;
+                          {(baseHeight + elevation.ne).toFixed(1)}&quot;
                           <span className="text-gray-500 text-xs ml-1">(+{elevation.ne.toFixed(1)})</span>
                         </span>
                       </div>
@@ -563,7 +598,7 @@ export function PieceTypeFormDialog({
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-400">SW</span>
                         <span className="text-white font-mono">
-                          {(BASE_HEIGHT + elevation.sw).toFixed(1)}&quot;
+                          {(baseHeight + elevation.sw).toFixed(1)}&quot;
                           <span className="text-gray-500 text-xs ml-1">(+{elevation.sw.toFixed(1)})</span>
                         </span>
                       </div>
@@ -579,7 +614,7 @@ export function PieceTypeFormDialog({
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-400">SE</span>
                         <span className="text-white font-mono">
-                          {(BASE_HEIGHT + elevation.se).toFixed(1)}&quot;
+                          {(baseHeight + elevation.se).toFixed(1)}&quot;
                           <span className="text-gray-500 text-xs ml-1">(+{elevation.se.toFixed(1)})</span>
                         </span>
                       </div>
@@ -594,7 +629,7 @@ export function PieceTypeFormDialog({
                   </div>
 
                   <p className="text-xs text-gray-500">
-                    All pieces have 0.5&quot; base. Sliders add 0-2.5&quot; elevation per corner (total: 0.5&quot; - 3&quot;).
+                    Base height: {baseHeight}&quot;. Sliders add 0-2.5&quot; elevation per corner (total: {baseHeight}&quot; - {(baseHeight + MAX_ELEVATION).toFixed(1)}&quot;).
                   </p>
                 </div>
               )}

@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Stage, Layer, Rect, Line, Group, Text, Circle } from 'react-konva';
+import { Stage, Layer, Rect, Line, Group, Text, Circle, Image as KonvaImage } from 'react-konva';
 import Konva from 'konva';
 import { useMapStore } from '@/store/mapStore';
 import { BASE_PIXELS_PER_INCH } from '@/config/terrain';
 import { PlacedPiece, ModularPiece } from '@/types';
+import { DEFAULT_PROPS } from '@/config/props';
 import { checkCollisionWithPieces } from '@/lib/collisionUtils';
 import { desaturateColor } from '@/lib/colorUtils';
-import { setStageInstance } from '@/lib/stageRef';
+import { setStageInstance, setMapDimensions, setCurrentZoom } from '@/lib/stageRef';
 import { getGridDimensions } from '@/lib/gridUtils';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,64 @@ interface DragPreview {
   cellColors?: string[][]; // Grid of terrain IDs
   isProp?: boolean;
   propEmoji?: string;
+  propImage?: string;
+}
+
+// Hook to load image for Konva
+function useLoadedImage(src: string | undefined): HTMLImageElement | null {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!src) {
+      setImage(null);
+      return;
+    }
+
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => setImage(img);
+    img.onerror = () => setImage(null);
+    img.src = src;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [src]);
+
+  return image;
+}
+
+// Component to render a prop image in Konva
+function PropImage({
+  src,
+  x,
+  y,
+  width,
+  height,
+  opacity = 1,
+}: {
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity?: number;
+}) {
+  const image = useLoadedImage(src);
+
+  if (!image) return null;
+
+  return (
+    <KonvaImage
+      image={image}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      opacity={opacity}
+    />
+  );
 }
 
 interface MapCanvasProps {
@@ -169,15 +228,28 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     customProps,
     openPropSearch,
     isPropSearchOpen,
+    showTerrain,
+    showProps,
   } = useMapStore();
 
   const pixelsPerInch = BASE_PIXELS_PER_INCH * zoom;
   const canvasWidth = mapWidth * pixelsPerInch;
   const canvasHeight = mapHeight * pixelsPerInch;
 
+  // Update map dimensions for full map snapshot (used by Generate Art)
+  useEffect(() => {
+    setMapDimensions(mapWidth, mapHeight);
+  }, [mapWidth, mapHeight]);
+
+  // Update zoom level for full map snapshot (used by Generate Art)
+  useEffect(() => {
+    setCurrentZoom(zoom);
+  }, [zoom]);
+
   // Combined pieces array (terrain pieces + custom props)
+  // Combined pieces array (terrain pieces + default props + custom props)
   const allPieces = useMemo(() => {
-    return [...availablePieces, ...customProps];
+    return [...availablePieces, ...DEFAULT_PROPS, ...customProps];
   }, [availablePieces, customProps]);
 
   // Get selected piece info for preview (from sidebar)
@@ -509,6 +581,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       // P key to open prop search dialog
       if ((e.key === 'p' || e.key === 'P') && !e.repeat && !isRadialMenuOpen && !isPropSearchOpen && !draggingPieceId && !isSidebarDragging && !isPlacementMode) {
         e.preventDefault();
+        // Deselect any selected piece to avoid replacing it when placing new prop
+        setSelectedPieceId(null);
         openPropSearch(mousePosRef.current.x, mousePosRef.current.y);
       }
       // Escape to cancel placement mode or map drag
@@ -629,23 +703,40 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       seen.add(p.id);
       return true;
     });
-    // Sort: selected pieces last so they render on top, props always on top of terrain
-    return uniquePieces.sort((a, b) => {
-      const pieceA = allPieces.find((p) => p.id === a.pieceId);
-      const pieceB = allPieces.find((p) => p.id === b.pieceId);
-      const aIsProp = isPropPiece(pieceA);
-      const bIsProp = isPropPiece(pieceB);
-      // Props always render on top of terrain
-      if (aIsProp && !bIsProp) return 1;
-      if (!aIsProp && bIsProp) return -1;
-      // Within same type, selected pieces on top
+
+    // Filter by visibility settings
+    const filteredPieces = uniquePieces.filter((placed) => {
+      const piece = allPieces.find((p) => p.id === placed.pieceId);
+      const isProp = piece?.pieceType === 'prop';
+      if (isProp && !showProps) return false;
+      if (!isProp && !showTerrain) return false;
+      return true;
+    });
+
+    // Sort: selected pieces last so they render on top
+    return filteredPieces.sort((a, b) => {
       const aSelected = selectedSet.has(a.id);
       const bSelected = selectedSet.has(b.id);
       if (aSelected && !bSelected) return 1;
       if (!aSelected && bSelected) return -1;
       return 0;
     });
-  }, [placedPieces, currentLevel, selectedSet, allPieces, isPropPiece]);
+  }, [placedPieces, currentLevel, selectedSet, allPieces, isPropPiece, showTerrain, showProps]);
+
+  // Separate terrain and props for rendering in different layers
+  const { terrainPieces, propPieces } = useMemo(() => {
+    const terrain: PlacedPiece[] = [];
+    const props: PlacedPiece[] = [];
+    for (const placed of visiblePieces) {
+      const piece = allPieces.find((p) => p.id === placed.pieceId);
+      if (piece?.pieceType === 'prop') {
+        props.push(placed);
+      } else {
+        terrain.push(placed);
+      }
+    }
+    return { terrainPieces: terrain, propPieces: props };
+  }, [visiblePieces, allPieces]);
 
   // Reference level pieces (other levels shown as guides)
   const referencePieces = useMemo(() => {
@@ -671,6 +762,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   // Handle mousedown on placed piece - prepare for potential drag
   const handlePieceMouseDown = (placedId: string, e: any) => {
     e.cancelBubble = true;
+
+    // If in sidebar drag mode (placing new piece), don't intercept - let the piece be placed
+    if (isSidebarDragging) {
+      return;
+    }
 
     // If in placement mode, exit it first
     if (isPlacementMode) {
@@ -811,6 +907,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       cellColors: selectedPiece.cellColors,
       isProp: selectedPiece.pieceType === 'prop',
       propEmoji: selectedPiece.propEmoji,
+      propImage: selectedPiece.propImage,
     });
   };
 
@@ -972,6 +1069,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       cellColors: selectedPiece.cellColors,
       isProp: selectedPiece.pieceType === 'prop',
       propEmoji: selectedPiece.propEmoji,
+      propImage: selectedPiece.propImage,
     };
 
     // Update both ref and state
@@ -1089,16 +1187,22 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     }
 
     // Handle sidebar drag - use preview position directly
-    if (!isSidebarDragging || !selectedPiece) return;
+    if (!isSidebarDragging || !selectedPiece) {
+      return;
+    }
 
     setDragPreview((prev) => ({ ...prev, visible: false }));
-    endSidebarDrag();
 
     // Don't place if there's a collision or preview not visible
-    if (preview.hasCollision || !preview.visible) return;
+    if (preview.hasCollision || !preview.visible) {
+      endSidebarDrag();
+      return;
+    }
 
     // Use the preview position directly - it's always correct!
+    // Call onDrop BEFORE endSidebarDrag because onDrop needs selectedPieceId
     onDrop(preview.x, preview.y, preview.rotation);
+    endSidebarDrag();
   };
 
   // Handle mouse leave to hide preview and cancel map drag
@@ -1185,7 +1289,12 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     }
 
     // Left click (button 0): start selection rectangle on background
+    // BUT NOT if we're in sidebar drag mode or placement mode (we want to place pieces instead)
     if (mouseButton === 0 && isBackground) {
+      // Don't start selection if in sidebar drag mode or placement mode - these modes use clicks to place
+      if (isSidebarDragging || isPlacementMode) {
+        return;
+      }
       // Don't start selection if view is locked
       if (isViewLocked) return;
 
@@ -1310,7 +1419,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
             >
               {/* Highlight area - shows actual grid position */}
               {dragPreview.isProp ? (
-                // Prop preview - circular with emoji
+                // Prop preview - circular with emoji or image
                 <>
                   <Circle
                     x={dragPreview.width * pixelsPerInch / 2}
@@ -1321,17 +1430,28 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                     strokeWidth={2}
                     dash={[6, 3]}
                   />
-                  <Text
-                    text={dragPreview.propEmoji || '?'}
-                    x={0}
-                    y={0}
-                    width={dragPreview.width * pixelsPerInch}
-                    height={dragPreview.height * pixelsPerInch}
-                    align="center"
-                    verticalAlign="middle"
-                    fontSize={Math.min(dragPreview.width, dragPreview.height) * pixelsPerInch * 0.6}
-                    opacity={dragPreview.hasCollision ? 0.5 : 1}
-                  />
+                  {dragPreview.propImage ? (
+                    <PropImage
+                      src={dragPreview.propImage}
+                      x={(dragPreview.width * pixelsPerInch - Math.min(dragPreview.width, dragPreview.height) * pixelsPerInch * 0.8) / 2}
+                      y={(dragPreview.height * pixelsPerInch - Math.min(dragPreview.width, dragPreview.height) * pixelsPerInch * 0.8) / 2}
+                      width={Math.min(dragPreview.width, dragPreview.height) * pixelsPerInch * 0.8}
+                      height={Math.min(dragPreview.width, dragPreview.height) * pixelsPerInch * 0.8}
+                      opacity={dragPreview.hasCollision ? 0.5 : 1}
+                    />
+                  ) : (
+                    <Text
+                      text={dragPreview.propEmoji || '?'}
+                      x={0}
+                      y={0}
+                      width={dragPreview.width * pixelsPerInch}
+                      height={dragPreview.height * pixelsPerInch}
+                      align="center"
+                      verticalAlign="middle"
+                      fontSize={Math.min(dragPreview.width, dragPreview.height) * pixelsPerInch * 0.6}
+                      opacity={dragPreview.hasCollision ? 0.5 : 1}
+                    />
+                  )}
                 </>
               ) : dragPreview.isDiagonal ? (
                 <Group
@@ -1512,15 +1632,13 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
             );
           })}
 
-          {/* Current level pieces */}
-          {visiblePieces.map((placed) => {
+          {/* Current level terrain pieces */}
+          {terrainPieces.map((placed) => {
             const piece = allPieces.find((p) => p.id === placed.pieceId);
             if (!piece) return null;
 
-            // Check if this piece is a prop
-            const isProp = piece.pieceType === 'prop';
-            // Control interactivity based on edit mode
-            const isInteractive = editMode === 'props' ? isProp : !isProp;
+            // Control interactivity based on edit mode (terrain pieces interactive in terrain mode)
+            const isInteractive = editMode === 'terrain';
 
             // Look up by id (UUID) or slug for backward compatibility
             const terrain = terrainTypes.find((t) => t.id === piece.terrainTypeId || t.slug === piece.terrainTypeId);
@@ -1534,92 +1652,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
             const isDragging = draggingPieceId === placed.id;
             const isSelected = selectedSet.has(placed.id);
 
-            // Props are rendered as circles with emojis
-            if (isProp) {
-              const propRadius = Math.min(pieceWidth, pieceHeight) / 2;
-              const emojiSize = propRadius * 1.2;
-
-              return (
-                <Group
-                  key={placed.id}
-                  x={placed.x * pixelsPerInch + effectiveWidth / 2}
-                  y={placed.y * pixelsPerInch + effectiveHeight / 2}
-                  offsetX={pieceWidth / 2}
-                  offsetY={pieceHeight / 2}
-                  listening={isInteractive}
-                  onMouseDown={isInteractive ? (e) => handlePieceMouseDown(placed.id, e) : undefined}
-                  onDblClick={isInteractive ? () => removePlacedPiece(placed.id) : undefined}
-                  onClick={isInteractive ? (e) => handlePieceClick(placed.id, e) : undefined}
-                  rotation={placed.rotation}
-                  opacity={isDragging ? 0 : (isInteractive ? 1 : 0.6)}
-                  visible={!isDragging}
-                >
-                  {/* Circular background */}
-                  <Circle
-                    x={pieceWidth / 2}
-                    y={pieceHeight / 2}
-                    radius={propRadius}
-                    fill="rgba(255, 255, 255, 0.9)"
-                    stroke={isSelected ? '#3b82f6' : '#666666'}
-                    strokeWidth={isSelected ? 3 : 2}
-                    shadowColor="black"
-                    shadowBlur={4}
-                    shadowOpacity={0.3}
-                  />
-                  {/* Emoji */}
-                  <Text
-                    text={piece.propEmoji || '?'}
-                    x={0}
-                    y={0}
-                    width={pieceWidth}
-                    height={pieceHeight}
-                    align="center"
-                    verticalAlign="middle"
-                    fontSize={emojiSize}
-                  />
-                  {/* Rotate button - appears when selected */}
-                  {isSelected && (
-                    <Group
-                      x={pieceWidth / 2}
-                      y={-12}
-                      onClick={(e) => {
-                        e.cancelBubble = true;
-                        const newRotation = (placed.rotation + 90) % 360;
-                        updatePlacedPiece(placed.id, { rotation: newRotation });
-                      }}
-                      onMouseEnter={(e) => {
-                        const stage = e.target.getStage();
-                        if (stage) stage.container().style.cursor = 'pointer';
-                      }}
-                      onMouseLeave={(e) => {
-                        const stage = e.target.getStage();
-                        if (stage) stage.container().style.cursor = 'default';
-                      }}
-                    >
-                      <Circle
-                        radius={10}
-                        fill="#3b82f6"
-                        stroke="#fff"
-                        strokeWidth={2}
-                        shadowColor="black"
-                        shadowBlur={4}
-                        shadowOpacity={0.5}
-                      />
-                      <Text
-                        text="↻"
-                        fontSize={14}
-                        fill="#fff"
-                        fontStyle="bold"
-                        x={-5}
-                        y={-7}
-                      />
-                    </Group>
-                  )}
-                </Group>
-              );
-            }
-
-            // Regular terrain piece rendering
+            // Terrain piece rendering
             return (
               <Group
                 key={placed.id}
@@ -1634,7 +1667,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                 onDblClick={isInteractive ? () => removePlacedPiece(placed.id) : undefined}
                 onClick={isInteractive ? (e) => handlePieceClick(placed.id, e) : undefined}
                 rotation={placed.rotation}
-                opacity={isDragging ? 0 : (isInteractive ? 1 : 0.6)}
+                opacity={isDragging ? 0 : (isInteractive ? 1 : 0.75)}
                 visible={!isDragging}
               >
                 {piece.isDiagonal ? (
@@ -1797,6 +1830,119 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                     onClick={(e) => {
                       e.cancelBubble = true;
                       // Rotate 90 degrees clockwise
+                      const newRotation = (placed.rotation + 90) % 360;
+                      updatePlacedPiece(placed.id, { rotation: newRotation });
+                    }}
+                    onMouseEnter={(e) => {
+                      const stage = e.target.getStage();
+                      if (stage) stage.container().style.cursor = 'pointer';
+                    }}
+                    onMouseLeave={(e) => {
+                      const stage = e.target.getStage();
+                      if (stage) stage.container().style.cursor = 'default';
+                    }}
+                  >
+                    <Circle
+                      radius={10}
+                      fill="#3b82f6"
+                      stroke="#fff"
+                      strokeWidth={2}
+                      shadowColor="black"
+                      shadowBlur={4}
+                      shadowOpacity={0.5}
+                    />
+                    <Text
+                      text="↻"
+                      fontSize={14}
+                      fill="#fff"
+                      fontStyle="bold"
+                      x={-5}
+                      y={-7}
+                    />
+                  </Group>
+                )}
+              </Group>
+            );
+          })}
+        </Layer>
+
+        {/* Props Layer - rendered on top of terrain */}
+        <Layer>
+          {propPieces.map((placed) => {
+            const piece = allPieces.find((p) => p.id === placed.pieceId);
+            if (!piece) return null;
+
+            // Control interactivity based on edit mode (props interactive in props mode)
+            const isInteractive = editMode === 'props';
+
+            // Calculate effective dimensions based on rotation (for positioning)
+            const isRotated = placed.rotation === 90 || placed.rotation === 270;
+            const effectiveWidth = (isRotated ? piece.size.height : piece.size.width) * pixelsPerInch;
+            const effectiveHeight = (isRotated ? piece.size.width : piece.size.height) * pixelsPerInch;
+            // Original dimensions (for drawing the shape inside the group)
+            const pieceWidth = piece.size.width * pixelsPerInch;
+            const pieceHeight = piece.size.height * pixelsPerInch;
+            const isDragging = draggingPieceId === placed.id;
+            const isSelected = selectedSet.has(placed.id);
+
+            const propRadius = Math.min(pieceWidth, pieceHeight) / 2;
+            const emojiSize = propRadius * 1.2;
+
+            return (
+              <Group
+                key={placed.id}
+                x={placed.x * pixelsPerInch + effectiveWidth / 2}
+                y={placed.y * pixelsPerInch + effectiveHeight / 2}
+                offsetX={pieceWidth / 2}
+                offsetY={pieceHeight / 2}
+                listening={isInteractive}
+                onMouseDown={isInteractive ? (e) => handlePieceMouseDown(placed.id, e) : undefined}
+                onDblClick={isInteractive ? () => removePlacedPiece(placed.id) : undefined}
+                onClick={isInteractive ? (e) => handlePieceClick(placed.id, e) : undefined}
+                rotation={placed.rotation}
+                opacity={isDragging ? 0 : (isInteractive ? 1 : 0.75)}
+                visible={!isDragging}
+              >
+                {/* Circular background - subtle transparent instead of bright white */}
+                <Circle
+                  x={pieceWidth / 2}
+                  y={pieceHeight / 2}
+                  radius={propRadius}
+                  fill="rgba(240, 240, 240, 0.6)"
+                  stroke={isSelected ? '#3b82f6' : 'rgba(100, 100, 100, 0.8)'}
+                  strokeWidth={isSelected ? 3 : 1.5}
+                  shadowColor="black"
+                  shadowBlur={3}
+                  shadowOpacity={0.2}
+                />
+                {/* Emoji or Image */}
+                {piece.propImage ? (
+                  <PropImage
+                    src={piece.propImage}
+                    x={(pieceWidth - propRadius * 1.6) / 2}
+                    y={(pieceHeight - propRadius * 1.6) / 2}
+                    width={propRadius * 1.6}
+                    height={propRadius * 1.6}
+                  />
+                ) : (
+                  <Text
+                    text={piece.propEmoji || '?'}
+                    x={0}
+                    y={0}
+                    width={pieceWidth}
+                    height={pieceHeight}
+                    align="center"
+                    verticalAlign="middle"
+                    fontSize={emojiSize}
+                  />
+                )}
+                {/* Rotate button - appears when selected */}
+                {isSelected && (
+                  <Group
+                    x={pieceWidth / 2}
+                    y={-12}
+                    onClick={(e) => {
+                      e.cancelBubble = true;
                       const newRotation = (placed.rotation + 90) % 360;
                       updatePlacedPiece(placed.id, { rotation: newRotation });
                     }}

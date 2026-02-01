@@ -9,14 +9,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { FileText, FileDown, Download, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
+import { FileText, FileDown, Download, CheckCircle, AlertCircle, AlertTriangle, Magnet } from 'lucide-react';
 import {
   prepareReportData,
   downloadMarkdownReport,
   downloadPDFReport,
   type ReportData,
 } from '@/lib/exportReport';
-import type { SavedMap, ModularPiece, TerrainType } from '@/types';
+import type { SavedMap, ModularPiece, TerrainType, PieceShape } from '@/types';
 
 interface ExportReportDialogProps {
   open: boolean;
@@ -24,6 +24,7 @@ interface ExportReportDialogProps {
   map: SavedMap;
   availablePieces: ModularPiece[];
   terrainTypes: TerrainType[];
+  shapes?: PieceShape[];
 }
 
 type ExportFormat = 'markdown' | 'pdf' | 'both';
@@ -34,6 +35,7 @@ export function ExportReportDialog({
   map,
   availablePieces,
   terrainTypes,
+  shapes,
 }: ExportReportDialogProps) {
   const [format, setFormat] = useState<ExportFormat>('pdf');
   const [isExporting, setIsExporting] = useState(false);
@@ -41,8 +43,8 @@ export function ExportReportDialog({
 
   // Prepare report data
   const reportData: ReportData = useMemo(() => {
-    return prepareReportData(map, availablePieces, terrainTypes);
-  }, [map, availablePieces, terrainTypes]);
+    return prepareReportData(map, availablePieces, terrainTypes, shapes);
+  }, [map, availablePieces, terrainTypes, shapes]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -63,7 +65,7 @@ export function ExportReportDialog({
     }
   };
 
-  const { pieceUsage, totalUsed, totalOverused, totalWithinBudget } = reportData;
+  const { pieceUsage, totalUsed, totalOverused, totalWithinBudget, magnetTotals } = reportData;
 
   // Count status types
   const okCount = pieceUsage.filter(p => p.status === 'ok').length;
@@ -140,6 +142,27 @@ export function ExportReportDialog({
               </p>
             )}
           </div>
+
+          {/* Magnets summary (if any) */}
+          {magnetTotals.length > 0 && (
+            <div className="bg-purple-900/30 rounded-lg p-3 space-y-2">
+              <div className="text-sm font-medium text-purple-300 flex items-center gap-2">
+                <Magnet className="h-4 w-4" />
+                Magnets Needed
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {magnetTotals.map((magnet) => (
+                  <div
+                    key={magnet.size}
+                    className="bg-purple-800/40 px-2 py-1 rounded text-xs"
+                  >
+                    <span className="text-purple-300">{magnet.size}:</span>
+                    <span className="text-white ml-1 font-bold">{magnet.totalNeeded}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Format selection */}
           <div className="space-y-2">

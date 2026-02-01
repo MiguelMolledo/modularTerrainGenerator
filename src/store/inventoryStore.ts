@@ -1,17 +1,5 @@
 import { create } from 'zustand';
 import {
-  supabase,
-  isSupabaseConfigured,
-  DbPieceShape,
-  DbTerrainType,
-  DbTerrainPiece,
-  DbTerrainObject,
-  DbCustomPiece,
-  DbPieceTemplate,
-  DbPieceTemplateItem,
-  DbPieceVariant,
-} from '@/lib/supabase';
-import {
   PieceShape,
   TerrainPieceConfig,
   TerrainObject,
@@ -25,6 +13,26 @@ import {
   MagnetConfig,
 } from '@/types';
 import { useElevationStore, createElevationKey } from './elevationStore';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  getShapes,
+  saveShapes,
+  getTerrainTypes as getStoredTerrainTypes,
+  saveTerrainTypes,
+  getTerrainPieces,
+  saveTerrainPieces,
+  getTerrainObjects,
+  saveTerrainObjects,
+  getCustomPieces,
+  saveCustomPieces,
+  getPieceTemplates,
+  savePieceTemplates,
+  getTemplateItems,
+  saveTemplateItems,
+  getPieceVariants,
+  savePieceVariants,
+  initializeDefaultData,
+} from '@/lib/localStorage';
 
 interface InventoryState {
   shapes: PieceShape[];
@@ -43,6 +51,7 @@ interface InventoryState {
     height: number;
     isDiagonal: boolean;
     defaultRotation: number;
+    baseHeight?: number;
     magnets?: MagnetConfig[];
   }) => Promise<PieceShape | null>;
   updateShape: (id: string, data: Partial<{
@@ -51,7 +60,8 @@ interface InventoryState {
     height: number;
     isDiagonal: boolean;
     defaultRotation: number;
-    magnets: MagnetConfig[];
+    baseHeight?: number;
+    magnets?: MagnetConfig[];
   }>) => Promise<boolean>;
   deleteShape: (id: string) => Promise<boolean>;
 
@@ -65,25 +75,34 @@ interface InventoryState {
     description?: string;
     templateId?: string;
   }) => Promise<TerrainTypeWithInventory | null>;
-  updateTerrainType: (
-    id: string,
-    data: Partial<{
-      name: string;
-      color: string;
-      icon: string;
-      description: string;
-    }>
-  ) => Promise<boolean>;
+  updateTerrainType: (id: string, data: Partial<{
+    slug: string;
+    name: string;
+    color: string;
+    icon: string;
+    description: string;
+    displayOrder: number;
+  }>) => Promise<boolean>;
   deleteTerrainType: (id: string) => Promise<boolean>;
 
   // Actions - Terrain Pieces
-  updateTerrainPieces: (
-    terrainTypeId: string,
-    pieces: { shapeId: string; quantity: number }[]
-  ) => Promise<boolean>;
+  updateTerrainPieceQuantity: (terrainId: string, shapeId: string, quantity: number) => Promise<boolean>;
+  updateTerrainPieces: (terrainId: string, pieces: { shapeId: string; quantity: number }[]) => Promise<boolean>;
+  bulkUpdateTerrainPieceQuantities: (updates: { terrainId: string; shapeId: string; quantity: number }[]) => Promise<boolean>;
+  applyTemplateToTerrain: (terrainId: string, templateId: string) => Promise<boolean>;
+  toggleTerrainPieceEnabled: (terrainId: string, shapeId: string, enabled: boolean) => Promise<boolean>;
 
-  // Actions - 3D Objects
-  createTerrainObject: (data: Omit<TerrainObject, 'id'>) => Promise<TerrainObject | null>;
+  // Actions - Terrain Objects
+  createTerrainObject: (data: {
+    terrainTypeId: string;
+    name: string;
+    width: number;
+    height: number;
+    depth: number;
+    emoji: string;
+    description?: string;
+    quantity: number;
+  }) => Promise<TerrainObject | null>;
   updateTerrainObject: (id: string, data: Partial<TerrainObject>) => Promise<boolean>;
   deleteTerrainObject: (id: string) => Promise<boolean>;
 
@@ -105,20 +124,21 @@ interface InventoryState {
     name: string;
     description?: string;
     icon: string;
-    items: { shapeId: string; quantity: number }[];
+    items?: { shapeId: string; quantity: number }[];
   }) => Promise<PieceTemplate | null>;
-  updatePieceTemplate: (
-    id: string,
-    data: {
-      name?: string;
-      description?: string;
-      icon?: string;
-      items?: { shapeId: string; quantity: number }[];
-    }
-  ) => Promise<boolean>;
+  updatePieceTemplate: (id: string, data: {
+    name?: string;
+    description?: string;
+    icon?: string;
+    isDefault?: boolean;
+    displayOrder?: number;
+    items?: { shapeId: string; quantity: number }[];
+  }) => Promise<boolean>;
   deletePieceTemplate: (id: string) => Promise<boolean>;
+  updateTemplateItem: (templateId: string, shapeId: string, quantity: number) => Promise<boolean>;
 
   // Actions - Piece Variants
+  fetchPieceVariants: () => Promise<void>;
   createPieceVariant: (data: {
     terrainTypeId: string;
     shapeId: string;
@@ -135,61 +155,6 @@ interface InventoryState {
   getModularPieces: () => ModularPiece[];
 }
 
-// Convert DB types to app types
-function dbToPieceShape(db: DbPieceShape): PieceShape {
-  return {
-    id: db.id,
-    shapeKey: db.shape_key,
-    name: db.name,
-    width: Number(db.width),
-    height: Number(db.height),
-    isDiagonal: db.is_diagonal,
-    defaultRotation: db.default_rotation,
-    displayOrder: db.display_order,
-    magnets: db.magnets || undefined,
-  };
-}
-
-function dbToTerrainObject(db: DbTerrainObject): TerrainObject {
-  return {
-    id: db.id,
-    terrainTypeId: db.terrain_type_id,
-    name: db.name,
-    width: Number(db.width),
-    height: Number(db.height),
-    depth: Number(db.depth),
-    emoji: db.emoji,
-    description: db.description || undefined,
-    quantity: db.quantity,
-  };
-}
-
-function dbToCustomPiece(db: DbCustomPiece): CustomPiece {
-  return {
-    id: db.id,
-    name: db.name,
-    width: Number(db.width),
-    height: Number(db.height),
-    cellColors: db.cell_colors,
-    quantity: db.quantity,
-    displayOrder: db.display_order,
-  };
-}
-
-function dbToPieceVariant(db: DbPieceVariant, shape?: PieceShape): PieceVariant {
-  return {
-    id: db.id,
-    terrainTypeId: db.terrain_type_id,
-    shapeId: db.shape_id,
-    name: db.name,
-    tags: db.tags || [],
-    cellColors: db.cell_colors,
-    quantity: db.quantity,
-    displayOrder: db.display_order,
-    shape,
-  };
-}
-
 export const useInventoryStore = create<InventoryState>((set, get) => ({
   shapes: [],
   terrainTypes: [],
@@ -198,22 +163,15 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   isLoading: false,
   error: null,
 
+  // =============================================
+  // Shapes
+  // =============================================
   fetchShapes: async () => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
-        .from('piece_shapes')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-
-      const shapes = (data as DbPieceShape[]).map(dbToPieceShape);
+      // Initialize default data if needed
+      initializeDefaultData();
+      const shapes = getShapes();
       set({ shapes, isLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch shapes';
@@ -222,11 +180,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   createShape: async (data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return null;
-    }
-
     // Check if shape with same key already exists
     const existingShape = get().shapes.find(s => s.shapeKey === data.shapeKey);
     if (existingShape) {
@@ -236,30 +189,21 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
     set({ isLoading: true, error: null });
     try {
-      const { data: result, error } = await supabase
-        .from('piece_shapes')
-        .insert({
-          shape_key: data.shapeKey,
-          name: data.name,
-          width: data.width,
-          height: data.height,
-          is_diagonal: data.isDiagonal,
-          default_rotation: data.defaultRotation,
-          display_order: get().shapes.length + 1,
-          magnets: data.magnets || null,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        // Handle unique constraint violation
-        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
-          throw new Error(`A piece type with key "${data.shapeKey}" already exists`);
-        }
-        throw error;
-      }
-
-      const newShape = dbToPieceShape(result as DbPieceShape);
+      const shapes = getShapes();
+      const newShape: PieceShape = {
+        id: uuidv4(),
+        shapeKey: data.shapeKey,
+        name: data.name,
+        width: data.width,
+        height: data.height,
+        isDiagonal: data.isDiagonal,
+        defaultRotation: data.defaultRotation,
+        displayOrder: shapes.length + 1,
+        baseHeight: data.baseHeight,
+        magnets: data.magnets,
+      };
+      shapes.push(newShape);
+      saveShapes(shapes);
 
       set((state) => ({
         shapes: [...state.shapes, newShape],
@@ -275,29 +219,16 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   updateShape: async (id, data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const updateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      };
-      if (data.name !== undefined) updateData.name = data.name;
-      if (data.width !== undefined) updateData.width = data.width;
-      if (data.height !== undefined) updateData.height = data.height;
-      if (data.isDiagonal !== undefined) updateData.is_diagonal = data.isDiagonal;
-      if (data.defaultRotation !== undefined) updateData.default_rotation = data.defaultRotation;
-      if (data.magnets !== undefined) updateData.magnets = data.magnets;
-
-      const { error } = await supabase
-        .from('piece_shapes')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) throw error;
+      const shapes = getShapes();
+      const index = shapes.findIndex(s => s.id === id);
+      if (index === -1) {
+        set({ error: 'Shape not found', isLoading: false });
+        return false;
+      }
+      shapes[index] = { ...shapes[index], ...data };
+      saveShapes(shapes);
 
       set((state) => ({
         shapes: state.shapes.map((s) =>
@@ -315,22 +246,24 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   deleteShape: async (id) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase
-        .from('piece_shapes')
-        .delete()
-        .eq('id', id);
+      const shapes = getShapes();
+      const filtered = shapes.filter(s => s.id !== id);
+      saveShapes(filtered);
 
-      if (error) throw error;
+      // Also remove associated terrain pieces
+      const terrainPieces = getTerrainPieces();
+      const filteredPieces = terrainPieces.filter(p => p.shapeId !== id);
+      saveTerrainPieces(filteredPieces);
 
+      // Update terrain types to remove references
       set((state) => ({
         shapes: state.shapes.filter((s) => s.id !== id),
+        terrainTypes: state.terrainTypes.map((t) => ({
+          ...t,
+          pieces: t.pieces.filter((p) => p.shapeId !== id),
+        })),
         isLoading: false,
       }));
 
@@ -342,96 +275,52 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
   },
 
+  // =============================================
+  // Terrain Types
+  // =============================================
   fetchTerrainTypes: async () => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      // Fetch terrain types
-      const { data: terrainData, error: terrainError } = await supabase
-        .from('terrain_types')
-        .select('*')
-        .order('display_order', { ascending: true });
+      // Initialize default data if needed
+      initializeDefaultData();
 
-      if (terrainError) throw terrainError;
+      const storedTypes = getStoredTerrainTypes();
+      const storedPieces = getTerrainPieces();
+      const storedObjects = getTerrainObjects();
+      const storedVariants = getPieceVariants();
+      const shapes = getShapes();
 
-      // Fetch all terrain pieces with shape data
-      const { data: piecesData, error: piecesError } = await supabase
-        .from('terrain_pieces')
-        .select('*, piece_shapes(*)');
+      const terrainTypes: TerrainTypeWithInventory[] = storedTypes.map(terrain => {
+        // Get pieces for this terrain
+        const pieces: TerrainPieceConfig[] = storedPieces
+          .filter(p => p.terrainTypeId === terrain.id)
+          .map(p => ({
+            id: p.id,
+            terrainTypeId: p.terrainTypeId,
+            shapeId: p.shapeId,
+            quantity: p.quantity,
+            enabled: p.enabled,
+            shape: shapes.find(s => s.id === p.shapeId),
+          }));
 
-      if (piecesError) throw piecesError;
+        // Get objects for this terrain
+        const objects = storedObjects.filter(o => o.terrainTypeId === terrain.id);
 
-      // Fetch all terrain objects
-      const { data: objectsData, error: objectsError } = await supabase
-        .from('terrain_objects')
-        .select('*');
+        // Get variants for this terrain
+        const variants: PieceVariant[] = storedVariants
+          .filter(v => v.terrainTypeId === terrain.id)
+          .map(v => ({
+            ...v,
+            shape: shapes.find(s => s.id === v.shapeId),
+          }));
 
-      if (objectsError) throw objectsError;
-
-      // Fetch all piece variants with shape data
-      const { data: variantsData, error: variantsError } = await supabase
-        .from('piece_variants')
-        .select('*, piece_shapes(*)');
-
-      if (variantsError) throw variantsError;
-
-      // Group pieces by terrain type
-      const piecesByTerrain = new Map<string, TerrainPieceConfig[]>();
-      for (const piece of piecesData || []) {
-        const terrainId = piece.terrain_type_id;
-        if (!piecesByTerrain.has(terrainId)) {
-          piecesByTerrain.set(terrainId, []);
-        }
-        piecesByTerrain.get(terrainId)!.push({
-          id: piece.id,
-          terrainTypeId: piece.terrain_type_id,
-          shapeId: piece.shape_id,
-          quantity: piece.quantity,
-          shape: piece.piece_shapes ? dbToPieceShape(piece.piece_shapes) : undefined,
-        });
-      }
-
-      // Group objects by terrain type
-      const objectsByTerrain = new Map<string, TerrainObject[]>();
-      for (const obj of (objectsData || []) as DbTerrainObject[]) {
-        const terrainId = obj.terrain_type_id;
-        if (!objectsByTerrain.has(terrainId)) {
-          objectsByTerrain.set(terrainId, []);
-        }
-        objectsByTerrain.get(terrainId)!.push(dbToTerrainObject(obj));
-      }
-
-      // Group variants by terrain type
-      const variantsByTerrain = new Map<string, PieceVariant[]>();
-      for (const variant of variantsData || []) {
-        const terrainId = variant.terrain_type_id;
-        if (!variantsByTerrain.has(terrainId)) {
-          variantsByTerrain.set(terrainId, []);
-        }
-        const shape = variant.piece_shapes ? dbToPieceShape(variant.piece_shapes) : undefined;
-        variantsByTerrain.get(terrainId)!.push(dbToPieceVariant(variant as DbPieceVariant, shape));
-      }
-
-      // Combine into TerrainTypeWithInventory
-      const terrainTypes: TerrainTypeWithInventory[] = (terrainData as DbTerrainType[]).map(
-        (t) => ({
-          id: t.id,
-          slug: t.slug,
-          name: t.name,
-          color: t.color,
-          icon: t.icon,
-          description: t.description || undefined,
-          isDefault: t.is_default,
-          displayOrder: t.display_order,
-          pieces: piecesByTerrain.get(t.id) || [],
-          objects: objectsByTerrain.get(t.id) || [],
-          variants: variantsByTerrain.get(t.id) || [],
-        })
-      );
+        return {
+          ...terrain,
+          pieces,
+          objects,
+          variants,
+        };
+      });
 
       set({ terrainTypes, isLoading: false });
     } catch (error) {
@@ -441,89 +330,60 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   createTerrainType: async (data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return null;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { data: result, error } = await supabase
-        .from('terrain_types')
-        .insert({
-          slug: data.slug,
-          name: data.name,
-          color: data.color,
-          icon: data.icon,
-          description: data.description || null,
-          is_default: false,
-          display_order: get().terrainTypes.length + 1,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const terrainId = result.id;
-      const pieces: TerrainPieceConfig[] = [];
+      const storedTypes = getStoredTerrainTypes();
+      const terrainId = uuidv4();
+      const newType = {
+        id: terrainId,
+        slug: data.slug,
+        name: data.name,
+        color: data.color,
+        icon: data.icon,
+        description: data.description || '',
+        isDefault: false,
+        displayOrder: storedTypes.length + 1,
+      };
+      storedTypes.push(newType);
+      saveTerrainTypes(storedTypes);
 
       // Apply template if provided
+      let pieces: TerrainPieceConfig[] = [];
       if (data.templateId) {
-        const template = get().pieceTemplates.find((t) => t.id === data.templateId);
-        if (template && template.items.length > 0) {
-          const shapes = get().shapes;
+        const storedTemplateItems = getTemplateItems();
+        const templateItems = storedTemplateItems.filter(i => i.templateId === data.templateId);
+        const shapes = getShapes();
+        const storedPieces = getTerrainPieces();
 
-          // Create terrain_pieces for each template item
-          for (const templateItem of template.items) {
-            const shape = shapes.find((s) => s.id === templateItem.shapeId);
-            if (!shape) continue;
-
-            const { data: pieceResult, error: pieceError } = await supabase
-              .from('terrain_pieces')
-              .insert({
-                terrain_type_id: terrainId,
-                shape_id: shape.id,
-                quantity: templateItem.quantity,
-              })
-              .select('*, piece_shapes(*)')
-              .single();
-
-            if (pieceError) {
-              console.error('Failed to create terrain piece:', pieceError);
-              continue;
-            }
-
-            pieces.push({
-              id: pieceResult.id,
-              terrainTypeId: terrainId,
-              shapeId: shape.id,
-              quantity: templateItem.quantity,
-              shape: shape,
-            });
-          }
+        for (const item of templateItems) {
+          const newPiece = {
+            id: uuidv4(),
+            terrainTypeId: terrainId,
+            shapeId: item.shapeId,
+            quantity: item.quantity,
+          };
+          storedPieces.push(newPiece);
+          pieces.push({
+            ...newPiece,
+            shape: shapes.find(s => s.id === item.shapeId),
+          });
         }
+        saveTerrainPieces(storedPieces);
       }
 
-      const newTerrain: TerrainTypeWithInventory = {
-        id: result.id,
-        slug: result.slug,
-        name: result.name,
-        color: result.color,
-        icon: result.icon,
-        description: result.description || undefined,
-        isDefault: result.is_default,
-        displayOrder: result.display_order,
+      const newTerrainType: TerrainTypeWithInventory = {
+        ...newType,
         pieces,
         objects: [],
         variants: [],
       };
 
       set((state) => ({
-        terrainTypes: [...state.terrainTypes, newTerrain],
+        terrainTypes: [...state.terrainTypes, newTerrainType],
         isLoading: false,
       }));
 
-      return newTerrain;
+      return newTerrainType;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create terrain type';
       set({ error: message, isLoading: false });
@@ -532,25 +392,16 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   updateTerrainType: async (id, data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase
-        .from('terrain_types')
-        .update({
-          ...(data.name && { name: data.name }),
-          ...(data.color && { color: data.color }),
-          ...(data.icon && { icon: data.icon }),
-          ...(data.description !== undefined && { description: data.description || null }),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
-
-      if (error) throw error;
+      const storedTypes = getStoredTerrainTypes();
+      const index = storedTypes.findIndex(t => t.id === id);
+      if (index === -1) {
+        set({ error: 'Terrain type not found', isLoading: false });
+        return false;
+      }
+      storedTypes[index] = { ...storedTypes[index], ...data };
+      saveTerrainTypes(storedTypes);
 
       set((state) => ({
         terrainTypes: state.terrainTypes.map((t) =>
@@ -568,23 +419,27 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   deleteTerrainType: async (id) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
-    // Don't allow deleting default terrain types
-    const terrain = get().terrainTypes.find((t) => t.id === id);
-    if (terrain?.isDefault) {
-      set({ error: 'Cannot delete default terrain types' });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase.from('terrain_types').delete().eq('id', id);
+      // Delete terrain type
+      const storedTypes = getStoredTerrainTypes();
+      const filtered = storedTypes.filter(t => t.id !== id);
+      saveTerrainTypes(filtered);
 
-      if (error) throw error;
+      // Delete associated pieces
+      const storedPieces = getTerrainPieces();
+      const filteredPieces = storedPieces.filter(p => p.terrainTypeId !== id);
+      saveTerrainPieces(filteredPieces);
+
+      // Delete associated objects
+      const storedObjects = getTerrainObjects();
+      const filteredObjects = storedObjects.filter(o => o.terrainTypeId !== id);
+      saveTerrainObjects(filteredObjects);
+
+      // Delete associated variants
+      const storedVariants = getPieceVariants();
+      const filteredVariants = storedVariants.filter(v => v.terrainTypeId !== id);
+      savePieceVariants(filteredVariants);
 
       set((state) => ({
         terrainTypes: state.terrainTypes.filter((t) => t.id !== id),
@@ -599,69 +454,260 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
   },
 
-  updateTerrainPieces: async (terrainTypeId, pieces) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
+  // =============================================
+  // Terrain Pieces
+  // =============================================
+  updateTerrainPieceQuantity: async (terrainId, shapeId, quantity) => {
     set({ isLoading: true, error: null });
     try {
-      // Upsert all pieces
-      for (const piece of pieces) {
-        const { error } = await supabase.from('terrain_pieces').upsert(
-          {
-            terrain_type_id: terrainTypeId,
-            shape_id: piece.shapeId,
-            quantity: piece.quantity,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: 'terrain_type_id,shape_id',
-          }
-        );
+      const storedPieces = getTerrainPieces();
+      const existingIndex = storedPieces.findIndex(
+        p => p.terrainTypeId === terrainId && p.shapeId === shapeId
+      );
 
-        if (error) throw error;
+      if (existingIndex !== -1) {
+        if (quantity === 0) {
+          // Remove piece
+          storedPieces.splice(existingIndex, 1);
+        } else {
+          // Update quantity
+          storedPieces[existingIndex].quantity = quantity;
+        }
+      } else if (quantity > 0) {
+        // Create new piece
+        storedPieces.push({
+          id: uuidv4(),
+          terrainTypeId: terrainId,
+          shapeId: shapeId,
+          quantity: quantity,
+        });
       }
 
-      // Refetch terrain types to get updated data
-      await get().fetchTerrainTypes();
+      saveTerrainPieces(storedPieces);
 
-      set({ isLoading: false });
+      const shapes = get().shapes;
+      set((state) => ({
+        terrainTypes: state.terrainTypes.map((t) => {
+          if (t.id !== terrainId) return t;
+
+          const existingPieceIndex = t.pieces.findIndex(p => p.shapeId === shapeId);
+          let newPieces = [...t.pieces];
+
+          if (existingPieceIndex !== -1) {
+            if (quantity === 0) {
+              newPieces.splice(existingPieceIndex, 1);
+            } else {
+              newPieces[existingPieceIndex] = {
+                ...newPieces[existingPieceIndex],
+                quantity,
+              };
+            }
+          } else if (quantity > 0) {
+            newPieces.push({
+              id: uuidv4(),
+              terrainTypeId: terrainId,
+              shapeId: shapeId,
+              quantity,
+              shape: shapes.find(s => s.id === shapeId),
+            });
+          }
+
+          return { ...t, pieces: newPieces };
+        }),
+        isLoading: false,
+      }));
+
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update pieces';
+      const message = error instanceof Error ? error.message : 'Failed to update piece quantity';
       set({ error: message, isLoading: false });
       return false;
     }
   },
 
-  createTerrainObject: async (data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return null;
-    }
-
+  updateTerrainPieces: async (terrainId, pieces) => {
     set({ isLoading: true, error: null });
     try {
-      const { data: result, error } = await supabase
-        .from('terrain_objects')
-        .insert({
-          terrain_type_id: data.terrainTypeId,
-          name: data.name,
-          width: data.width,
-          height: data.height,
-          depth: data.depth,
-          emoji: data.emoji,
-          description: data.description || null,
-          quantity: data.quantity,
-        })
-        .select()
-        .single();
+      const storedPieces = getTerrainPieces();
 
-      if (error) throw error;
+      // Remove all existing pieces for this terrain
+      const filteredPieces = storedPieces.filter(p => p.terrainTypeId !== terrainId);
 
-      const newObject = dbToTerrainObject(result as DbTerrainObject);
+      // Add new pieces with quantity > 0
+      for (const piece of pieces) {
+        if (piece.quantity > 0) {
+          filteredPieces.push({
+            id: uuidv4(),
+            terrainTypeId: terrainId,
+            shapeId: piece.shapeId,
+            quantity: piece.quantity,
+          });
+        }
+      }
+
+      saveTerrainPieces(filteredPieces);
+
+      // Refetch terrain types to update state
+      await get().fetchTerrainTypes();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update terrain pieces';
+      set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  bulkUpdateTerrainPieceQuantities: async (updates) => {
+    set({ isLoading: true, error: null });
+    try {
+      const storedPieces = getTerrainPieces();
+
+      for (const update of updates) {
+        const existingIndex = storedPieces.findIndex(
+          p => p.terrainTypeId === update.terrainId && p.shapeId === update.shapeId
+        );
+
+        if (existingIndex !== -1) {
+          if (update.quantity === 0) {
+            storedPieces.splice(existingIndex, 1);
+          } else {
+            storedPieces[existingIndex].quantity = update.quantity;
+          }
+        } else if (update.quantity > 0) {
+          storedPieces.push({
+            id: uuidv4(),
+            terrainTypeId: update.terrainId,
+            shapeId: update.shapeId,
+            quantity: update.quantity,
+          });
+        }
+      }
+
+      saveTerrainPieces(storedPieces);
+
+      // Refetch terrain types to update state
+      await get().fetchTerrainTypes();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to bulk update quantities';
+      set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  applyTemplateToTerrain: async (terrainId, templateId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const storedItems = getTemplateItems();
+      const templateItems = storedItems.filter(i => i.templateId === templateId);
+
+      const storedPieces = getTerrainPieces();
+
+      // Remove existing pieces for this terrain
+      const filteredPieces = storedPieces.filter(p => p.terrainTypeId !== terrainId);
+
+      // Add template pieces
+      for (const item of templateItems) {
+        filteredPieces.push({
+          id: uuidv4(),
+          terrainTypeId: terrainId,
+          shapeId: item.shapeId,
+          quantity: item.quantity,
+        });
+      }
+
+      saveTerrainPieces(filteredPieces);
+
+      // Refetch terrain types to update state
+      await get().fetchTerrainTypes();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to apply template';
+      set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  toggleTerrainPieceEnabled: async (terrainId, shapeId, enabled) => {
+    set({ isLoading: true, error: null });
+    try {
+      const storedPieces = getTerrainPieces();
+      const existingIndex = storedPieces.findIndex(
+        p => p.terrainTypeId === terrainId && p.shapeId === shapeId
+      );
+
+      if (existingIndex !== -1) {
+        // Update existing piece
+        storedPieces[existingIndex].enabled = enabled;
+      } else {
+        // Create new piece record with enabled flag
+        storedPieces.push({
+          id: uuidv4(),
+          terrainTypeId: terrainId,
+          shapeId: shapeId,
+          quantity: 0,
+          enabled: enabled,
+        });
+      }
+      saveTerrainPieces(storedPieces);
+
+      // Update state
+      const shapes = get().shapes;
+      set((state) => ({
+        terrainTypes: state.terrainTypes.map((t) => {
+          if (t.id !== terrainId) return t;
+
+          const existingPieceIndex = t.pieces.findIndex(p => p.shapeId === shapeId);
+          let newPieces = [...t.pieces];
+
+          if (existingPieceIndex !== -1) {
+            // Update existing
+            newPieces[existingPieceIndex] = {
+              ...newPieces[existingPieceIndex],
+              enabled,
+            };
+          } else {
+            // Add new piece entry
+            const shape = shapes.find(s => s.id === shapeId);
+            newPieces.push({
+              id: uuidv4(),
+              terrainTypeId: terrainId,
+              shapeId: shapeId,
+              quantity: 0,
+              enabled,
+              shape,
+            });
+          }
+
+          return {
+            ...t,
+            pieces: newPieces,
+          };
+        }),
+        isLoading: false,
+      }));
+
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to toggle piece';
+      set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  // =============================================
+  // Terrain Objects
+  // =============================================
+  createTerrainObject: async (data) => {
+    set({ isLoading: true, error: null });
+    try {
+      const storedObjects = getTerrainObjects();
+      const newObject: TerrainObject = {
+        id: uuidv4(),
+        ...data,
+      };
+      storedObjects.push(newObject);
+      saveTerrainObjects(storedObjects);
 
       set((state) => ({
         terrainTypes: state.terrainTypes.map((t) =>
@@ -674,65 +720,48 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
       return newObject;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create object';
+      const message = error instanceof Error ? error.message : 'Failed to create terrain object';
       set({ error: message, isLoading: false });
       return null;
     }
   },
 
   updateTerrainObject: async (id, data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const updateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      };
-      if (data.name !== undefined) updateData.name = data.name;
-      if (data.width !== undefined) updateData.width = data.width;
-      if (data.height !== undefined) updateData.height = data.height;
-      if (data.depth !== undefined) updateData.depth = data.depth;
-      if (data.emoji !== undefined) updateData.emoji = data.emoji;
-      if (data.description !== undefined) updateData.description = data.description || null;
-      if (data.quantity !== undefined) updateData.quantity = data.quantity;
-
-      const { error } = await supabase
-        .from('terrain_objects')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) throw error;
+      const storedObjects = getTerrainObjects();
+      const index = storedObjects.findIndex(o => o.id === id);
+      if (index === -1) {
+        set({ error: 'Object not found', isLoading: false });
+        return false;
+      }
+      storedObjects[index] = { ...storedObjects[index], ...data };
+      saveTerrainObjects(storedObjects);
 
       set((state) => ({
         terrainTypes: state.terrainTypes.map((t) => ({
           ...t,
-          objects: t.objects.map((o) => (o.id === id ? { ...o, ...data } : o)),
+          objects: t.objects.map((o) =>
+            o.id === id ? { ...o, ...data } : o
+          ),
         })),
         isLoading: false,
       }));
 
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update object';
+      const message = error instanceof Error ? error.message : 'Failed to update terrain object';
       set({ error: message, isLoading: false });
       return false;
     }
   },
 
   deleteTerrainObject: async (id) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase.from('terrain_objects').delete().eq('id', id);
-
-      if (error) throw error;
+      const storedObjects = getTerrainObjects();
+      const filtered = storedObjects.filter(o => o.id !== id);
+      saveTerrainObjects(filtered);
 
       set((state) => ({
         terrainTypes: state.terrainTypes.map((t) => ({
@@ -744,28 +773,19 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete object';
+      const message = error instanceof Error ? error.message : 'Failed to delete terrain object';
       set({ error: message, isLoading: false });
       return false;
     }
   },
 
+  // =============================================
+  // Custom Pieces
+  // =============================================
   fetchCustomPieces: async () => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
-        .from('custom_pieces')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-
-      const customPieces = (data as DbCustomPiece[]).map(dbToCustomPiece);
+      const customPieces = getCustomPieces();
       set({ customPieces, isLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch custom pieces';
@@ -774,29 +794,20 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   createCustomPiece: async (data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return null;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { data: result, error } = await supabase
-        .from('custom_pieces')
-        .insert({
-          name: data.name,
-          width: data.width,
-          height: data.height,
-          cell_colors: data.cellColors,
-          quantity: data.quantity,
-          display_order: get().customPieces.length + 1,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const newPiece = dbToCustomPiece(result as DbCustomPiece);
+      const storedPieces = getCustomPieces();
+      const newPiece: CustomPiece = {
+        id: uuidv4(),
+        name: data.name,
+        width: data.width,
+        height: data.height,
+        cellColors: data.cellColors,
+        quantity: data.quantity,
+        displayOrder: storedPieces.length + 1,
+      };
+      storedPieces.push(newPiece);
+      saveCustomPieces(storedPieces);
 
       set((state) => ({
         customPieces: [...state.customPieces, newPiece],
@@ -812,28 +823,16 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   updateCustomPiece: async (id, data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const updateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      };
-      if (data.name !== undefined) updateData.name = data.name;
-      if (data.width !== undefined) updateData.width = data.width;
-      if (data.height !== undefined) updateData.height = data.height;
-      if (data.cellColors !== undefined) updateData.cell_colors = data.cellColors;
-      if (data.quantity !== undefined) updateData.quantity = data.quantity;
-
-      const { error } = await supabase
-        .from('custom_pieces')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) throw error;
+      const storedPieces = getCustomPieces();
+      const index = storedPieces.findIndex(p => p.id === id);
+      if (index === -1) {
+        set({ error: 'Custom piece not found', isLoading: false });
+        return false;
+      }
+      storedPieces[index] = { ...storedPieces[index], ...data };
+      saveCustomPieces(storedPieces);
 
       set((state) => ({
         customPieces: state.customPieces.map((p) =>
@@ -851,16 +850,11 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   deleteCustomPiece: async (id) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase.from('custom_pieces').delete().eq('id', id);
-
-      if (error) throw error;
+      const storedPieces = getCustomPieces();
+      const filtered = storedPieces.filter(p => p.id !== id);
+      saveCustomPieces(filtered);
 
       set((state) => ({
         customPieces: state.customPieces.filter((p) => p.id !== id),
@@ -875,221 +869,140 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
   },
 
+  // =============================================
+  // Piece Templates
+  // =============================================
   fetchPieceTemplates: async () => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      // Fetch templates
-      const { data: templatesData, error: templatesError } = await supabase
-        .from('piece_templates')
-        .select('*')
-        .order('display_order', { ascending: true });
+      const storedTemplates = getPieceTemplates();
+      const storedItems = getTemplateItems();
+      const shapes = getShapes();
 
-      if (templatesError) throw templatesError;
+      const pieceTemplates: PieceTemplate[] = storedTemplates.map(template => {
+        const items: PieceTemplateItem[] = storedItems
+          .filter(i => i.templateId === template.id)
+          .map(i => ({
+            ...i,
+            shape: shapes.find(s => s.id === i.shapeId),
+          }));
 
-      // Fetch all template items with shape data
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('piece_template_items')
-        .select('*, piece_shapes(*)');
-
-      if (itemsError) throw itemsError;
-
-      // Group items by template
-      const itemsByTemplate = new Map<string, PieceTemplateItem[]>();
-      for (const item of itemsData || []) {
-        const templateId = item.template_id;
-        if (!itemsByTemplate.has(templateId)) {
-          itemsByTemplate.set(templateId, []);
-        }
-        itemsByTemplate.get(templateId)!.push({
-          id: item.id,
-          templateId: item.template_id,
-          shapeId: item.shape_id,
-          quantity: item.quantity,
-          shape: item.piece_shapes ? dbToPieceShape(item.piece_shapes) : undefined,
-        });
-      }
-
-      // Combine into PieceTemplate
-      const pieceTemplates: PieceTemplate[] = (templatesData as DbPieceTemplate[]).map((t) => ({
-        id: t.id,
-        name: t.name,
-        description: t.description || undefined,
-        icon: t.icon,
-        isDefault: t.is_default,
-        displayOrder: t.display_order,
-        items: itemsByTemplate.get(t.id) || [],
-      }));
+        return {
+          ...template,
+          items,
+        };
+      });
 
       set({ pieceTemplates, isLoading: false });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch piece templates';
+      const message = error instanceof Error ? error.message : 'Failed to fetch templates';
       set({ error: message, isLoading: false });
     }
   },
 
   createPieceTemplate: async (data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return null;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      // Create template
-      const { data: result, error } = await supabase
-        .from('piece_templates')
-        .insert({
-          name: data.name,
-          description: data.description || null,
-          icon: data.icon,
-          is_default: false,
-          display_order: get().pieceTemplates.length + 1,
-        })
-        .select()
-        .single();
+      const storedTemplates = getPieceTemplates();
+      const templateId = uuidv4();
+      const newTemplate = {
+        id: templateId,
+        name: data.name,
+        description: data.description,
+        icon: data.icon,
+        isDefault: false,
+        displayOrder: storedTemplates.length + 1,
+      };
+      storedTemplates.push(newTemplate);
+      savePieceTemplates(storedTemplates);
 
-      if (error) throw error;
-
-      const templateId = result.id;
-      const items: PieceTemplateItem[] = [];
-
-      // Create template items
-      if (data.items.length > 0) {
-        const shapes = get().shapes;
+      // Add template items if provided
+      const shapes = get().shapes;
+      let newItems: PieceTemplateItem[] = [];
+      if (data.items && data.items.length > 0) {
+        const storedItems = getTemplateItems();
         for (const item of data.items) {
-          if (item.quantity <= 0) continue;
-
-          const { data: itemResult, error: itemError } = await supabase
-            .from('piece_template_items')
-            .insert({
-              template_id: templateId,
-              shape_id: item.shapeId,
+          if (item.quantity > 0) {
+            const newItem = {
+              id: uuidv4(),
+              templateId,
+              shapeId: item.shapeId,
               quantity: item.quantity,
-            })
-            .select()
-            .single();
-
-          if (itemError) {
-            console.error('Failed to create template item:', itemError);
-            continue;
+            };
+            storedItems.push(newItem);
+            newItems.push({
+              ...newItem,
+              shape: shapes.find(s => s.id === item.shapeId),
+            });
           }
-
-          const shape = shapes.find((s) => s.id === item.shapeId);
-          items.push({
-            id: itemResult.id,
-            templateId: templateId,
-            shapeId: item.shapeId,
-            quantity: item.quantity,
-            shape,
-          });
         }
+        saveTemplateItems(storedItems);
       }
 
-      const newTemplate: PieceTemplate = {
-        id: result.id,
-        name: result.name,
-        description: result.description || undefined,
-        icon: result.icon,
-        isDefault: result.is_default,
-        displayOrder: result.display_order,
-        items,
+      const newPieceTemplate: PieceTemplate = {
+        ...newTemplate,
+        items: newItems,
       };
 
       set((state) => ({
-        pieceTemplates: [...state.pieceTemplates, newTemplate],
+        pieceTemplates: [...state.pieceTemplates, newPieceTemplate],
         isLoading: false,
       }));
 
-      return newTemplate;
+      return newPieceTemplate;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create piece template';
+      const message = error instanceof Error ? error.message : 'Failed to create template';
       set({ error: message, isLoading: false });
       return null;
     }
   },
 
   updatePieceTemplate: async (id, data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
-    // Don't allow editing default templates
-    const template = get().pieceTemplates.find((t) => t.id === id);
-    if (template?.isDefault) {
-      set({ error: 'Cannot edit default templates' });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      // Update template metadata if provided
-      if (data.name || data.description !== undefined || data.icon) {
-        const updateData: Record<string, unknown> = {
-          updated_at: new Date().toISOString(),
-        };
-        if (data.name) updateData.name = data.name;
-        if (data.description !== undefined) updateData.description = data.description || null;
-        if (data.icon) updateData.icon = data.icon;
-
-        const { error } = await supabase
-          .from('piece_templates')
-          .update(updateData)
-          .eq('id', id);
-
-        if (error) throw error;
+      const storedTemplates = getPieceTemplates();
+      const index = storedTemplates.findIndex(t => t.id === id);
+      if (index === -1) {
+        set({ error: 'Template not found', isLoading: false });
+        return false;
       }
 
+      // Update template metadata (excluding items)
+      const { items, ...templateData } = data;
+      storedTemplates[index] = { ...storedTemplates[index], ...templateData };
+      savePieceTemplates(storedTemplates);
+
       // Update items if provided
-      let updatedItems = template?.items || [];
-      if (data.items) {
-        // Delete existing items
-        await supabase.from('piece_template_items').delete().eq('template_id', id);
-
-        // Insert new items
-        updatedItems = [];
-        const shapes = get().shapes;
-        for (const item of data.items) {
-          if (item.quantity <= 0) continue;
-
-          const { data: itemResult, error: itemError } = await supabase
-            .from('piece_template_items')
-            .insert({
-              template_id: id,
-              shape_id: item.shapeId,
+      const shapes = get().shapes;
+      let newItems: PieceTemplateItem[] | undefined;
+      if (items !== undefined) {
+        const storedItems = getTemplateItems();
+        // Remove existing items for this template
+        const filteredItems = storedItems.filter(i => i.templateId !== id);
+        // Add new items
+        newItems = [];
+        for (const item of items) {
+          if (item.quantity > 0) {
+            const newItem = {
+              id: uuidv4(),
+              templateId: id,
+              shapeId: item.shapeId,
               quantity: item.quantity,
-            })
-            .select()
-            .single();
-
-          if (itemError) continue;
-
-          const shape = shapes.find((s) => s.id === item.shapeId);
-          updatedItems.push({
-            id: itemResult.id,
-            templateId: id,
-            shapeId: item.shapeId,
-            quantity: item.quantity,
-            shape,
-          });
+            };
+            filteredItems.push(newItem);
+            newItems.push({
+              ...newItem,
+              shape: shapes.find(s => s.id === item.shapeId),
+            });
+          }
         }
+        saveTemplateItems(filteredItems);
       }
 
       set((state) => ({
         pieceTemplates: state.pieceTemplates.map((t) =>
           t.id === id
-            ? {
-                ...t,
-                ...(data.name && { name: data.name }),
-                ...(data.description !== undefined && { description: data.description }),
-                ...(data.icon && { icon: data.icon }),
-                items: updatedItems,
-              }
+            ? { ...t, ...templateData, ...(newItems !== undefined ? { items: newItems } : {}) }
             : t
         ),
         isLoading: false,
@@ -1097,30 +1010,24 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update piece template';
+      const message = error instanceof Error ? error.message : 'Failed to update template';
       set({ error: message, isLoading: false });
       return false;
     }
   },
 
   deletePieceTemplate: async (id) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
-    // Don't allow deleting default templates
-    const template = get().pieceTemplates.find((t) => t.id === id);
-    if (template?.isDefault) {
-      set({ error: 'Cannot delete default templates' });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase.from('piece_templates').delete().eq('id', id);
+      // Delete template
+      const storedTemplates = getPieceTemplates();
+      const filtered = storedTemplates.filter(t => t.id !== id);
+      savePieceTemplates(filtered);
 
-      if (error) throw error;
+      // Delete associated items
+      const storedItems = getTemplateItems();
+      const filteredItems = storedItems.filter(i => i.templateId !== id);
+      saveTemplateItems(filteredItems);
 
       set((state) => ({
         pieceTemplates: state.pieceTemplates.filter((t) => t.id !== id),
@@ -1129,109 +1036,163 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete piece template';
+      const message = error instanceof Error ? error.message : 'Failed to delete template';
       set({ error: message, isLoading: false });
       return false;
     }
   },
 
-  createPieceVariant: async (data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return null;
-    }
-
+  updateTemplateItem: async (templateId, shapeId, quantity) => {
     set({ isLoading: true, error: null });
     try {
-      const terrain = get().terrainTypes.find((t) => t.id === data.terrainTypeId);
-      const displayOrder = terrain?.variants.length || 0;
+      const storedItems = getTemplateItems();
+      const existingIndex = storedItems.findIndex(
+        i => i.templateId === templateId && i.shapeId === shapeId
+      );
 
-      const { data: result, error } = await supabase
-        .from('piece_variants')
-        .insert({
-          terrain_type_id: data.terrainTypeId,
-          shape_id: data.shapeId,
-          name: data.name,
-          tags: data.tags,
-          cell_colors: data.cellColors,
-          quantity: data.quantity,
-          display_order: displayOrder + 1,
-        })
-        .select('*, piece_shapes(*)')
-        .single();
+      if (existingIndex !== -1) {
+        if (quantity === 0) {
+          storedItems.splice(existingIndex, 1);
+        } else {
+          storedItems[existingIndex].quantity = quantity;
+        }
+      } else if (quantity > 0) {
+        storedItems.push({
+          id: uuidv4(),
+          templateId,
+          shapeId,
+          quantity,
+        });
+      }
 
-      if (error) throw error;
+      saveTemplateItems(storedItems);
 
-      const shape = result.piece_shapes ? dbToPieceShape(result.piece_shapes) : undefined;
-      const newVariant = dbToPieceVariant(result as DbPieceVariant, shape);
+      const shapes = get().shapes;
+      set((state) => ({
+        pieceTemplates: state.pieceTemplates.map((t) => {
+          if (t.id !== templateId) return t;
+
+          const existingItemIndex = t.items.findIndex(i => i.shapeId === shapeId);
+          let newItems = [...t.items];
+
+          if (existingItemIndex !== -1) {
+            if (quantity === 0) {
+              newItems.splice(existingItemIndex, 1);
+            } else {
+              newItems[existingItemIndex] = {
+                ...newItems[existingItemIndex],
+                quantity,
+              };
+            }
+          } else if (quantity > 0) {
+            newItems.push({
+              id: uuidv4(),
+              templateId,
+              shapeId,
+              quantity,
+              shape: shapes.find(s => s.id === shapeId),
+            });
+          }
+
+          return { ...t, items: newItems };
+        }),
+        isLoading: false,
+      }));
+
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update template item';
+      set({ error: message, isLoading: false });
+      return false;
+    }
+  },
+
+  // =============================================
+  // Piece Variants
+  // =============================================
+  fetchPieceVariants: async () => {
+    // Variants are loaded with terrain types
+    await get().fetchTerrainTypes();
+  },
+
+  createPieceVariant: async (data) => {
+    set({ isLoading: true, error: null });
+    try {
+      const storedVariants = getPieceVariants();
+      const shapes = get().shapes;
+      const shape = shapes.find(s => s.id === data.shapeId);
+
+      const newVariant = {
+        id: uuidv4(),
+        terrainTypeId: data.terrainTypeId,
+        shapeId: data.shapeId,
+        name: data.name,
+        tags: data.tags,
+        cellColors: data.cellColors,
+        quantity: data.quantity,
+        displayOrder: storedVariants.length + 1,
+      };
+      storedVariants.push(newVariant);
+      savePieceVariants(storedVariants);
+
+      const newPieceVariant: PieceVariant = {
+        ...newVariant,
+        shape,
+      };
 
       set((state) => ({
         terrainTypes: state.terrainTypes.map((t) =>
           t.id === data.terrainTypeId
-            ? { ...t, variants: [...t.variants, newVariant] }
+            ? { ...t, variants: [...t.variants, newPieceVariant] }
             : t
         ),
         isLoading: false,
       }));
 
-      return newVariant;
+      return newPieceVariant;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create piece variant';
+      const message = error instanceof Error ? error.message : 'Failed to create variant';
       set({ error: message, isLoading: false });
       return null;
     }
   },
 
   updatePieceVariant: async (id, data) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const updateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      };
-      if (data.name !== undefined) updateData.name = data.name;
-      if (data.tags !== undefined) updateData.tags = data.tags;
-      if (data.cellColors !== undefined) updateData.cell_colors = data.cellColors;
-      if (data.quantity !== undefined) updateData.quantity = data.quantity;
-
-      const { error } = await supabase
-        .from('piece_variants')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) throw error;
+      const storedVariants = getPieceVariants();
+      const index = storedVariants.findIndex(v => v.id === id);
+      if (index === -1) {
+        set({ error: 'Variant not found', isLoading: false });
+        return false;
+      }
+      storedVariants[index] = { ...storedVariants[index], ...data };
+      savePieceVariants(storedVariants);
 
       set((state) => ({
         terrainTypes: state.terrainTypes.map((t) => ({
           ...t,
-          variants: t.variants.map((v) => (v.id === id ? { ...v, ...data } : v)),
+          variants: t.variants.map((v) =>
+            v.id === id ? { ...v, ...data } : v
+          ),
         })),
         isLoading: false,
       }));
 
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update piece variant';
+      const message = error instanceof Error ? error.message : 'Failed to update variant';
       set({ error: message, isLoading: false });
       return false;
     }
   },
 
   deletePieceVariant: async (id) => {
-    if (!isSupabaseConfigured() || !supabase) {
-      set({ error: 'Supabase not configured', isLoading: false });
-      return false;
-    }
-
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase.from('piece_variants').delete().eq('id', id);
-
-      if (error) throw error;
+      const storedVariants = getPieceVariants();
+      const filtered = storedVariants.filter(v => v.id !== id);
+      savePieceVariants(filtered);
 
       set((state) => ({
         terrainTypes: state.terrainTypes.map((t) => ({
@@ -1243,15 +1204,17 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete piece variant';
+      const message = error instanceof Error ? error.message : 'Failed to delete variant';
       set({ error: message, isLoading: false });
       return false;
     }
   },
 
+  // =============================================
+  // Utilities
+  // =============================================
   clearError: () => set({ error: null }),
 
-  // Generate ModularPiece[] for mapStore compatibility
   getModularPieces: (): ModularPiece[] => {
     const { shapes, terrainTypes, customPieces } = get();
     const elevations = useElevationStore.getState().elevations;
@@ -1260,7 +1223,9 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     // Add predefined terrain pieces
     for (const terrain of terrainTypes) {
       for (const pieceConfig of terrain.pieces) {
+        // Skip if quantity is 0 or if disabled
         if (pieceConfig.quantity <= 0) continue;
+        if (pieceConfig.enabled === false) continue;
 
         const shape = pieceConfig.shape || shapes.find((s) => s.id === pieceConfig.shapeId);
         if (!shape) continue;
@@ -1270,6 +1235,16 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         const elevationKey = createElevationKey(terrain.slug, shape.shapeKey);
         const defaultElevationKey = createElevationKey('_default', shape.shapeKey);
         const elevation = elevations[elevationKey] || elevations[defaultElevationKey];
+
+        // Determine tags based on piece characteristics
+        const pieceTags: string[] = [];
+        if (shape.isDiagonal) {
+          pieceTags.push('corners');
+        } else if (elevation && (elevation.nw !== 0 || elevation.ne !== 0 || elevation.sw !== 0 || elevation.se !== 0)) {
+          pieceTags.push('elevation');
+        } else {
+          pieceTags.push('core');
+        }
 
         pieces.push({
           id: `${terrain.slug}-${shape.shapeKey}`,
@@ -1283,7 +1258,9 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           isDiagonal: shape.isDiagonal,
           quantity: pieceConfig.quantity,
           defaultRotation: shape.defaultRotation,
+          baseHeight: shape.baseHeight,
           elevation,
+          tags: pieceTags,
         });
       }
     }
@@ -1310,6 +1287,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         quantity: custom.quantity,
         isCustom: true,
         cellColors: custom.cellColors,
+        tags: ['custom', 'multi'],
       });
     }
 
@@ -1339,6 +1317,12 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           const cellTerrain = terrainTypes.find((t) => t.id === cellTerrainId);
           if (!cellTerrain) continue;
 
+          // Combine variant's own tags with 'multi' tag
+          const variantTags = [...(variant.tags || [])];
+          if (!variantTags.includes('multi')) {
+            variantTags.push('multi');
+          }
+
           pieces.push({
             id: `variant-${variant.id}-${cellTerrain.slug}`,
             name: variant.name,
@@ -1351,9 +1335,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
             isDiagonal: shape.isDiagonal,
             quantity: variant.quantity,
             defaultRotation: shape.defaultRotation,
+            baseHeight: shape.baseHeight,
             isVariant: true,
             variantId: variant.id,
-            tags: variant.tags,
+            tags: variantTags,
             cellColors: variant.cellColors,
           });
         }

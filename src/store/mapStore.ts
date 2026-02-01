@@ -4,6 +4,7 @@ import { MapTemplate, MapFeature } from '@/types/templates';
 import { DEFAULT_TERRAIN_TYPES, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, GRID_CELL_SIZE, DEFAULT_LEVELS } from '@/config/terrain';
 import { DEFAULT_PROPS } from '@/config/props';
 import { placeTemplate, PlaceTemplateResult } from '@/lib/templateEngine';
+import { useInventoryStore } from './inventoryStore';
 
 interface MapState {
   // Current map ID (null for new unsaved map)
@@ -68,6 +69,10 @@ interface MapState {
   showReferenceLevels: boolean;
   referenceLevelOpacity: number; // 0-1 range
 
+  // Visibility toggles for terrain and props
+  showTerrain: boolean;
+  showProps: boolean;
+
   // Sidebar state
   selectedTerrainTab: string | null;
 
@@ -105,6 +110,7 @@ interface MapState {
   updatePlacedPieces: (updates: Array<{ id: string; updates: Partial<PlacedPiece> }>) => void;
   setAvailablePieces: (pieces: ModularPiece[]) => void;
   setTerrainTypes: (types: TerrainType[]) => void;
+  refreshFromInventory: () => Promise<void>;
   setZoom: (zoom: number) => void;
   setPan: (x: number, y: number) => void;
   toggleGrid: () => void;
@@ -148,6 +154,10 @@ interface MapState {
   // Prop search dialog actions
   openPropSearch: (x: number, y: number) => void;
   closePropSearch: () => void;
+
+  // Visibility toggles actions
+  setShowTerrain: (show: boolean) => void;
+  setShowProps: (show: boolean) => void;
 
   // Custom props actions
   addCustomProp: (prop: ModularPiece) => void;
@@ -689,6 +699,8 @@ export const useMapStore = create<MapState>((set, get) => ({
   is3DMode: false,
   showReferenceLevels: false,
   referenceLevelOpacity: 0.3,
+  showTerrain: true,
+  showProps: true,
   selectedTerrainTab: null,
   editMode: 'terrain',
   customProps: [],
@@ -786,6 +798,39 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   setTerrainTypes: (types) => set({ terrainTypes: types }),
 
+  refreshFromInventory: async () => {
+    const inventoryStore = useInventoryStore.getState();
+
+    // Ensure inventory is loaded
+    if (inventoryStore.terrainTypes.length === 0) {
+      await inventoryStore.fetchTerrainTypes();
+    }
+    if (inventoryStore.shapes.length === 0) {
+      await inventoryStore.fetchShapes();
+    }
+
+    // Get updated pieces from inventory
+    const modularPieces = inventoryStore.getModularPieces();
+
+    // Convert terrain types to the format mapStore expects
+    const terrainTypes: TerrainType[] = inventoryStore.terrainTypes.map(t => ({
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      color: t.color,
+      icon: t.icon,
+      description: t.description,
+    }));
+
+    // Merge with default props
+    const allPieces = [...modularPieces, ...DEFAULT_PROPS];
+
+    set({
+      availablePieces: allPieces,
+      terrainTypes,
+    });
+  },
+
   setZoom: (zoom) => set({ zoom: Math.max(0.25, Math.min(2, zoom)) }),
 
   setPan: (x, y) => set({ panX: x, panY: y }),
@@ -810,7 +855,8 @@ export const useMapStore = create<MapState>((set, get) => ({
       availablePieces: [...state.availablePieces, piece],
     })),
 
-  clearMap: () => set({ placedPieces: [], selectedPlacedPieceIds: [], hasUnsavedChanges: true }),
+  clearMap: () =>
+    set({ placedPieces: [], selectedPlacedPieceIds: [], hasUnsavedChanges: true }),
 
   rotateCurrentPiece: () =>
     set((state) => ({
@@ -875,6 +921,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   endSidebarDrag: () =>
     set({
       isSidebarDragging: false,
+      selectedPieceId: null,
     }),
 
   openRadialMenu: (x: number, y: number) =>
@@ -942,6 +989,10 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   // Edit mode actions
   setEditMode: (mode) => set({ editMode: mode }),
+
+  // Visibility toggle actions
+  setShowTerrain: (show) => set({ showTerrain: show }),
+  setShowProps: (show) => set({ showProps: show }),
 
   // Prop search dialog actions
   openPropSearch: (x, y) => set({

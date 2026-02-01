@@ -11,6 +11,7 @@ import { PropSearchDialog } from './PropSearchDialog';
 import { UnsavedChangesGuard } from './UnsavedChangesGuard';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
+import { DEFAULT_PROPS } from '@/config/props';
 
 // Lazy load 3D viewer to reduce initial bundle
 const Map3DViewer = lazy(() =>
@@ -46,8 +47,9 @@ export function MapDesigner() {
   const handleDrop = (x: number, y: number, rotation: number) => {
     if (!selectedPieceId) return;
 
-    // Check both availablePieces and customProps for the piece
+    // Check availablePieces, DEFAULT_PROPS, and customProps for the piece
     const piece = availablePieces.find((p) => p.id === selectedPieceId)
+      || DEFAULT_PROPS.find((p) => p.id === selectedPieceId)
       || customProps.find((p) => p.id === selectedPieceId);
     if (!piece) return;
 

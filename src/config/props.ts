@@ -20,7 +20,7 @@ export const PROP_CATEGORIES: { id: PropCategory; name: string; icon: string }[]
   { id: 'custom', name: 'Custom', icon: '✨' },
 ];
 
-// Default props library
+// Default props library (all start with quantity 0 - user adds to inventory as needed)
 export const DEFAULT_PROPS: ModularPiece[] = [
   // Furniture (mostly medium to large)
   {
@@ -32,7 +32,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['furniture', 'seating', 'tavern', 'indoor'],
   },
   {
@@ -44,7 +44,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['furniture', 'tavern', 'indoor', 'dining'],
   },
   {
@@ -56,7 +56,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['furniture', 'bedroom', 'indoor', 'rest'],
   },
   {
@@ -68,7 +68,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['furniture', 'seating', 'royal', 'castle', 'indoor'],
   },
   {
@@ -80,7 +80,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['furniture', 'storage', 'tavern', 'cellar'],
   },
   {
@@ -92,7 +92,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['furniture', 'library', 'indoor', 'wizard', 'storage'],
   },
 
@@ -106,7 +106,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['npc', 'humanoid', 'person', 'civilian'],
   },
   {
@@ -118,7 +118,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['npc', 'humanoid', 'soldier', 'military', 'armor'],
   },
   {
@@ -130,7 +130,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['npc', 'humanoid', 'shop', 'trade', 'market'],
   },
   {
@@ -142,7 +142,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['npc', 'humanoid', 'magic', 'mage', 'spellcaster'],
   },
   {
@@ -154,7 +154,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['npc', 'humanoid', 'farmer', 'civilian', 'village'],
   },
 
@@ -168,7 +168,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['creature', 'animal', 'mount', 'beast', 'outdoor'],
   },
   {
@@ -180,7 +180,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['creature', 'animal', 'beast', 'enemy', 'forest'],
   },
   {
@@ -192,7 +192,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['creature', 'animal', 'beast', 'enemy', 'forest'],
   },
   {
@@ -204,7 +204,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['creature', 'monster', 'enemy', 'dungeon', 'cave'],
   },
   {
@@ -216,7 +216,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['creature', 'undead', 'enemy', 'dungeon', 'monster'],
   },
   {
@@ -228,7 +228,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['creature', 'undead', 'enemy', 'dungeon', 'monster'],
   },
 
@@ -242,7 +242,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['hero', 'player', 'humanoid', 'adventurer'],
   },
   {
@@ -254,7 +254,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['hero', 'player', 'fighter', 'melee', 'armor'],
   },
   {
@@ -266,7 +266,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['hero', 'player', 'magic', 'spellcaster', 'wizard'],
   },
   {
@@ -278,7 +278,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['hero', 'player', 'stealth', 'thief', 'assassin'],
   },
   {
@@ -290,7 +290,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['hero', 'player', 'healer', 'divine', 'priest'],
   },
 
@@ -304,7 +304,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['boss', 'enemy', 'monster', 'encounter'],
   },
   {
@@ -316,7 +316,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['boss', 'enemy', 'monster', 'giant', 'cave'],
   },
   {
@@ -328,7 +328,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.huge,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['boss', 'enemy', 'monster', 'giant', 'huge'],
   },
   {
@@ -340,7 +340,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.gargantuan,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['boss', 'enemy', 'monster', 'dragon', 'flying', 'legendary'],
   },
   {
@@ -352,7 +352,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.huge,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['boss', 'enemy', 'monster', 'fiend', 'evil', 'hell'],
   },
 
@@ -366,7 +366,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['item', 'loot', 'treasure', 'storage', 'dungeon'],
   },
   {
@@ -378,7 +378,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.tiny,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['item', 'loot', 'consumable', 'healing', 'magic'],
   },
   {
@@ -390,7 +390,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.tiny,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['item', 'loot', 'magic', 'spell', 'readable'],
   },
   {
@@ -402,7 +402,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.tiny,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['item', 'loot', 'quest', 'unlock', 'dungeon'],
   },
   {
@@ -414,7 +414,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.tiny,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['item', 'loot', 'treasure', 'valuable', 'jewel'],
   },
   {
@@ -426,7 +426,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['item', 'environment', 'light', 'outdoor', 'rest'],
   },
   {
@@ -438,7 +438,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.large,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['item', 'environment', 'nature', 'outdoor', 'forest'],
   },
   {
@@ -450,7 +450,7 @@ export const DEFAULT_PROPS: ModularPiece[] = [
     terrainTypeId: 'props',
     size: PROP_SIZES.medium,
     isDiagonal: false,
-    quantity: 99,
+    quantity: 0,
     tags: ['item', 'environment', 'nature', 'outdoor', 'obstacle'],
   },
 ];

@@ -154,12 +154,11 @@ export function PlacedPiece3D({
   const pieceHeight = piece.baseHeight ?? PIECE_HEIGHT_INCHES;
 
   // Get corner elevations (default to flat if not specified)
-  const baseElevation = piece.elevation || DEFAULT_CORNER_ELEVATIONS;
-
-  // Apply rotation to corner elevations
-  const rotatedElevation = useMemo(() => {
-    return rotateCornerElevations(baseElevation, placedPiece.rotation);
-  }, [baseElevation, placedPiece.rotation]);
+  // NOTE: We use the elevation as-is without rotating it here.
+  // The mesh rotation (rotationY) will handle the visual rotation.
+  // This way, a piece with elevation on the north side will have that
+  // elevation move with the piece when it's rotated on the map.
+  const elevation = piece.elevation || DEFAULT_CORNER_ELEVATIONS;
 
   // Calculate effective dimensions based on rotation
   const isRotated = placedPiece.rotation === 90 || placedPiece.rotation === 270;
@@ -205,21 +204,21 @@ export function PlacedPiece3D({
           shape.lineTo(w / 2, -h / 2);   // SE... wait, this is NE for diagonal
           shape.lineTo(-w / 2, h / 2);   // NW
           shape.closePath();
-          avgHeight = pieceHeight + (rotatedElevation.nw + rotatedElevation.ne + rotatedElevation.sw) / 3;
+          avgHeight = pieceHeight + (elevation.nw + elevation.ne + elevation.sw) / 3;
           break;
         case 90: // Top-right corner (NW, NE, SE)
           shape.moveTo(-w / 2, -h / 2);
           shape.lineTo(w / 2, -h / 2);
           shape.lineTo(w / 2, h / 2);
           shape.closePath();
-          avgHeight = pieceHeight + (rotatedElevation.nw + rotatedElevation.ne + rotatedElevation.se) / 3;
+          avgHeight = pieceHeight + (elevation.nw + elevation.ne + elevation.se) / 3;
           break;
         case 180: // Bottom-right corner (NE, SE, SW)
           shape.moveTo(w / 2, -h / 2);
           shape.lineTo(w / 2, h / 2);
           shape.lineTo(-w / 2, h / 2);
           shape.closePath();
-          avgHeight = pieceHeight + (rotatedElevation.ne + rotatedElevation.se + rotatedElevation.sw) / 3;
+          avgHeight = pieceHeight + (elevation.ne + elevation.se + elevation.sw) / 3;
           break;
         case 270: // Bottom-left corner (NW, SE, SW)
         default:
@@ -227,7 +226,7 @@ export function PlacedPiece3D({
           shape.lineTo(-w / 2, h / 2);
           shape.lineTo(w / 2, h / 2);
           shape.closePath();
-          avgHeight = pieceHeight + (rotatedElevation.nw + rotatedElevation.se + rotatedElevation.sw) / 3;
+          avgHeight = pieceHeight + (elevation.nw + elevation.se + elevation.sw) / 3;
           break;
       }
 
@@ -246,10 +245,10 @@ export function PlacedPiece3D({
         piece.size.width,
         piece.size.height,
         pieceHeight,
-        rotatedElevation
+        elevation
       );
     }
-  }, [piece.size.width, piece.size.height, piece.isDiagonal, piece.defaultRotation, rotatedElevation, hasCellColors, pieceHeight]);
+  }, [piece.size.width, piece.size.height, piece.isDiagonal, piece.defaultRotation, elevation, hasCellColors, pieceHeight]);
 
   // Parse terrain color (desaturated for reference pieces)
   const color = useMemo(() => {

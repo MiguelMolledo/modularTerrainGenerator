@@ -20,10 +20,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Eye, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Grid3X3, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users } from 'lucide-react';
+import { GenerateArtDialog } from './GenerateArtDialog';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { useRouter } from 'next/navigation';
-import { generateThumbnail } from '@/lib/stageRef';
+import { generateThumbnail, generateFullMapSnapshot } from '@/lib/stageRef';
 import { clearLastMapId } from './UnsavedChangesGuard';
 import type { ModularPiece, SavedMap } from '@/types';
 
@@ -113,7 +114,10 @@ export function Toolbar() {
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [showExportReportDialog, setShowExportReportDialog] = useState(false);
+  const [showGenerateArtDialog, setShowGenerateArtDialog] = useState(false);
   const [showMapSizeDialog, setShowMapSizeDialog] = useState(false);
+  const [showNewMapDialog, setShowNewMapDialog] = useState(false);
+  const [newMapName, setNewMapName] = useState('');
   const [tempMapWidth, setTempMapWidth] = useState(60);
   const [tempMapHeight, setTempMapHeight] = useState(60);
   const mapSelectorRef = useRef<HTMLDivElement>(null);
@@ -154,16 +158,21 @@ export function Toolbar() {
     setReferenceLevelOpacity,
     editMode,
     setEditMode,
+    showTerrain,
+    showProps,
+    setShowTerrain,
+    setShowProps,
   } = useMapStore();
 
   const { saveMap, savedMaps, fetchMaps, loadMap } = useMapInventoryStore();
-  const { terrainTypes, fetchTerrainTypes, getModularPieces } = useInventoryStore();
+  const { terrainTypes, shapes, fetchTerrainTypes, fetchShapes, getModularPieces } = useInventoryStore();
 
-  // Fetch maps and terrain types on mount
+  // Fetch maps, terrain types, and shapes on mount
   useEffect(() => {
     fetchMaps();
     fetchTerrainTypes();
-  }, [fetchMaps, fetchTerrainTypes]);
+    fetchShapes();
+  }, [fetchMaps, fetchTerrainTypes, fetchShapes]);
 
   // Get available pieces from inventory for report
   const availablePieces: ModularPiece[] = useMemo(() => {
@@ -236,8 +245,8 @@ export function Toolbar() {
         setMapName(saveName);
       }
 
-      // Generate snapshot from canvas (always saved separately from custom thumbnail)
-      const snapshot = generateThumbnail();
+      // Generate snapshot of the FULL map (not just visible area)
+      const snapshot = generateFullMapSnapshot();
 
       const mapData = getMapDataForSave();
       const mapDataWithSnapshot = {
@@ -285,7 +294,7 @@ export function Toolbar() {
   // Build current map data for the export report dialog
   const currentMapData: SavedMap = useMemo(() => {
     const mapData = getMapDataForSave();
-    const snapshot = generateThumbnail();
+    const snapshot = generateFullMapSnapshot();
     return {
       id: currentMapId || 'current',
       name: mapName,
@@ -307,8 +316,17 @@ export function Toolbar() {
         return;
       }
     }
+    setNewMapName('');
+    setShowNewMapDialog(true);
+  };
+
+  const handleCreateNewMap = () => {
     clearLastMapId();
     resetToNewMap();
+    if (newMapName.trim()) {
+      setMapName(newMapName.trim());
+    }
+    setShowNewMapDialog(false);
     router.push('/designer');
   };
 
@@ -363,6 +381,38 @@ export function Toolbar() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>Props mode - Edit NPCs, furniture, items</TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Visibility Toggles */}
+        <div className="flex items-center gap-0.5 bg-gray-700 rounded-md p-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={showTerrain ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setShowTerrain(!showTerrain)}
+                className={`px-2 h-7 relative ${showTerrain ? '' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Mountain className="h-4 w-4" />
+                {!showTerrain && <EyeOff className="h-3 w-3 absolute -right-0.5 -bottom-0.5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{showTerrain ? 'Hide terrain' : 'Show terrain'}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={showProps ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setShowProps(!showProps)}
+                className={`px-2 h-7 relative ${showProps ? '' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Users className="h-4 w-4" />
+                {!showProps && <EyeOff className="h-3 w-3 absolute -right-0.5 -bottom-0.5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{showProps ? 'Hide props' : 'Show props'}</TooltipContent>
           </Tooltip>
         </div>
 
@@ -525,6 +575,24 @@ export function Toolbar() {
             </span>
           </div>
         )}
+
+        <Separator orientation="vertical" className="h-8" />
+
+        {/* Generate Art button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowGenerateArtDialog(true)}
+              className="gap-1 text-amber-400 border-amber-600/50 hover:bg-amber-900/30"
+            >
+              <Wand2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Art</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Generate artistic battle map from current layout</TooltipContent>
+        </Tooltip>
 
         <div className="flex-1" />
 
@@ -699,6 +767,7 @@ export function Toolbar() {
         map={currentMapData}
         availablePieces={availablePieces}
         terrainTypes={terrainTypes}
+        shapes={shapes}
       />
 
       {/* Map Size Dialog */}
@@ -774,6 +843,50 @@ export function Toolbar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* New Map Dialog */}
+      <Dialog open={showNewMapDialog} onOpenChange={setShowNewMapDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Map</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-gray-300 block mb-2">
+                Map Name
+              </label>
+              <input
+                type="text"
+                value={newMapName}
+                onChange={(e) => setNewMapName(e.target.value)}
+                placeholder="Enter map name..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newMapName.trim()) {
+                    handleCreateNewMap();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewMapDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateNewMap} disabled={!newMapName.trim()}>
+              <FilePlus className="h-4 w-4 mr-1" />
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Art Dialog */}
+      <GenerateArtDialog
+        open={showGenerateArtDialog}
+        onOpenChange={setShowGenerateArtDialog}
+      />
     </TooltipProvider>
   );
 }

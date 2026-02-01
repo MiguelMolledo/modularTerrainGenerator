@@ -19,6 +19,11 @@ function MapLoader() {
   const { loadMap } = useMapInventoryStore();
   const { terrainTypes, shapes, fetchTerrainTypes, fetchShapes, getModularPieces } = useInventoryStore();
 
+  // Reset checkedLastMap when mapId changes (allows re-checking on navigation)
+  useEffect(() => {
+    setCheckedLastMap(false);
+  }, [mapId]);
+
   // Check for last map on initial load (no mapId in URL)
   useEffect(() => {
     if (!mapId && !checkedLastMap) {
@@ -55,6 +60,7 @@ function MapLoader() {
           name: t.name,
           color: t.color,
           icon: t.icon,
+          description: t.description,
         }));
         setTerrainTypes(simpleTerrainTypes);
       }

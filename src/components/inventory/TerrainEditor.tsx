@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PiecesGrid } from './PiecesGrid';
 import { ObjectsList } from './ObjectsList';
-import { Save } from 'lucide-react';
+import { Save, ChevronDown, ChevronUp, Wand2 } from 'lucide-react';
 
 const TERRAIN_EMOJIS = ['🏜️', '🌲', '🏔️', '🌊', '🐊', '🌋', '❄️', '🌾', '🏛️', '🌙', '☀️', '🌸'];
 const TERRAIN_COLORS = [
@@ -26,8 +26,10 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
   const [editedName, setEditedName] = useState(terrain?.name || '');
   const [editedColor, setEditedColor] = useState(terrain?.color || '#888888');
   const [editedIcon, setEditedIcon] = useState(terrain?.icon || '🗺️');
+  const [editedDescription, setEditedDescription] = useState(terrain?.description || '');
   const [hasChanges, setHasChanges] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showDescriptionEditor, setShowDescriptionEditor] = useState(false);
   const [pickerPosition, setPickerPosition] = useState({ top: 0, left: 0 });
   const iconButtonRef = React.useRef<HTMLButtonElement>(null);
 
@@ -37,6 +39,7 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
       setEditedName(terrain.name);
       setEditedColor(terrain.color);
       setEditedIcon(terrain.icon);
+      setEditedDescription(terrain.description || '');
       setHasChanges(false);
     }
   }, [terrain]);
@@ -71,6 +74,7 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
       name: editedName,
       color: editedColor,
       icon: editedIcon,
+      description: editedDescription,
     });
     setHasChanges(false);
   };
@@ -168,11 +172,50 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
           </div>
 
           {/* Save button */}
-          {hasChanges && !terrain.isDefault && (
+          {hasChanges && (
             <Button onClick={handleSaveChanges} disabled={isLoading}>
               <Save className="h-4 w-4 mr-1" />
               Save
             </Button>
+          )}
+        </div>
+
+        {/* Description section - collapsible */}
+        <div className="mt-4 pt-4 border-t border-gray-700">
+          <button
+            onClick={() => setShowDescriptionEditor(!showDescriptionEditor)}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors w-full"
+          >
+            <Wand2 className="h-4 w-4 text-amber-500" />
+            <span className="font-medium">AI Image Description</span>
+            {showDescriptionEditor ? (
+              <ChevronUp className="h-4 w-4 ml-auto" />
+            ) : (
+              <ChevronDown className="h-4 w-4 ml-auto" />
+            )}
+            {editedDescription && !showDescriptionEditor && (
+              <span className="text-xs text-gray-500 truncate max-w-xs ml-2">
+                {editedDescription.substring(0, 50)}...
+              </span>
+            )}
+          </button>
+
+          {showDescriptionEditor && (
+            <div className="mt-3">
+              <textarea
+                value={editedDescription}
+                onChange={(e) => {
+                  setEditedDescription(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="Describe this terrain for AI image generation. Be detailed about textures, colors, features, and atmosphere..."
+                rows={4}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                This description is used when generating artistic battlemaps. Include details about textures, colors, typical features, and atmosphere.
+              </p>
+            </div>
           )}
         </div>
       </CardHeader>

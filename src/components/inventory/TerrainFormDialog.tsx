@@ -35,14 +35,14 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !slug.trim()) return;
+    if (!name.trim() || !slug.trim() || !description.trim()) return;
 
     const result = await createTerrainType({
       name: name.trim(),
       slug: slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'),
       icon,
       color,
-      description: description.trim() || undefined,
+      description: description.trim(),
       templateId: selectedTemplateId,
     });
 
@@ -213,15 +213,19 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
           {/* Description */}
           <div>
             <label className="text-sm font-medium text-gray-300 block mb-1">
-              Description (optional)
+              Description <span className="text-red-400">*</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description..."
-              rows={2}
+              placeholder="Describe this terrain for AI image generation (e.g., 'Sandy desert with dunes, dry earth, and cacti')"
+              rows={3}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              required
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Used for AI image generation. Describe the visual appearance and features.
+            </p>
           </div>
 
           <DialogFooter>
@@ -232,7 +236,7 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !name.trim() || !slug.trim()}>
+            <Button type="submit" disabled={isLoading || !name.trim() || !slug.trim() || !description.trim()}>
               {isLoading ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>

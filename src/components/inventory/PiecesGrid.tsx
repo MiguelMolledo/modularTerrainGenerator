@@ -5,7 +5,7 @@ import { useInventoryStore } from '@/store/inventoryStore';
 import { useElevationStore, createElevationKey } from '@/store/elevationStore';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, Minus, Plus, Layers, Pencil, Trash2, Mountain } from 'lucide-react';
+import { Save, Minus, Plus, Layers, Pencil, Trash2, Mountain, Eye, EyeOff } from 'lucide-react';
 import { PieceVariantFormDialog } from './PieceVariantFormDialog';
 import { CustomPiecePreview } from './CustomPiecePreview';
 import { ElevationEditor } from './ElevationEditor';
@@ -16,13 +16,20 @@ interface PiecesGridProps {
 }
 
 export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
-  const { shapes, terrainTypes, updateTerrainPieces, deletePieceVariant, isLoading } = useInventoryStore();
+  const { shapes, terrainTypes, updateTerrainPieces, deletePieceVariant, toggleTerrainPieceEnabled, isLoading } = useInventoryStore();
   const { elevations, setElevation, getElevation } = useElevationStore();
   const terrain = terrainTypes.find((t) => t.id === terrainTypeId);
 
   // Local state for quantities
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Helper to get enabled status directly from terrain pieces
+  const isShapeEnabled = (shapeId: string): boolean => {
+    if (!terrain) return true;
+    const piece = terrain.pieces.find(p => p.shapeId === shapeId);
+    return piece?.enabled !== false; // Default to true if no piece or enabled is undefined
+  };
 
   // Variant dialog state
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
@@ -49,6 +56,12 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
     const newValue = Math.max(0, value);
     setQuantities((prev) => ({ ...prev, [shapeId]: newValue }));
     setHasChanges(true);
+  };
+
+  const handleToggleEnabled = async (shapeId: string) => {
+    const currentEnabled = isShapeEnabled(shapeId);
+    const newEnabled = !currentEnabled;
+    await toggleTerrainPieceEnabled(terrainTypeId, shapeId, newEnabled);
   };
 
   const handleSave = async () => {
@@ -120,9 +133,23 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {shapes.map((shape) => {
           const quantity = quantities[shape.id] || 0;
+          const isEnabled = isShapeEnabled(shape.id);
 
           return (
-            <Card key={shape.id} className="p-4">
+            <Card key={shape.id} className={`p-4 relative ${!isEnabled ? 'opacity-50' : ''}`}>
+              {/* Enable/Disable toggle */}
+              <button
+                onClick={() => handleToggleEnabled(shape.id)}
+                className={`absolute top-2 right-2 p-1.5 rounded-lg transition-colors ${
+                  isEnabled
+                    ? 'text-green-400 hover:bg-green-900/30'
+                    : 'text-gray-500 hover:bg-gray-700/50'
+                }`}
+                title={isEnabled ? 'Visible in designer (click to hide)' : 'Hidden from designer (click to show)'}
+              >
+                {isEnabled ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </button>
+
               {/* Visual representation */}
               <div className="h-20 flex items-center justify-center mb-3">
                 {shape.isDiagonal ? (

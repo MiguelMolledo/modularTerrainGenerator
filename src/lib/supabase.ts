@@ -52,6 +52,7 @@ export interface DbPieceShape {
   is_diagonal: boolean;
   default_rotation: number;
   display_order: number;
+  base_height: number | null; // Base height in inches (default 0.5")
   magnets: DbMagnetConfig[] | null; // JSONB: array of magnet configurations
   created_at: string;
 }
