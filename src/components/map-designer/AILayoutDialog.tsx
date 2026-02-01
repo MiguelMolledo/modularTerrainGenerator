@@ -49,7 +49,6 @@ export function AILayoutDialog({ open, onOpenChange }: AILayoutDialogProps) {
     mapWidth,
     mapHeight,
     availablePieces,
-    placedPieces,
     addPlacedPiece,
     currentLevel,
   } = useMapStore();
@@ -61,34 +60,21 @@ export function AILayoutDialog({ open, onOpenChange }: AILayoutDialogProps) {
   const [suggestions, setSuggestions] = useState<PlacementSuggestion[]>([]);
   const [layoutDescription, setLayoutDescription] = useState('');
 
-  // Calculate available pieces with remaining quantities
+  // Calculate available pieces (no stock limit - AI can use any piece)
   const availablePiecesWithQuantity = useMemo(() => {
     // Only terrain pieces, not props
     const terrainPieces = availablePieces.filter((p) => p.pieceType !== 'prop');
 
-    // Count how many of each piece are already placed
-    const usedCounts = new Map<string, number>();
-    placedPieces.forEach((placed) => {
-      const count = usedCounts.get(placed.pieceId) || 0;
-      usedCounts.set(placed.pieceId, count + 1);
-    });
-
-    return terrainPieces
-      .map((piece) => {
-        const used = usedCounts.get(piece.id) || 0;
-        const available = piece.quantity - used;
-        return {
-          id: piece.id,
-          name: piece.name,
-          terrainType: piece.terrainTypeId,
-          width: piece.size.width,
-          height: piece.size.height,
-          isDiagonal: piece.isDiagonal,
-          available: Math.max(0, available),
-        };
-      })
-      .filter((p) => p.available > 0);
-  }, [availablePieces, placedPieces]);
+    return terrainPieces.map((piece) => ({
+      id: piece.id,
+      name: piece.name,
+      terrainType: piece.terrainTypeId,
+      width: piece.size.width,
+      height: piece.size.height,
+      isDiagonal: piece.isDiagonal,
+      available: piece.quantity, // Report total quantity, but don't limit
+    }));
+  }, [availablePieces]);
 
   // Reset state
   const resetState = () => {
@@ -115,7 +101,7 @@ export function AILayoutDialog({ open, onOpenChange }: AILayoutDialogProps) {
     }
 
     if (availablePiecesWithQuantity.length === 0) {
-      setError('No terrain pieces available. Add pieces to your inventory first.');
+      setError('No terrain pieces in inventory. Add pieces to your inventory first.');
       return;
     }
 
@@ -314,7 +300,7 @@ Example: A forest clearing with a small river running through it, some elevated 
             <div className="flex items-center gap-2 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg text-yellow-300">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">
-                No terrain pieces available. Add pieces to your inventory or remove some from the map.
+                No terrain pieces in inventory. Add pieces to your inventory first.
               </span>
             </div>
           )}

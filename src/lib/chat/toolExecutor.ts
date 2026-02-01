@@ -518,31 +518,20 @@ async function executeGenerateLayout(toolCallId: string, params: GenerateLayoutP
   }
 
   const mapStore = useMapStore.getState();
-  const { mapWidth, mapHeight, availablePieces, placedPieces, currentLevel, addPlacedPiece } = mapStore;
+  const { mapWidth, mapHeight, availablePieces, currentLevel, addPlacedPiece } = mapStore;
 
-  // Calculate available pieces with remaining quantities
-  const usedCounts = new Map<string, number>();
-  placedPieces.forEach((placed) => {
-    const count = usedCounts.get(placed.pieceId) || 0;
-    usedCounts.set(placed.pieceId, count + 1);
-  });
-
+  // Get all terrain pieces (no stock limit - AI can use any piece)
   const availablePiecesWithQuantity = availablePieces
     .filter((p) => p.pieceType !== 'prop')
-    .map((piece) => {
-      const used = usedCounts.get(piece.id) || 0;
-      const available = piece.quantity - used;
-      return {
-        id: piece.id,
-        name: piece.name,
-        terrainType: piece.terrainTypeId,
-        width: piece.size.width,
-        height: piece.size.height,
-        isDiagonal: piece.isDiagonal,
-        available: Math.max(0, available),
-      };
-    })
-    .filter((p) => p.available > 0);
+    .map((piece) => ({
+      id: piece.id,
+      name: piece.name,
+      terrainType: piece.terrainTypeId,
+      width: piece.size.width,
+      height: piece.size.height,
+      isDiagonal: piece.isDiagonal,
+      available: piece.quantity, // Report total quantity, but don't limit
+    }));
 
   if (availablePiecesWithQuantity.length === 0) {
     return {
@@ -550,7 +539,7 @@ async function executeGenerateLayout(toolCallId: string, params: GenerateLayoutP
       name: 'generate_layout',
       result: null,
       success: false,
-      error: 'No terrain pieces available. Add pieces to your inventory first.',
+      error: 'No terrain pieces in inventory. Add pieces to your inventory first.',
     };
   }
 

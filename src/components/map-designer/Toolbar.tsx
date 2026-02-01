@@ -21,7 +21,8 @@ import {
 } from '@/components/ui/dialog';
 import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
 import { GenerateArtDialog } from './GenerateArtDialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2, Undo2, Redo2 } from 'lucide-react';
+import { AILayoutDialog } from './AILayoutDialog';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2, Undo2, Redo2, Sparkles } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { useRouter } from 'next/navigation';
 import { generateThumbnail, generateFullMapSnapshot } from '@/lib/stageRef';
@@ -120,6 +121,7 @@ export function Toolbar() {
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [showExportReportDialog, setShowExportReportDialog] = useState(false);
   const [showGenerateArtDialog, setShowGenerateArtDialog] = useState(false);
+  const [showAILayoutDialog, setShowAILayoutDialog] = useState(false);
   const [showMapSizeDialog, setShowMapSizeDialog] = useState(false);
   const [showNewMapDialog, setShowNewMapDialog] = useState(false);
   const [newMapName, setNewMapName] = useState('');
@@ -647,6 +649,22 @@ export function Toolbar() {
 
         <Separator orientation="vertical" className="h-8" />
 
+        {/* AI Layout button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAILayoutDialog(true)}
+              className="gap-1 text-green-400 border-green-600/50 hover:bg-green-900/30"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">Layout</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Generate terrain layout with AI</TooltipContent>
+        </Tooltip>
+
         {/* Generate Art button */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -1025,6 +1043,11 @@ export function Toolbar() {
       <GenerateArtDialog
         open={showGenerateArtDialog}
         onOpenChange={setShowGenerateArtDialog}
+      />
+
+      <AILayoutDialog
+        open={showAILayoutDialog}
+        onOpenChange={setShowAILayoutDialog}
       />
 
       {/* Delete Map Confirmation Dialog */}
