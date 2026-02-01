@@ -14,7 +14,11 @@ export interface PieceTemplate {
   pieces: PieceTemplateItem[];
 }
 
-// Predefined templates
+// Predefined templates using the standard shape keys:
+// - 6x6-flat: 6x6 Flat piece
+// - 6x6-elev: 6x6 Elevated piece
+// - 3x3-flat: 3x3 Flat piece
+// - 3x3-corner: 3x3 Corner (diagonal) piece
 export const PIECE_TEMPLATES: PieceTemplate[] = [
   {
     id: 'empty',
@@ -26,13 +30,13 @@ export const PIECE_TEMPLATES: PieceTemplate[] = [
   {
     id: 'starter',
     name: 'Starter Set',
-    description: 'Basic pieces to get started (squares and rectangles)',
+    description: 'Basic pieces to get started',
     icon: '🎯',
     pieces: [
-      { shapeKey: '3x3', quantity: 4 },
-      { shapeKey: '6x6', quantity: 2 },
-      { shapeKey: '3x6', quantity: 2 },
-      { shapeKey: '6x3', quantity: 2 },
+      { shapeKey: '6x6-flat', quantity: 2 },
+      { shapeKey: '6x6-elev', quantity: 2 },
+      { shapeKey: '3x3-flat', quantity: 4 },
+      { shapeKey: '3x3-corner', quantity: 2 },
     ],
   },
   {
@@ -41,12 +45,10 @@ export const PIECE_TEMPLATES: PieceTemplate[] = [
     description: 'Common pieces for most terrain builds',
     icon: '📦',
     pieces: [
-      { shapeKey: '3x3', quantity: 6 },
-      { shapeKey: '6x6', quantity: 4 },
-      { shapeKey: '3x6', quantity: 4 },
-      { shapeKey: '6x3', quantity: 4 },
-      { shapeKey: '3x1.5', quantity: 4 },
-      { shapeKey: '1.5x3', quantity: 4 },
+      { shapeKey: '6x6-flat', quantity: 4 },
+      { shapeKey: '6x6-elev', quantity: 4 },
+      { shapeKey: '3x3-flat', quantity: 4 },
+      { shapeKey: '3x3-corner', quantity: 4 },
     ],
   },
   {
@@ -55,52 +57,38 @@ export const PIECE_TEMPLATES: PieceTemplate[] = [
     description: 'All piece shapes with generous quantities',
     icon: '🎁',
     pieces: [
-      { shapeKey: '3x3', quantity: 10 },
-      { shapeKey: '6x6', quantity: 4 },
-      { shapeKey: '3x6', quantity: 5 },
-      { shapeKey: '6x3', quantity: 5 },
-      { shapeKey: '3x1.5', quantity: 8 },
-      { shapeKey: '1.5x3', quantity: 8 },
-      { shapeKey: '6x1.5', quantity: 4 },
-      { shapeKey: '1.5x6', quantity: 4 },
-      { shapeKey: 'diagonal-tl', quantity: 4 },
-      { shapeKey: 'diagonal-tr', quantity: 4 },
-      { shapeKey: 'diagonal-br', quantity: 4 },
-      { shapeKey: 'diagonal-bl', quantity: 4 },
+      { shapeKey: '6x6-flat', quantity: 6 },
+      { shapeKey: '6x6-elev', quantity: 6 },
+      { shapeKey: '3x3-flat', quantity: 8 },
+      { shapeKey: '3x3-corner', quantity: 8 },
     ],
   },
   {
-    id: 'diagonal-only',
-    name: 'Diagonals Only',
-    description: 'Just triangular pieces for transitions',
+    id: 'flat-only',
+    name: 'Flat Only',
+    description: 'Just flat pieces without elevation',
+    icon: '⬜',
+    pieces: [
+      { shapeKey: '6x6-flat', quantity: 6 },
+      { shapeKey: '3x3-flat', quantity: 8 },
+    ],
+  },
+  {
+    id: 'elevated-only',
+    name: 'Elevated Only',
+    description: 'Just elevated pieces for hills and platforms',
+    icon: '⬆️',
+    pieces: [
+      { shapeKey: '6x6-elev', quantity: 6 },
+    ],
+  },
+  {
+    id: 'corners-only',
+    name: 'Corners Only',
+    description: 'Just corner pieces for transitions',
     icon: '📐',
     pieces: [
-      { shapeKey: 'diagonal-tl', quantity: 6 },
-      { shapeKey: 'diagonal-tr', quantity: 6 },
-      { shapeKey: 'diagonal-br', quantity: 6 },
-      { shapeKey: 'diagonal-bl', quantity: 6 },
-    ],
-  },
-  {
-    id: 'strips',
-    name: 'Strip Pieces',
-    description: 'Thin pieces for borders and paths',
-    icon: '📏',
-    pieces: [
-      { shapeKey: '3x1.5', quantity: 8 },
-      { shapeKey: '1.5x3', quantity: 8 },
-      { shapeKey: '6x1.5', quantity: 6 },
-      { shapeKey: '1.5x6', quantity: 6 },
-    ],
-  },
-  {
-    id: 'squares',
-    name: 'Squares Only',
-    description: 'Just square pieces (3x3 and 6x6)',
-    icon: '⬛',
-    pieces: [
-      { shapeKey: '3x3', quantity: 12 },
-      { shapeKey: '6x6', quantity: 6 },
+      { shapeKey: '3x3-corner', quantity: 8 },
     ],
   },
 ];
