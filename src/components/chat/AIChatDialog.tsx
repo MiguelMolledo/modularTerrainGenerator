@@ -77,7 +77,7 @@ export function AIChatDialog() {
             )}
             {terrain.pieces.length > 0 && (
               <div className="space-y-1">
-                <span className="text-xs text-amber-400">Piezas:</span>
+                <span className="text-xs text-amber-400">Pieces:</span>
                 <div className="grid grid-cols-2 gap-1">
                   {terrain.pieces.map((piece, i) => (
                     <div key={i} className="flex items-center justify-between bg-gray-800 px-2 py-1 rounded text-xs">
@@ -89,7 +89,7 @@ export function AIChatDialog() {
               </div>
             )}
             <p className="text-xs text-amber-300 mt-2">
-              Di &quot;confirmar&quot; para crear o &quot;cancelar&quot; para descartar.
+              Say &quot;confirm&quot; to create or &quot;cancel&quot; to discard.
             </p>
           </div>
         </div>
@@ -101,7 +101,7 @@ export function AIChatDialog() {
       if (r.cancelled) {
         return (
           <div className="mt-2 text-sm text-gray-400">
-            Configuración cancelada.
+            Configuration cancelled.
           </div>
         );
       }
@@ -112,13 +112,13 @@ export function AIChatDialog() {
           <div className="mt-2 text-sm">
             <div className="flex items-center gap-2 text-green-400">
               <span className="text-lg">{terrain.icon}</span>
-              <span>Terreno &quot;{terrain.name}&quot; creado</span>
+              <span>Terrain &quot;{terrain.name}&quot; created</span>
             </div>
             {Number(r.piecesAssigned) > 0 && (
-              <p className="text-gray-400 text-xs mt-1">{Number(r.piecesAssigned)} tipos de pieza asignados</p>
+              <p className="text-gray-400 text-xs mt-1">{Number(r.piecesAssigned)} piece types assigned</p>
             )}
             {shapesCreated.length > 0 && (
-              <p className="text-gray-400 text-xs">Shapes creados: {shapesCreated.join(', ')}</p>
+              <p className="text-gray-400 text-xs">Shapes created: {shapesCreated.join(', ')}</p>
             )}
           </div>
         );
@@ -131,7 +131,7 @@ export function AIChatDialog() {
       const missing = r.missingShapes as string[] | undefined;
       return (
         <div className="mt-2 text-sm">
-          <div className="text-green-400">Piezas asignadas a {String(r.terrain)}:</div>
+          <div className="text-green-400">Pieces assigned to {String(r.terrain)}:</div>
           <div className="flex flex-wrap gap-1 mt-1">
             {assigned.map((p, i) => (
               <span key={i} className="bg-green-900/50 px-2 py-0.5 rounded text-xs text-green-300">
@@ -140,7 +140,7 @@ export function AIChatDialog() {
             ))}
           </div>
           {missing && missing.length > 0 && (
-            <p className="text-amber-400 text-xs mt-1">Shapes no encontrados: {missing.join(', ')}</p>
+            <p className="text-amber-400 text-xs mt-1">Shapes not found: {missing.join(', ')}</p>
           )}
         </div>
       );
@@ -150,7 +150,7 @@ export function AIChatDialog() {
     if (name === 'create_custom_piece' && r.id) {
       return (
         <div className="mt-2 text-sm text-green-400">
-          Pieza custom &quot;{String(r.name)}&quot; creada ({String(r.dimensions)}) x{Number(r.quantity)}
+          Custom piece &quot;{String(r.name)}&quot; created ({String(r.dimensions)}) x{Number(r.quantity)}
         </div>
       );
     }
@@ -160,15 +160,15 @@ export function AIChatDialog() {
       const maps = r.maps as Array<{ id: string; name: string; dimensions: string; piecesCount: number }>;
       return (
         <div className="mt-2 text-sm">
-          <span className="text-blue-400">{Number(r.count)} mapas encontrados:</span>
+          <span className="text-blue-400">{Number(r.count)} maps found:</span>
           <div className="space-y-1 mt-2">
             {maps.slice(0, 8).map((map) => (
               <div key={map.id} className="flex items-center justify-between bg-gray-800 px-2 py-1 rounded text-xs">
                 <span className="text-white">🗺️ {map.name}</span>
-                <span className="text-gray-400">{map.dimensions} • {map.piecesCount} piezas</span>
+                <span className="text-gray-400">{map.dimensions} • {map.piecesCount} pieces</span>
               </div>
             ))}
-            {maps.length > 8 && <span className="text-gray-500 text-xs">+{maps.length - 8} más</span>}
+            {maps.length > 8 && <span className="text-gray-500 text-xs">+{maps.length - 8} more</span>}
           </div>
         </div>
       );
@@ -186,11 +186,11 @@ export function AIChatDialog() {
               <span className="font-medium text-white">{String(r.name)}</span>
             </div>
             <div className="text-xs text-gray-400 mb-2">
-              {String(r.dimensions)} ({String(r.dimensionsFeet)}) • {Number(r.totalPieces)} piezas
+              {String(r.dimensions)} ({String(r.dimensionsFeet)}) • {Number(r.totalPieces)} pieces
             </div>
             {terrains.length > 0 && (
               <div className="mb-2">
-                <span className="text-xs text-blue-400">Terrenos:</span>
+                <span className="text-xs text-blue-400">Terrains:</span>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {terrains.map((t, i) => (
                     <span key={i} className="bg-gray-800 px-2 py-0.5 rounded text-xs">
@@ -209,7 +209,7 @@ export function AIChatDialog() {
                       {p.emoji} {p.name} x{p.count}
                     </span>
                   ))}
-                  {props.length > 6 && <span className="text-gray-500 text-xs">+{props.length - 6} más</span>}
+                  {props.length > 6 && <span className="text-gray-500 text-xs">+{props.length - 6} more</span>}
                 </div>
               </div>
             )}
@@ -262,7 +262,7 @@ export function AIChatDialog() {
       const count = Number(r.count) || props.length;
       return (
         <div className="mt-2 text-sm">
-          <span className="text-yellow-400">{count} props generados:</span>
+          <span className="text-yellow-400">{count} props generated:</span>
           <div className="grid grid-cols-1 gap-1 mt-2">
             {props.map((prop) => (
               <div key={prop.index} className="flex items-center gap-2 bg-gray-800 px-2 py-1.5 rounded text-xs">
@@ -283,7 +283,7 @@ export function AIChatDialog() {
       const count = Number(r.addedCount) || props.length;
       return (
         <div className="mt-2 text-sm">
-          <span className="text-green-400">{count} props añadidos:</span>
+          <span className="text-green-400">{count} props added:</span>
           <div className="flex flex-wrap gap-1 mt-1">
             {props.slice(0, 10).map((prop, i) => (
               <span key={i} className="bg-green-900/50 px-2 py-0.5 rounded text-xs text-green-300">{prop}</span>
@@ -378,33 +378,44 @@ export function AIChatDialog() {
               <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-4">
                 <div className="text-4xl">🏰</div>
                 <div>
-                  <h3 className="text-lg font-medium text-white mb-1">Hola! Soy tu asistente</h3>
+                  <h3 className="text-lg font-medium text-white mb-1">Hi! I&apos;m your assistant</h3>
                   <p className="text-gray-400 text-sm">
-                    Puedo crear piezas, props, layouts y narrar escenas
+                    I can create pieces, props, layouts and narrate scenes
                   </p>
                 </div>
 
                 <div className="w-full space-y-1.5">
                   <button
                     className="w-full text-left px-3 py-2 bg-gray-800/80 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 hover:border-purple-500/50 transition-colors"
-                    onClick={() => setInput('Genera props para una taberna medieval')}
+                    onClick={() => sendMessage('I want to create a new piece')}
+                    disabled={isLoading}
                   >
-                    <span className="text-purple-400">Generar props</span>
-                    <span className="text-gray-500 ml-2">- NPCs, muebles...</span>
+                    <span className="text-purple-400">🧩 Create Piece</span>
+                    <span className="text-gray-500 ml-2">- Guided step by step</span>
                   </button>
                   <button
                     className="w-full text-left px-3 py-2 bg-gray-800/80 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 hover:border-purple-500/50 transition-colors"
-                    onClick={() => setInput('Créame una pieza 6x6')}
+                    onClick={() => sendMessage('I want to create a new terrain type')}
+                    disabled={isLoading}
                   >
-                    <span className="text-purple-400">Crear pieza</span>
-                    <span className="text-gray-500 ml-2">- Terreno modular</span>
+                    <span className="text-purple-400">🎨 Create Terrain</span>
+                    <span className="text-gray-500 ml-2">- Forest, snow, lava...</span>
                   </button>
                   <button
                     className="w-full text-left px-3 py-2 bg-gray-800/80 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 hover:border-purple-500/50 transition-colors"
-                    onClick={() => setInput('Describe la escena para mis jugadores')}
+                    onClick={() => sendMessage('I want to generate props for my scene')}
+                    disabled={isLoading}
                   >
-                    <span className="text-purple-400">Narrar escena</span>
-                    <span className="text-gray-500 ml-2">- Read aloud</span>
+                    <span className="text-purple-400">🪑 Generate Props</span>
+                    <span className="text-gray-500 ml-2">- NPCs, furniture...</span>
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-2 bg-gray-800/80 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 hover:border-purple-500/50 transition-colors"
+                    onClick={() => sendMessage('Describe the scene for my players')}
+                    disabled={isLoading}
+                  >
+                    <span className="text-purple-400">📖 Narrate Scene</span>
+                    <span className="text-gray-500 ml-2">- Read aloud text</span>
                   </button>
                 </div>
               </div>
@@ -460,7 +471,7 @@ export function AIChatDialog() {
                   <div className="flex justify-start">
                     <div className="bg-gray-700 rounded-lg px-3 py-2 flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
-                      <span className="text-sm text-gray-300">Pensando...</span>
+                      <span className="text-sm text-gray-300">Thinking...</span>
                     </div>
                   </div>
                 )}
@@ -497,7 +508,7 @@ export function AIChatDialog() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Escribe aquí..."
+              placeholder="Type here..."
               className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
               disabled={isLoading}
             />

@@ -82,15 +82,35 @@ export function calculatePieceUsage(
     // Look up magnets from shape if shapes are provided
     // The pieceId format is typically "terrain-shapeKey" or "custom-xxx" or "variant-xxx"
     let magnetsPerPiece: { size: string; quantity: number }[] | undefined;
-    if (shapes) {
-      // Extract shapeKey from pieceId (e.g., "forest-6x6-flat" -> "6x6-flat")
+    if (shapes && shapes.length > 0) {
+      // Try multiple strategies to find the matching shape:
+      // 1. Direct shapeKey match (try all possible splits since terrain slug may have hyphens)
+      // 2. Match by dimensions from piece size
       const parts = pieceId.split('-');
-      if (parts.length >= 2) {
-        const shapeKey = parts.slice(1).join('-'); // Everything after terrain slug
-        const shape = shapes.find(s => s.shapeKey === shapeKey);
-        if (shape?.magnets && shape.magnets.length > 0) {
-          magnetsPerPiece = shape.magnets.map(m => ({ size: m.size, quantity: m.quantity }));
-        }
+      let foundShape: PieceShape | undefined;
+
+      // Strategy 1: Try different split points for "terrain-shapeKey" format
+      // e.g., "dark-forest-6x6-flat" could be "dark-forest" + "6x6-flat" or "dark" + "forest-6x6-flat"
+      for (let splitIdx = 1; splitIdx < parts.length && !foundShape; splitIdx++) {
+        const potentialShapeKey = parts.slice(splitIdx).join('-');
+        foundShape = shapes.find(s => s.shapeKey === potentialShapeKey);
+      }
+
+      // Strategy 2: If not found, try matching by piece dimensions
+      if (!foundShape && piece) {
+        const pieceWidth = piece.size.width;
+        const pieceHeight = piece.size.height;
+        const isDiag = piece.isDiagonal;
+        // Find a shape with matching dimensions and diagonal flag
+        foundShape = shapes.find(s =>
+          s.width === pieceWidth &&
+          s.height === pieceHeight &&
+          s.isDiagonal === isDiag
+        );
+      }
+
+      if (foundShape?.magnets && foundShape.magnets.length > 0) {
+        magnetsPerPiece = foundShape.magnets.map(m => ({ size: m.size, quantity: m.quantity }));
       }
     }
 
@@ -268,13 +288,32 @@ export function generateMarkdownReport(data: ReportData): string {
     md += '## 🧲 Magnets Needed\n\n';
 
     // Total magnets table
-    md += '### Total Magnets\n\n';
+    md += '### Total Magnets Summary\n\n';
     md += '| Magnet Size | Quantity Needed |\n';
     md += '|-------------|----------------|\n';
     for (const magnet of magnetTotals) {
       md += `| ${magnet.size} | ${magnet.totalNeeded} |\n`;
     }
     md += '\n';
+
+    // Magnets per piece type
+    const piecesWithMagnets = pieceUsage.filter(p => p.magnetsPerPiece && p.magnetsPerPiece.length > 0);
+    if (piecesWithMagnets.length > 0) {
+      md += '### Magnets by Piece Type\n\n';
+      md += '| Terrain | Piece | Size | Qty Used | Magnets/Piece | Total Magnets |\n';
+      md += '|---------|-------|------|----------|---------------|---------------|\n';
+
+      for (const piece of piecesWithMagnets) {
+        const magnetsStr = piece.magnetsPerPiece!.map(m => `${m.quantity}x ${m.size}`).join(', ');
+        const totalMagnets = piece.magnetsPerPiece!.map(m => {
+          const total = m.quantity * piece.used;
+          return `${total}x ${m.size}`;
+        }).join(', ');
+
+        md += `| ${piece.terrainIcon} ${piece.terrainName} | ${piece.name} | ${piece.sizeLabel} | ${piece.used} | ${magnetsStr} | ${totalMagnets} |\n`;
+      }
+      md += '\n';
+    }
 
     // Magnets by terrain
     if (magnetsByTerrain.length > 0) {
@@ -335,13 +374,15 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.text(`Map Report: ${map.name}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
 
-  // Snapshot image (if available)
+  // Snapshot image (if available) - full width for better visibility
   if (map.snapshot) {
     try {
-      const imgWidth = 120;
-      const imgHeight = 75;
-      const imgX = (pageWidth - imgWidth) / 2;
-      doc.addImage(map.snapshot, 'JPEG', imgX, yPos, imgWidth, imgHeight);
+      // Use almost full page width with margins
+      const margin = 15;
+      const imgWidth = pageWidth - (margin * 2);
+      // Calculate height maintaining aspect ratio (assuming 16:9 or similar)
+      const imgHeight = imgWidth * 0.625; // 10:16 ratio for landscape maps
+      doc.addImage(map.snapshot, 'JPEG', margin, yPos, imgWidth, imgHeight);
       yPos += imgHeight + 10;
     } catch {
       // Image failed to load, skip it
@@ -500,6 +541,70 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     currentY = (doc as any).lastAutoTable?.finalY || currentY + 30;
+
+    // Magnets per piece type
+    const piecesWithMagnets = pieceUsage.filter(p => p.magnetsPerPiece && p.magnetsPerPiece.length > 0);
+    if (piecesWithMagnets.length > 0) {
+      currentY += 10;
+
+      // Check if we need a new page
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Magnets by Piece Type', 20, currentY);
+      currentY += 8;
+
+      const piecesMagnetData: string[][] = [];
+      for (const piece of piecesWithMagnets) {
+        const magnetsStr = piece.magnetsPerPiece!.map(m => `${m.quantity}x ${m.size}`).join(', ');
+        const totalMagnets = piece.magnetsPerPiece!.map(m => {
+          const total = m.quantity * piece.used;
+          return `${total}x ${m.size}`;
+        }).join(', ');
+
+        piecesMagnetData.push([
+          piece.terrainName,
+          piece.name,
+          piece.sizeLabel,
+          piece.used.toString(),
+          magnetsStr,
+          totalMagnets,
+        ]);
+      }
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Terrain', 'Piece', 'Size', 'Qty', 'Magnets/Piece', 'Total Magnets']],
+        body: piecesMagnetData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [100, 80, 120],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 8,
+        },
+        bodyStyles: {
+          fontSize: 7,
+        },
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 32 },
+          2: { cellWidth: 18 },
+          3: { cellWidth: 12, halign: 'center' },
+          4: { cellWidth: 35 },
+          5: { cellWidth: 35 },
+        },
+        tableWidth: 'auto',
+        margin: { left: 20 },
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      currentY = (doc as any).lastAutoTable?.finalY || currentY + 30;
+    }
 
     // Magnets by terrain (if multiple terrains)
     if (magnetsByTerrain.length > 1) {

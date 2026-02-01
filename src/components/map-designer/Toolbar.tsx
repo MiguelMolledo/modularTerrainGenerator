@@ -120,6 +120,8 @@ export function Toolbar() {
   const [newMapName, setNewMapName] = useState('');
   const [tempMapWidth, setTempMapWidth] = useState(60);
   const [tempMapHeight, setTempMapHeight] = useState(60);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const mapSelectorRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,7 +166,7 @@ export function Toolbar() {
     setShowProps,
   } = useMapStore();
 
-  const { saveMap, savedMaps, fetchMaps, loadMap } = useMapInventoryStore();
+  const { saveMap, savedMaps, fetchMaps, loadMap, deleteMap } = useMapInventoryStore();
   const { terrainTypes, shapes, fetchTerrainTypes, fetchShapes, getModularPieces } = useInventoryStore();
 
   // Fetch maps, terrain types, and shapes on mount
@@ -289,6 +291,29 @@ export function Toolbar() {
 
   const handleExportReport = () => {
     setShowExportReportDialog(true);
+  };
+
+  const handleDeleteMap = async () => {
+    if (!currentMapId) return;
+
+    setIsDeleting(true);
+    try {
+      const success = await deleteMap(currentMapId);
+      if (success) {
+        // Clear the lastMapId so UnsavedChangesGuard doesn't try to load it
+        clearLastMapId();
+        // Reset to a new empty map
+        resetToNewMap();
+        // Navigate to designer without mapId
+        router.replace('/designer');
+        setShowDeleteConfirm(false);
+        setShowSaveDialog(false);
+      }
+    } catch (error) {
+      console.error('Failed to delete map:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Build current map data for the export report dialog
@@ -702,10 +727,36 @@ export function Toolbar() {
                 : 'Save as new map'}
           </TooltipContent>
         </Tooltip>
+
+        {/* Delete Map button - only visible when a map is loaded */}
+        {currentMapId && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting}
+                className="gap-1 text-red-400 hover:text-red-300 hover:bg-red-950/50 border-red-800"
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete this map permanently</TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {/* Save Dialog */}
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+      <Dialog open={showSaveDialog} onOpenChange={(open) => {
+        setShowSaveDialog(open);
+        if (!open) setShowDeleteConfirm(false);
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Save Map</DialogTitle>
@@ -727,7 +778,51 @@ export function Toolbar() {
               {placedPieces.length} pieces will be saved
             </p>
           </div>
-          <DialogFooter className="flex gap-2 sm:gap-0">
+          {/* Delete confirmation */}
+          {showDeleteConfirm && currentMapId && (
+            <div className="bg-red-950/50 border border-red-700 rounded-lg p-3 mb-4">
+              <p className="text-sm text-red-300 mb-3">
+                Are you sure you want to delete this map? This action cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteMap}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1" />
+                  )}
+                  Delete Map
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex flex-wrap gap-2 sm:gap-0">
+            {/* Delete button - only for saved maps */}
+            {currentMapId && !showDeleteConfirm && (
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex-1 sm:flex-none text-red-400 hover:text-red-300 hover:bg-red-950/50"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={handleExport}
@@ -887,6 +982,53 @@ export function Toolbar() {
         open={showGenerateArtDialog}
         onOpenChange={setShowGenerateArtDialog}
       />
+
+      {/* Delete Map Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-400">
+              <Trash2 className="h-5 w-5" />
+              Delete Map
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-300">
+              Are you sure you want to delete <span className="font-semibold text-white">&quot;{mapName}&quot;</span>?
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              This action cannot be undone. The map and all its pieces will be permanently deleted.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteMap}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Map
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

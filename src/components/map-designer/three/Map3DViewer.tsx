@@ -1,10 +1,12 @@
 'use client';
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useMapStore } from '@/store/mapStore';
 import { Scene3D } from './Scene3D';
 import { Loader2 } from 'lucide-react';
+import { setCanvas3dInstance } from '@/lib/canvas3dRef';
+import * as THREE from 'three';
 
 function LoadingFallback() {
   return (
@@ -19,6 +21,18 @@ function LoadingFallback() {
 
 export function Map3DViewer() {
   const { mapWidth, mapHeight, toggle3DMode } = useMapStore();
+
+  // Callback to capture canvas reference when it's created
+  const handleCanvasCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
+    setCanvas3dInstance(gl.domElement);
+  }, []);
+
+  // Clean up canvas reference on unmount
+  useEffect(() => {
+    return () => {
+      setCanvas3dInstance(null);
+    };
+  }, []);
 
   // Handle V key to toggle back to 2D
   useEffect(() => {
@@ -61,7 +75,9 @@ export function Map3DViewer() {
           gl={{
             antialias: true,
             alpha: false,
+            preserveDrawingBuffer: true, // Required for snapshot capture
           }}
+          onCreated={handleCanvasCreated}
         >
           <color attach="background" args={['#1a1a2e']} />
           <Scene3D />

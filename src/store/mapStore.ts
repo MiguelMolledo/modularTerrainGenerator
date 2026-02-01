@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { PlacedPiece, ModularPiece, TerrainType, GridConfig, SavedMapData, EditMode } from '@/types';
+import { PlacedPiece, ModularPiece, TerrainType, GridConfig, SavedMapData, EditMode, GeneratedImage } from '@/types';
 import { MapTemplate, MapFeature } from '@/types/templates';
 import { DEFAULT_TERRAIN_TYPES, DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, GRID_CELL_SIZE, DEFAULT_LEVELS } from '@/config/terrain';
 import { DEFAULT_PROPS } from '@/config/props';
@@ -90,6 +90,9 @@ interface MapState {
   hasUnsavedChanges: boolean;
   lastSavedSnapshot: string | null;
 
+  // Generated images history
+  generatedImages: GeneratedImage[];
+
   // Actions
   setMapName: (name: string) => void;
   setMapDescription: (description: string) => void;
@@ -178,6 +181,11 @@ interface MapState {
   loadMapData: (data: SavedMapData, mapId?: string) => void;
   getMapDataForSave: () => SavedMapData;
   resetToNewMap: () => void;
+
+  // Generated images
+  addGeneratedImage: (image: Omit<GeneratedImage, 'id' | 'createdAt'>) => void;
+  removeGeneratedImage: (id: string) => void;
+  clearGeneratedImages: () => void;
 }
 
 // Demo pieces for testing
@@ -708,6 +716,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   propSearchPosition: { x: 0, y: 0 },
   hasUnsavedChanges: false,
   lastSavedSnapshot: null,
+  generatedImages: [],
 
   // Actions
   setMapName: (name) => set({ mapName: name, hasUnsavedChanges: true }),
@@ -1057,6 +1066,9 @@ export const useMapStore = create<MapState>((set, get) => ({
     // Load custom props from saved data
     const loadedCustomProps = data.customProps || [];
 
+    // Load generated images from saved data
+    const loadedGeneratedImages = data.generatedImages || [];
+
     set({
       currentMapId: mapId || null,
       mapName: data.name,
@@ -1066,6 +1078,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       levels: data.levels,
       placedPieces: uniquePieces,
       customProps: loadedCustomProps,
+      generatedImages: loadedGeneratedImages,
       gridConfig: data.gridConfig || {
         cellSize: GRID_CELL_SIZE,
         showGrid: true,
@@ -1090,6 +1103,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         mapName: data.name,
         mapDescription: data.description || '',
         customProps: loadedCustomProps,
+        generatedImages: loadedGeneratedImages,
       }),
     });
   },
@@ -1105,6 +1119,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       placedPieces: state.placedPieces,
       gridConfig: state.gridConfig,
       customProps: state.customProps.length > 0 ? state.customProps : undefined,
+      generatedImages: state.generatedImages.length > 0 ? state.generatedImages : undefined,
     };
   },
 
@@ -1119,6 +1134,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       currentLevel: 0,
       placedPieces: [],
       customProps: [],
+      generatedImages: [],
       gridConfig: {
         cellSize: GRID_CELL_SIZE,
         showGrid: true,
@@ -1137,5 +1153,31 @@ export const useMapStore = create<MapState>((set, get) => ({
       // New map starts with no unsaved changes
       hasUnsavedChanges: false,
       lastSavedSnapshot: null,
+    }),
+
+  // Generated images actions
+  addGeneratedImage: (image) =>
+    set((state) => ({
+      generatedImages: [
+        ...state.generatedImages,
+        {
+          ...image,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      hasUnsavedChanges: true,
+    })),
+
+  removeGeneratedImage: (id) =>
+    set((state) => ({
+      generatedImages: state.generatedImages.filter((img) => img.id !== id),
+      hasUnsavedChanges: true,
+    })),
+
+  clearGeneratedImages: () =>
+    set({
+      generatedImages: [],
+      hasUnsavedChanges: true,
     }),
 }));

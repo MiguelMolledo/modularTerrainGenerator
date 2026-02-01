@@ -91,6 +91,7 @@ export interface CreateShapeParams {
   name?: string;
   baseHeight?: number;
   isDiagonal?: boolean;
+  magnets?: { size: string; quantity: number }[];
   elevation?: {
     nw?: number;
     ne?: number;

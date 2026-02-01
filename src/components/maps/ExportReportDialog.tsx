@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { FileText, FileDown, Download, CheckCircle, AlertCircle, AlertTriangle, Magnet } from 'lucide-react';
+import { FileText, FileDown, Download, CheckCircle, AlertCircle, AlertTriangle, Magnet, ImageIcon } from 'lucide-react';
 import {
   prepareReportData,
   downloadMarkdownReport,
@@ -65,6 +65,17 @@ export function ExportReportDialog({
     }
   };
 
+  const handleDownloadSnapshot = () => {
+    if (!map.snapshot) return;
+
+    const link = document.createElement('a');
+    link.href = map.snapshot;
+    link.download = `${map.name.replace(/[^a-zA-Z0-9]/g, '_')}_snapshot.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const { pieceUsage, totalUsed, totalOverused, totalWithinBudget, magnetTotals } = reportData;
 
   // Count status types
@@ -85,12 +96,23 @@ export function ExportReportDialog({
         <div className="space-y-4 py-4">
           {/* Map preview */}
           {map.snapshot && (
-            <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
-              <img
-                src={map.snapshot}
-                alt={map.name}
-                className="w-full h-full object-contain"
-              />
+            <div className="space-y-2">
+              <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
+                <img
+                  src={map.snapshot}
+                  alt={map.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleDownloadSnapshot}
+              >
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Download Image
+              </Button>
             </div>
           )}
 

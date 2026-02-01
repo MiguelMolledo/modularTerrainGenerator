@@ -191,7 +191,7 @@ export async function executeToolCalls(toolCalls: ToolCall[]): Promise<ToolResul
 
 // Create a new shape
 async function executeCreateShape(toolCallId: string, params: CreateShapeParams): Promise<ToolResult> {
-  const { width, height, name, baseHeight, isDiagonal = false } = params;
+  const { width, height, name, baseHeight, isDiagonal = false, magnets, elevation } = params;
 
   // Validate dimensions
   if (width < 0.5 || width > 12 || height < 0.5 || height > 12) {
@@ -216,8 +216,16 @@ async function executeCreateShape(toolCallId: string, params: CreateShapeParams)
     };
   }
 
-  const shapeKey = generateShapeKey(width, height, isDiagonal);
-  const shapeName = name || generateShapeName(width, height, isDiagonal);
+  // Determine suffix based on elevation
+  let suffix = '-flat';
+  if (isDiagonal) {
+    suffix = '-corner';
+  } else if (elevation && (elevation.nw || elevation.ne || elevation.sw || elevation.se)) {
+    suffix = '-elev';
+  }
+
+  const shapeKey = `${width}x${height}${suffix}`;
+  const shapeName = name || `${width}x${height} ${suffix === '-corner' ? 'Corner' : suffix === '-elev' ? 'Elevated' : 'Flat'}`;
 
   const store = useInventoryStore.getState();
   const shape = await store.createShape({
@@ -228,6 +236,7 @@ async function executeCreateShape(toolCallId: string, params: CreateShapeParams)
     isDiagonal,
     defaultRotation: isDiagonal ? 0 : 0,
     baseHeight: baseHeight || 0.5,
+    magnets: magnets || undefined,
   });
 
   if (!shape) {
@@ -245,6 +254,15 @@ async function executeCreateShape(toolCallId: string, params: CreateShapeParams)
   // Refresh map store to show new piece
   await useMapStore.getState().refreshFromInventory();
 
+  // Build result message with details
+  const magnetInfo = magnets && magnets.length > 0
+    ? magnets.map(m => `${m.quantity}x ${m.size}`).join(', ')
+    : 'none';
+
+  const elevationInfo = elevation && (elevation.nw || elevation.ne || elevation.sw || elevation.se)
+    ? `NW:${elevation.nw || 0}", NE:${elevation.ne || 0}", SW:${elevation.sw || 0}", SE:${elevation.se || 0}"`
+    : 'flat';
+
   return {
     toolCallId,
     name: 'create_shape',
@@ -256,6 +274,8 @@ async function executeCreateShape(toolCallId: string, params: CreateShapeParams)
       height: shape.height,
       isDiagonal: shape.isDiagonal,
       baseHeight: shape.baseHeight,
+      magnets: magnetInfo,
+      elevation: elevationInfo,
     },
     success: true,
   };

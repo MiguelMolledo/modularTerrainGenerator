@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,25 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+        setIsDeleting(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   const handleEdit = () => {
     router.push(`/designer?mapId=${map.id}`);
@@ -36,14 +55,17 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
 
   const handleDelete = async () => {
     if (isDeleting) {
+      // Second click - actually delete
       await deleteMap(map.id);
       setIsDeleting(false);
+      setIsMenuOpen(false);
     } else {
+      // First click - show confirmation
       setIsDeleting(true);
       // Auto-cancel after 3 seconds
       setTimeout(() => setIsDeleting(false), 3000);
+      // Don't close menu - wait for confirmation
     }
-    setIsMenuOpen(false);
   };
 
   const handleRename = async () => {
@@ -109,7 +131,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
   };
 
   return (
-    <Card className="group hover:ring-2 hover:ring-blue-500 transition-all overflow-hidden">
+    <Card className={`group hover:ring-2 hover:ring-blue-500 transition-all overflow-visible relative ${isMenuOpen ? 'z-[9999]' : ''}`}>
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -121,7 +143,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
 
       {/* Flip Card Container */}
       <div
-        className="h-32 relative cursor-pointer perspective-1000"
+        className="h-32 relative cursor-pointer perspective-1000 overflow-hidden"
         onMouseEnter={() => map.snapshot && setIsFlipped(true)}
         onMouseLeave={() => setIsFlipped(false)}
         style={{ perspective: '1000px' }}
@@ -221,83 +243,83 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Menu button - stays on top of flip animation */}
-        <div className="absolute top-2 right-2 z-10">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMenuOpen(!isMenuOpen);
-            }}
+      {/* Menu button - OUTSIDE flip container to avoid overflow:hidden clipping */}
+      <div ref={menuRef} className="absolute top-2 right-2 z-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsMenuOpen(!isMenuOpen);
+          }}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+
+        {/* Dropdown menu */}
+        {isMenuOpen && (
+          <div
+            className="absolute right-0 top-10 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] z-[9999] max-h-[400px] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-
-          {/* Dropdown menu */}
-          {isMenuOpen && (
-            <div
-              className="absolute right-0 top-10 bg-gray-800 border border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px] z-10"
-              onClick={(e) => e.stopPropagation()}
+            <button
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              onClick={handleEdit}
             >
+              <Edit2 className="h-4 w-4" /> Edit
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              onClick={handleDuplicate}
+            >
+              <Copy className="h-4 w-4" /> Duplicate
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              onClick={handleExport}
+            >
+              <Download className="h-4 w-4" /> Export JSON
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              onClick={handleExportReport}
+            >
+              <FileText className="h-4 w-4" /> Export Report
+            </button>
+            <hr className="my-1 border-gray-700" />
+            <button
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              onClick={handleUploadClick}
+              disabled={isUploading}
+            >
+              <ImagePlus className="h-4 w-4" />
+              {isUploading ? 'Uploading...' : 'Upload Thumbnail'}
+            </button>
+            {map.isCustomThumbnail && (
               <button
-                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
-                onClick={handleEdit}
+                className="w-full px-3 py-2 text-left text-sm text-orange-400 hover:bg-gray-700 flex items-center gap-2"
+                onClick={handleRemoveThumbnail}
               >
-                <Edit2 className="h-4 w-4" /> Edit
+                <ImageOff className="h-4 w-4" /> Remove Custom
               </button>
-              <button
-                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
-                onClick={handleDuplicate}
-              >
-                <Copy className="h-4 w-4" /> Duplicate
-              </button>
-              <button
-                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
-                onClick={handleExport}
-              >
-                <Download className="h-4 w-4" /> Export JSON
-              </button>
-              <button
-                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
-                onClick={handleExportReport}
-              >
-                <FileText className="h-4 w-4" /> Export Report
-              </button>
-              <hr className="my-1 border-gray-700" />
-              <button
-                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
-                onClick={handleUploadClick}
-                disabled={isUploading}
-              >
-                <ImagePlus className="h-4 w-4" />
-                {isUploading ? 'Uploading...' : 'Upload Thumbnail'}
-              </button>
-              {map.isCustomThumbnail && (
-                <button
-                  className="w-full px-3 py-2 text-left text-sm text-orange-400 hover:bg-gray-700 flex items-center gap-2"
-                  onClick={handleRemoveThumbnail}
-                >
-                  <ImageOff className="h-4 w-4" /> Remove Custom
-                </button>
-              )}
-              <hr className="my-1 border-gray-700" />
-              <button
-                className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
-                  isDeleting
-                    ? 'text-red-400 bg-red-950 hover:bg-red-900'
-                    : 'text-red-400 hover:bg-gray-700'
-                }`}
-                onClick={handleDelete}
-              >
-                <Trash2 className="h-4 w-4" />
-                {isDeleting ? 'Click to confirm' : 'Delete'}
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+            <hr className="my-1 border-gray-700" />
+            <button
+              className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
+                isDeleting
+                  ? 'text-red-400 bg-red-950 hover:bg-red-900'
+                  : 'text-red-400 hover:bg-gray-700'
+              }`}
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              {isDeleting ? 'Click to confirm' : 'Delete'}
+            </button>
+          </div>
+        )}
       </div>
 
       <CardContent className="p-3">

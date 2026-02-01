@@ -105,6 +105,15 @@ export interface GridConfig {
   magneticSnap: boolean;  // for diagonal pieces
 }
 
+// Generated image history entry
+export interface GeneratedImage {
+  id: string;
+  url: string;
+  prompt: string;
+  style: string;
+  createdAt: string;
+}
+
 // Saved map in the inventory
 export interface SavedMap {
   id: string;
@@ -118,6 +127,7 @@ export interface SavedMap {
   thumbnail?: string;
   snapshot?: string;
   isCustomThumbnail?: boolean;
+  generatedImages?: GeneratedImage[];
   createdAt: string;
   updatedAt: string;
 }
@@ -135,6 +145,7 @@ export interface SavedMapData {
   snapshot?: string;
   isCustomThumbnail?: boolean;
   customProps?: ModularPiece[]; // User-created props saved with the map
+  generatedImages?: GeneratedImage[]; // History of AI-generated images
 }
 
 // =============================================

@@ -6,17 +6,17 @@ export const createShapeTool: OpenRouterTool = {
   type: 'function',
   function: {
     name: 'create_shape',
-    description: 'Creates a new modular terrain piece type (shape) that can be used in maps. The shape defines the dimensions and characteristics of terrain pieces.',
+    description: 'Creates a new modular terrain piece type (shape) that can be used in maps. The shape defines the dimensions and characteristics of terrain pieces. IMPORTANT: Only call this after gathering all necessary information from the user through guided questions.',
     parameters: {
       type: 'object',
       properties: {
         width: {
           type: 'number',
-          description: 'Width of the piece in inches (0.5 to 12)',
+          description: 'Width of the piece in inches (0.5 to 12). Common sizes: 6, 4, 3, 2, 1.5, 1',
         },
         height: {
           type: 'number',
-          description: 'Height of the piece in inches (0.5 to 12)',
+          description: 'Height of the piece in inches (0.5 to 12). Common sizes: 6, 4, 3, 2, 1.5, 1',
         },
         name: {
           type: 'string',
@@ -28,7 +28,35 @@ export const createShapeTool: OpenRouterTool = {
         },
         isDiagonal: {
           type: 'boolean',
-          description: 'Whether this is a diagonal/corner piece. Default is false.',
+          description: 'Whether this is a diagonal/corner piece (triangular). Default is false.',
+        },
+        magnets: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              size: {
+                type: 'string',
+                description: 'Magnet size (e.g., "3x2", "5x2", "6x3" in mm format)',
+              },
+              quantity: {
+                type: 'number',
+                description: 'Number of magnets of this size per piece',
+              },
+            },
+            required: ['size', 'quantity'],
+          },
+          description: 'Array of magnet configurations. Each entry specifies a magnet size and how many of that size per piece.',
+        },
+        elevation: {
+          type: 'object',
+          properties: {
+            nw: { type: 'number', description: 'Northwest corner elevation in inches (0-2.5)' },
+            ne: { type: 'number', description: 'Northeast corner elevation in inches (0-2.5)' },
+            sw: { type: 'number', description: 'Southwest corner elevation in inches (0-2.5)' },
+            se: { type: 'number', description: 'Southeast corner elevation in inches (0-2.5)' },
+          },
+          description: 'Elevation at each corner for slopes/ramps. All 0 = flat piece. Example ramp north: {nw: 2, ne: 2, sw: 0, se: 0}',
         },
       },
       required: ['width', 'height'],

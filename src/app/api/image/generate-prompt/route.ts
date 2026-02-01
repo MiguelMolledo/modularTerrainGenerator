@@ -3,13 +3,13 @@ import type { TerrainDetail } from '@/lib/falai';
 
 // System prompt for generating image prompts using the JSON template
 // Optimized for shorter, more effective prompts
-const IMAGE_PROMPT_SYSTEM = `Eres un generador de prompts para battlemaps de D&D.
+const IMAGE_PROMPT_SYSTEM = `You are a prompt generator for D&D battlemaps.
 
-GENERA ÚNICAMENTE un JSON válido con esta estructura SIMPLE:
+Generate ONLY a valid JSON with this SIMPLE structure:
 
 {
   "terrain_replacements": [
-    { "color": "[color name: green/blue/brown/etc]", "description": "[texture description - MAX 40 chars]" }
+    { "color": "[color name: green/blue/brown/etc]", "description": "[terrain description - MAX 40 chars]" }
   ],
   "atmosphere": {
     "mood": "[2-3 word mood description]"
@@ -17,19 +17,19 @@ GENERA ÚNICAMENTE un JSON válido con esta estructura SIMPLE:
   "style_keywords": "[5-7 style keywords separated by commas]"
 }
 
-EJEMPLOS de descripciones de terreno CORRECTAS (cortas y directas):
+EXAMPLES of CORRECT terrain descriptions (short and direct):
 - "dense forest with tall trees"
 - "crystal clear water with rocks"
 - "sandy desert with dunes"
 - "volcanic rocks with lava cracks"
 - "snowy tundra with ice patches"
 
-INSTRUCCIONES:
-- Responde ÚNICAMENTE con el JSON, sin markdown
-- Descripciones de terreno MÁXIMO 40 caracteres
-- Solo incluye los terrenos que se te proporcionan
-- mood debe ser 2-3 palabras máximo
-- style_keywords debe ser 5-7 palabras clave`;
+INSTRUCTIONS:
+- Respond ONLY with JSON, no markdown
+- Terrain descriptions MAX 40 characters
+- Only include the terrains provided to you
+- mood should be 2-3 words max
+- style_keywords should be 5-7 keywords`;
 
 // Convert JSON template to actual prompt for image generation (max 1900 chars)
 // Uses simple, effective format: "Top down view battle map for D&D. Replace [color] with [texture]..."
@@ -190,19 +190,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Build the user message
-    const userMessage = `Genera un JSON para transformar este mapa táctico en un battlemap artístico.
+    const userMessage = `Generate a JSON to transform this tactical map into an artistic battlemap.
 
-Estilo deseado: ${styleName} (${style})
-Dimensiones del mapa: ${mapWidth}" x ${mapHeight}" (aproximadamente ${Math.round(mapWidth * 2.54)}x${Math.round(mapHeight * 2.54)} cm)
+Desired style: ${styleName} (${style})
+Map dimensions: ${mapWidth}" x ${mapHeight}"
 
-Terrenos detectados en el mapa:
+Detected terrains on the map:
 ${terrainList.length > 0
-  ? terrainList.map(t => `- Áreas ${t.color} = ${t.name} (${t.percentage}% del mapa): ${t.description}`).join('\n')
-  : '- No se detectaron terrenos específicos'}
+  ? terrainList.map(t => `- ${t.color} areas = ${t.name} (${t.percentage}% of map): ${t.description}`).join('\n')
+  : '- No specific terrains detected'}
 
-${propsSummary ? `Props/elementos en el mapa: ${propsSummary}` : ''}
+${propsSummary ? `Props/elements on the map: ${propsSummary}` : ''}
 
-Genera el JSON completo siguiendo la estructura del template. Sé creativo con las descripciones artísticas pero MANTÉN la disposición original del mapa.`;
+Generate the complete JSON following the template structure. Be creative with artistic descriptions but KEEP the original map layout.`;
 
     // Call Gemini to generate the JSON
     const jsonResponse = await callGemini(

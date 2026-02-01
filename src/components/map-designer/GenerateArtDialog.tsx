@@ -19,11 +19,14 @@ import {
   Check,
   RefreshCw,
   Sparkles,
+  History,
+  Trash2,
 } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
 import { useAPIKeysStore } from '@/store/apiKeysStore';
 import { generateFullMapSnapshot } from '@/lib/stageRef';
-import { STYLE_PRESETS, ASPECT_RATIOS, RESOLUTIONS, OUTPUT_FORMATS, buildDirectImagePrompt, type StylePreset, type TerrainDetail } from '@/lib/falai';
+import { generate3DSnapshot } from '@/lib/canvas3dRef';
+import { STYLE_PRESETS, ASPECT_RATIOS, OUTPUT_FORMATS, buildDirectImagePrompt, type StylePreset, type TerrainDetail } from '@/lib/falai';
 
 interface GenerateArtDialogProps {
   open: boolean;
@@ -33,7 +36,7 @@ interface GenerateArtDialogProps {
 type GenerationStatus = 'idle' | 'capturing' | 'generating' | 'success' | 'error';
 
 export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps) {
-  const { mapWidth, mapHeight, placedPieces, terrainTypes, customProps, availablePieces } = useMapStore();
+  const { mapWidth, mapHeight, placedPieces, terrainTypes, customProps, availablePieces, is3DMode, generatedImages, addGeneratedImage, removeGeneratedImage } = useMapStore();
 
   // Local state
   const [selectedStyle, setSelectedStyle] = useState<string>('fantasy');
@@ -47,7 +50,6 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
 
   // Model parameters
   const [aspectRatio, setAspectRatio] = useState<string>('auto');
-  const [resolution, setResolution] = useState<string>('1K');
   const [outputFormat, setOutputFormat] = useState<string>('png');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -55,6 +57,9 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [generatedJson, setGeneratedJson] = useState<Record<string, unknown> | null>(null);
   const [showJson, setShowJson] = useState(false);
+
+  // History panel
+  const [showHistory, setShowHistory] = useState(false);
 
   // Compute detailed terrain info and props summary
   const { terrainDetails, propsSummary } = useMemo(() => {
@@ -193,17 +198,20 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
 
     // Small delay to ensure canvas is ready
     setTimeout(() => {
-      // Capture the full map area, not just the current viewport
-      const snapshot = generateFullMapSnapshot(1200, 900);
+      // Use appropriate snapshot function based on current view mode
+      const snapshot = is3DMode
+        ? generate3DSnapshot(1200, 900)
+        : generateFullMapSnapshot(1200, 900);
+
       if (snapshot) {
         setMapPreview(snapshot);
         setStatus('idle');
       } else {
-        setError('Failed to capture map preview. Make sure the map has content.');
+        setError(`Failed to capture ${is3DMode ? '3D' : 'map'} preview. Make sure the ${is3DMode ? '3D view is loaded' : 'map has content'}.`);
         setStatus('error');
       }
     }, 100);
-  }, []);
+  }, [is3DMode]);
 
   // Capture on open and generate initial prompt
   React.useEffect(() => {
@@ -233,6 +241,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
       setShowAdvanced(false);
       setGeneratedJson(null);
       setShowJson(false);
+      setShowHistory(false);
     }, 200);
   };
 
@@ -282,7 +291,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
           mapHeight,
           // Model parameters
           aspectRatio,
-          resolution,
+          resolution: '1K',
           outputFormat,
         }),
       });
@@ -296,6 +305,13 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
       setGeneratedImageUrl(data.imageUrl);
       setUsedPrompt(data.prompt || null);
       setStatus('success');
+
+      // Save to history
+      addGeneratedImage({
+        url: data.imageUrl,
+        prompt: editablePrompt,
+        style: selectedStyle,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred';
       setError(message);
@@ -353,7 +369,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
             {/* Source Map Preview */}
             <div>
               <label className="text-sm font-medium text-gray-300 block mb-2">
-                Source Map
+                Source {is3DMode ? '3D View' : 'Map'}
               </label>
               <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden border border-gray-700 flex items-center justify-center">
                 {status === 'capturing' ? (
@@ -521,7 +537,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                   onClick={() => setShowJson(!showJson)}
                   className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
                 >
-                  {showJson ? '▼' : '▶'} Ver JSON generado
+                  {showJson ? '▼' : '▶'} View generated JSON
                 </button>
                 {showJson && (
                   <pre className="mt-2 p-2 bg-gray-900 rounded text-xs text-gray-300 overflow-x-auto max-h-48">
@@ -562,29 +578,6 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                         } disabled:opacity-50`}
                       >
                         {ar.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Resolution */}
-                <div>
-                  <label className="text-xs font-medium text-gray-400 block mb-1">
-                    Resolution
-                  </label>
-                  <div className="flex gap-1">
-                    {RESOLUTIONS.map((res) => (
-                      <button
-                        key={res.id}
-                        onClick={() => setResolution(res.id)}
-                        disabled={isGenerating}
-                        className={`px-2 py-1 text-xs rounded transition-colors ${
-                          resolution === res.id
-                            ? 'bg-amber-600 text-white'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        } disabled:opacity-50`}
-                      >
-                        {res.label}
                       </button>
                     ))}
                   </div>
@@ -636,7 +629,81 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
             </div>
           )}
 
+          {/* History Section */}
+          {generatedImages.length > 0 && (
+            <div className="border border-gray-700 rounded-lg">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="w-full px-3 py-2 flex items-center justify-between text-sm text-gray-400 hover:text-gray-200"
+              >
+                <span className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Generated Images History ({generatedImages.length})
+                </span>
+                <span>{showHistory ? '▲' : '▼'}</span>
+              </button>
+
+              {showHistory && (
+                <div className="px-3 pb-3 border-t border-gray-700 pt-3">
+                  <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                    {generatedImages.map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative group rounded-lg overflow-hidden border border-gray-600"
+                      >
+                        <img
+                          src={img.url}
+                          alt={`Generated ${img.style}`}
+                          className="w-full aspect-video object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(img.url);
+                                const blob = await response.blob();
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `map-art-${img.id.slice(0, 8)}.jpg`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                              } catch {
+                                setError('Failed to download image');
+                              }
+                            }}
+                            className="p-1.5 bg-amber-600 hover:bg-amber-700 rounded text-white"
+                            title="Download"
+                          >
+                            <Download className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => removeGeneratedImage(img.id)}
+                            className="p-1.5 bg-red-600 hover:bg-red-700 rounded text-white"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
+                          <p className="text-[10px] text-gray-300 truncate capitalize">
+                            {img.style}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Hover over images to download or delete. Images are saved with the map.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
 
         <DialogFooter className="mt-4 flex gap-2">
           <Button variant="outline" onClick={handleClose}>
