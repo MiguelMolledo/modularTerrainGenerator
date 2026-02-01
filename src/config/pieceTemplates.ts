@@ -15,10 +15,10 @@ export interface PieceTemplate {
 }
 
 // Predefined templates using the standard shape keys:
-// - 6x6-flat: 6x6 Flat piece
-// - 6x6-elev: 6x6 Elevated piece
-// - 3x3-flat: 3x3 Flat piece
-// - 3x3-corner: 3x3 Corner (diagonal) piece
+// Core flat pieces: 6x6-flat, 3x3-flat, 3x6, 3x1.5
+// Corner/diagonal: 3x3-corner, 6x3-diagonal-tl
+// Elevated blocks: 6x6-e2.5-2.5-2.5-2.5 (flat block), 6x6-e2.5-0-0-0 (single), 6x6-e2.5-2.5-0-0 (double), 6x6-e2-2-0-2 (triple)
+// Special: 3x3 (wall), 0.5x0.5 (column), 3x2-e1.5-1.5-0-0 (stairs)
 export const PIECE_TEMPLATES: PieceTemplate[] = [
   {
     id: 'empty',
@@ -30,13 +30,13 @@ export const PIECE_TEMPLATES: PieceTemplate[] = [
   {
     id: 'starter',
     name: 'Starter Set',
-    description: 'Basic pieces to get started',
+    description: 'Basic flat pieces to get started',
     icon: '🎯',
     pieces: [
-      { shapeKey: '6x6-flat', quantity: 2 },
-      { shapeKey: '6x6-elev', quantity: 2 },
+      { shapeKey: '6x6-flat', quantity: 4 },
       { shapeKey: '3x3-flat', quantity: 4 },
-      { shapeKey: '3x3-corner', quantity: 2 },
+      { shapeKey: '3x3-corner', quantity: 4 },
+      { shapeKey: '3x6', quantity: 2 },
     ],
   },
   {
@@ -46,9 +46,11 @@ export const PIECE_TEMPLATES: PieceTemplate[] = [
     icon: '📦',
     pieces: [
       { shapeKey: '6x6-flat', quantity: 4 },
-      { shapeKey: '6x6-elev', quantity: 4 },
       { shapeKey: '3x3-flat', quantity: 4 },
       { shapeKey: '3x3-corner', quantity: 4 },
+      { shapeKey: '3x6', quantity: 2 },
+      { shapeKey: '6x6-e2.5-2.5-2.5-2.5', quantity: 2 },
+      { shapeKey: '6x6-e2.5-0-0-0', quantity: 1 },
     ],
   },
   {
@@ -58,9 +60,14 @@ export const PIECE_TEMPLATES: PieceTemplate[] = [
     icon: '🎁',
     pieces: [
       { shapeKey: '6x6-flat', quantity: 6 },
-      { shapeKey: '6x6-elev', quantity: 6 },
-      { shapeKey: '3x3-flat', quantity: 8 },
-      { shapeKey: '3x3-corner', quantity: 8 },
+      { shapeKey: '3x3-flat', quantity: 6 },
+      { shapeKey: '3x3-corner', quantity: 6 },
+      { shapeKey: '3x6', quantity: 4 },
+      { shapeKey: '3x1.5', quantity: 4 },
+      { shapeKey: '6x6-e2.5-2.5-2.5-2.5', quantity: 2 },
+      { shapeKey: '6x6-e2.5-0-0-0', quantity: 2 },
+      { shapeKey: '6x6-e2.5-2.5-0-0', quantity: 2 },
+      { shapeKey: '6x3-diagonal-tl', quantity: 4 },
     ],
   },
   {
@@ -71,24 +78,43 @@ export const PIECE_TEMPLATES: PieceTemplate[] = [
     pieces: [
       { shapeKey: '6x6-flat', quantity: 6 },
       { shapeKey: '3x3-flat', quantity: 8 },
+      { shapeKey: '3x6', quantity: 4 },
+      { shapeKey: '3x1.5', quantity: 4 },
     ],
   },
   {
-    id: 'elevated-only',
-    name: 'Elevated Only',
-    description: 'Just elevated pieces for hills and platforms',
+    id: 'elevated',
+    name: 'Elevated Blocks',
+    description: 'Elevated block pieces for hills and platforms',
     icon: '⬆️',
     pieces: [
-      { shapeKey: '6x6-elev', quantity: 6 },
+      { shapeKey: '6x6-e2.5-2.5-2.5-2.5', quantity: 4 },
+      { shapeKey: '6x6-e2.5-0-0-0', quantity: 2 },
+      { shapeKey: '6x6-e2.5-2.5-0-0', quantity: 2 },
+      { shapeKey: '6x6-e2-2-0-2', quantity: 2 },
     ],
   },
   {
     id: 'corners-only',
-    name: 'Corners Only',
-    description: 'Just corner pieces for transitions',
+    name: 'Corners & Diagonals',
+    description: 'Corner and diagonal pieces for transitions',
     icon: '📐',
     pieces: [
       { shapeKey: '3x3-corner', quantity: 8 },
+      { shapeKey: '6x3-diagonal-tl', quantity: 4 },
+    ],
+  },
+  {
+    id: 'dungeon',
+    name: 'Dungeon Set',
+    description: 'Walls, columns and stairs for dungeon builds',
+    icon: '🏰',
+    pieces: [
+      { shapeKey: '6x6-flat', quantity: 4 },
+      { shapeKey: '3x3-flat', quantity: 4 },
+      { shapeKey: '3x3', quantity: 8 },
+      { shapeKey: '0.5x0.5', quantity: 8 },
+      { shapeKey: '3x2-e1.5-1.5-0-0', quantity: 4 },
     ],
   },
 ];

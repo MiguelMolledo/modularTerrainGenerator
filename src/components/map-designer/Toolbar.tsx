@@ -381,11 +381,7 @@ export function Toolbar() {
         mapWidth: mapWidth,
         mapHeight: mapHeight,
         placedPieces: [],
-        terrainTypes: [],
-        customPieces: [],
-        customProps: [],
-        levels: [{ id: 'ground', name: 'Ground Floor', elevation: 0 }],
-        currentLevel: 'ground',
+        levels: [-1, 0, 1, 2], // Default levels
         gridConfig: gridConfig,
       };
 
@@ -660,26 +656,34 @@ export function Toolbar() {
 
         {/* 2D/3D Toggle - compact */}
         <div className="flex items-center gap-0.5 bg-gray-700 rounded-md p-0.5">
-          <Button
-            variant={!is3DMode ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => is3DMode && toggle3DMode()}
-            className={`px-2 h-7 ${!is3DMode ? '' : 'text-gray-400 hover:text-white'}`}
-            title="Edit mode (2D)"
-          >
-            <Grid2X2 className="h-4 w-4 sm:mr-1" />
-            <span className="hidden sm:inline text-xs">2D</span>
-          </Button>
-          <Button
-            variant={is3DMode ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => !is3DMode && toggle3DMode()}
-            className={`px-2 h-7 ${is3DMode ? '' : 'text-gray-400 hover:text-white'}`}
-            title="Preview mode (3D)"
-          >
-            <Box className="h-4 w-4 sm:mr-1" />
-            <span className="hidden sm:inline text-xs">3D</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={!is3DMode ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => is3DMode && toggle3DMode()}
+                className={`px-2 h-7 ${!is3DMode ? '' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Grid2X2 className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline text-xs">2D</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit mode (2D) (V)</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={is3DMode ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => !is3DMode && toggle3DMode()}
+                className={`px-2 h-7 ${is3DMode ? '' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Box className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline text-xs">3D</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Preview mode (3D) (V)</TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Rotation indicator - only on larger screens and 2D mode */}
