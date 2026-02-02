@@ -600,6 +600,30 @@ function detectLayoutContext(
   let dungeonScore = 0;
   let outdoorScore = 0;
 
+  // Elevation keywords - if present, NEVER use dungeon algorithm (needs general for elevation_zones)
+  const elevationKeywords = [
+    'elevation', 'elevated', 'hill', 'hills', 'cliff', 'cliffs', 'raised',
+    'platform', 'height', 'ramp', 'slope', 'incline', 'terrace', 'mesa',
+    'highland', 'ridge', 'bluff', 'escarpment', 'overlook', 'high ground'
+  ];
+
+  for (const keyword of elevationKeywords) {
+    if (description.includes(keyword)) {
+      // Force general algorithm for elevation support
+      return {
+        type: 'general',
+        confidence: 1.0,
+        indicators: [`elevation keyword: "${keyword}" - using general algorithm for elevation support`]
+      };
+    }
+  }
+
+  // Check if user has elevated pieces AND the description mentions terrain features
+  // that benefit from elevation (forest with hills, rocky terrain, etc.)
+  const hasElevatedPieces = availablePieces.some(p =>
+    p.elevation && (p.elevation.nw > 0 || p.elevation.ne > 0 || p.elevation.sw > 0 || p.elevation.se > 0)
+  );
+
   // Dungeon keywords
   const dungeonKeywords = [
     'dungeon', 'underground', 'cavern', 'cave', 'crypt', 'tomb',
@@ -607,10 +631,11 @@ function detectLayoutContext(
     'sewer', 'basement', 'cellar', 'prison', 'jail', 'lair'
   ];
 
-  // Outdoor keywords
+  // Outdoor keywords - these benefit from elevation
   const outdoorKeywords = [
     'forest', 'field', 'meadow', 'river', 'lake', 'mountain',
-    'beach', 'desert', 'swamp', 'jungle', 'plains', 'hill', 'outdoor'
+    'beach', 'desert', 'swamp', 'jungle', 'plains', 'outdoor',
+    'canyon', 'valley', 'clearing', 'grove', 'woods'
   ];
 
   for (const keyword of dungeonKeywords) {
@@ -623,6 +648,10 @@ function detectLayoutContext(
   for (const keyword of outdoorKeywords) {
     if (description.includes(keyword)) {
       outdoorScore += 2;
+      // If user has elevated pieces and mentions outdoor terrain, prefer general algorithm
+      if (hasElevatedPieces) {
+        outdoorScore += 1; // Extra weight to use general algorithm with elevation support
+      }
     }
   }
 
@@ -635,15 +664,9 @@ function detectLayoutContext(
     }
   }
 
-  // Check terrain types for dungeon indicators
-  const terrainTypes = [...new Set(availablePieces.map(p => p.terrainType.toLowerCase()))];
-  const dungeonTerrains = ['dungeon', 'stone', 'cave', 'castle', 'crypt'];
-  for (const terrain of terrainTypes) {
-    if (dungeonTerrains.some(dt => terrain.includes(dt))) {
-      dungeonScore += 2;
-      indicators.push(`terrain: "${terrain}"`);
-    }
-  }
+  // Check terrain types for dungeon indicators - but ONLY from description keywords, not terrainTypes
+  // This prevents "stone" terrain type from triggering dungeon mode for outdoor maps
+  // We've removed the terrain-based detection to avoid false positives
 
   // Check for diagonal pieces (useful for transitions)
   const hasDiagonals = availablePieces.some(p => p.isDiagonal);
@@ -651,8 +674,8 @@ function detectLayoutContext(
     indicators.push('has diagonal pieces');
   }
 
-  // Determine type
-  if (dungeonScore >= 3 && dungeonScore > outdoorScore) {
+  // Determine type - require stronger dungeon signals
+  if (dungeonScore >= 4 && dungeonScore > outdoorScore * 1.5) {
     return {
       type: 'dungeon',
       confidence: Math.min(1, dungeonScore / 10),
