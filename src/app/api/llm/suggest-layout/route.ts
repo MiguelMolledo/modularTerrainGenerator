@@ -44,6 +44,49 @@ Format:
   "description": "Brief description of the layout strategy"
 }`;
 
+// System prompt for dungeon-specific layouts with rooms and corridors
+const DUNGEON_LAYOUT_SYSTEM = `You are a dungeon architect for tabletop RPG battle maps. Given a dungeon description, map dimensions, and available terrain types, design a dungeon layout with ROOMS and CORRIDORS.
+
+DUNGEON DESIGN PRINCIPLES:
+1. ROOMS are rectangular areas sized in 3-inch multiples (minimum 6x6, typical 9x9 to 18x18)
+2. CORRIDORS connect rooms and are either 3" wide (narrow) or 6" wide (wide)
+3. DIAGONAL TRANSITIONS: Where narrow corridors (3") meet larger rooms, set useDiagonalTransitions: true
+4. Room TYPES indicate purpose: entrance, chamber, boss, treasure, trap, shrine
+
+COORDINATE RULES:
+- All coordinates in inches, preferably multiples of 3 (0, 3, 6, 9, 12, etc.)
+- Map origin (0,0) is top-left
+- Rooms must NOT overlap (leave corridor space between them)
+- Plan corridors to connect room edges, not overlap rooms
+
+ROOM SIZING GUIDE:
+- Small room: 6x6 or 6x9 (guards, storage, shrine)
+- Medium room: 9x9 or 9x12 (chambers, trap rooms)
+- Large room: 12x12 to 18x18 (boss arena, treasure vault)
+- Entrance: Usually 6x6 to 9x9, placed near a map edge
+
+CORRIDOR RULES:
+- Narrow corridor (3"): Typical dungeon passage, creates tension
+- Wide corridor (6"): Main thoroughfare, grand halls
+- useDiagonalTransitions: true when corridor width < room width (creates natural widening effect)
+- style "L-shaped" for corridors that need to turn corners
+
+Respond ONLY with valid JSON. No explanations or markdown.
+Format:
+{
+  "rooms": [
+    {"id": "entrance", "type": "entrance", "x": 0, "y": 21, "width": 9, "height": 9, "connections": ["hall"], "description": "Stone archway entrance"},
+    {"id": "hall", "type": "chamber", "x": 15, "y": 15, "width": 12, "height": 12, "connections": ["entrance", "boss"], "description": "Central gathering hall"},
+    {"id": "boss", "type": "boss", "x": 33, "y": 12, "width": 15, "height": 15, "connections": ["hall"], "description": "Dragon's lair"}
+  ],
+  "corridors": [
+    {"id": "corr-1", "fromRoom": "entrance", "toRoom": "hall", "width": 3, "style": "straight", "useDiagonalTransitions": true},
+    {"id": "corr-2", "fromRoom": "hall", "toRoom": "boss", "width": 6, "style": "straight", "useDiagonalTransitions": false}
+  ],
+  "terrain": "stone",
+  "description": "A dungeon with narrow entrance corridor opening into central hall, leading to boss chamber"
+}`;
+
 interface CornerElevations {
   nw: number;
   ne: number;
@@ -120,6 +163,61 @@ interface SuccessResponse {
 
 interface ErrorResponse {
   error: string;
+}
+
+// =====================================
+// DUNGEON-SPECIFIC DATA STRUCTURES
+// =====================================
+
+type DungeonRoomType = 'entrance' | 'chamber' | 'corridor-hub' | 'boss' | 'treasure' | 'trap' | 'shrine';
+
+interface DungeonRoom {
+  id: string;
+  type: DungeonRoomType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  connections: string[];
+  description?: string;
+}
+
+type CorridorStyle = 'straight' | 'L-shaped';
+
+interface DungeonCorridor {
+  id: string;
+  fromRoom: string;
+  toRoom: string;
+  width: 3 | 6;
+  style: CorridorStyle;
+  useDiagonalTransitions: boolean;
+}
+
+interface DungeonLayout {
+  rooms: DungeonRoom[];
+  corridors: DungeonCorridor[];
+  terrain: string;
+  description: string;
+}
+
+interface LayoutContext {
+  type: 'general' | 'dungeon' | 'outdoor';
+  confidence: number;
+  indicators: string[];
+}
+
+interface CorridorSegment {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isHorizontal: boolean;
+}
+
+interface DiagonalTransition {
+  x: number;
+  y: number;
+  rotation: number;
 }
 
 // Classify pieces by their elevation pattern
@@ -488,6 +586,654 @@ function fillRegionWithPieces(
   return placements;
 }
 
+// =====================================
+// DUNGEON LAYOUT FUNCTIONS
+// =====================================
+
+// Detect if the scene description and available pieces suggest a dungeon layout
+function detectLayoutContext(
+  sceneDescription: string,
+  availablePieces: AvailablePiece[]
+): LayoutContext {
+  const description = sceneDescription.toLowerCase();
+  const indicators: string[] = [];
+  let dungeonScore = 0;
+  let outdoorScore = 0;
+
+  // Dungeon keywords
+  const dungeonKeywords = [
+    'dungeon', 'underground', 'cavern', 'cave', 'crypt', 'tomb',
+    'corridor', 'chamber', 'vault', 'labyrinth', 'maze', 'catacomb',
+    'sewer', 'basement', 'cellar', 'prison', 'jail', 'lair'
+  ];
+
+  // Outdoor keywords
+  const outdoorKeywords = [
+    'forest', 'field', 'meadow', 'river', 'lake', 'mountain',
+    'beach', 'desert', 'swamp', 'jungle', 'plains', 'hill', 'outdoor'
+  ];
+
+  for (const keyword of dungeonKeywords) {
+    if (description.includes(keyword)) {
+      dungeonScore += 2;
+      indicators.push(`keyword: "${keyword}"`);
+    }
+  }
+
+  for (const keyword of outdoorKeywords) {
+    if (description.includes(keyword)) {
+      outdoorScore += 2;
+    }
+  }
+
+  // Structural keywords that suggest dungeon-like layout
+  const structuralKeywords = ['room', 'passage', 'hall', 'entrance', 'door'];
+  for (const keyword of structuralKeywords) {
+    if (description.includes(keyword)) {
+      dungeonScore += 1;
+      indicators.push(`structural: "${keyword}"`);
+    }
+  }
+
+  // Check terrain types for dungeon indicators
+  const terrainTypes = [...new Set(availablePieces.map(p => p.terrainType.toLowerCase()))];
+  const dungeonTerrains = ['dungeon', 'stone', 'cave', 'castle', 'crypt'];
+  for (const terrain of terrainTypes) {
+    if (dungeonTerrains.some(dt => terrain.includes(dt))) {
+      dungeonScore += 2;
+      indicators.push(`terrain: "${terrain}"`);
+    }
+  }
+
+  // Check for diagonal pieces (useful for transitions)
+  const hasDiagonals = availablePieces.some(p => p.isDiagonal);
+  if (hasDiagonals) {
+    indicators.push('has diagonal pieces');
+  }
+
+  // Determine type
+  if (dungeonScore >= 3 && dungeonScore > outdoorScore) {
+    return {
+      type: 'dungeon',
+      confidence: Math.min(1, dungeonScore / 10),
+      indicators
+    };
+  } else if (outdoorScore > dungeonScore) {
+    return {
+      type: 'outdoor',
+      confidence: Math.min(1, outdoorScore / 10),
+      indicators: []
+    };
+  }
+
+  return {
+    type: 'general',
+    confidence: 0.5,
+    indicators: []
+  };
+}
+
+// Build user prompt for dungeon layout
+function buildDungeonUserPrompt(
+  sceneDescription: string,
+  mapWidth: number,
+  mapHeight: number,
+  terrainTypes: string[],
+  hasDiagonalPieces: boolean
+): string {
+  return `Dungeon Description: "${sceneDescription}"
+
+Map dimensions: ${mapWidth}" x ${mapHeight}" (width x height in inches)
+
+Available terrain types: ${terrainTypes.join(', ')}
+
+Features:
+- Diagonal corner pieces: ${hasDiagonalPieces ? 'YES - use useDiagonalTransitions: true for narrow corridors opening into rooms' : 'NO - use flush transitions'}
+
+DESIGN GUIDELINES:
+1. Place entrance room near a map edge
+2. Create 3-6 rooms connected by corridors
+3. Use 3" wide corridors for tension, 6" wide for main halls
+4. ${hasDiagonalPieces ? 'Set useDiagonalTransitions: true when 3" corridors meet rooms wider than 6"' : 'All transitions will be flush'}
+5. Rooms should NOT overlap - leave space for corridors between them
+6. Boss room should be largest and farthest from entrance
+
+Return the dungeon layout as valid JSON with rooms, corridors, terrain, and description.`;
+}
+
+// Fill a dungeon room with floor pieces
+function fillDungeonRoom(
+  room: DungeonRoom,
+  pieces: AvailablePiece[],
+  terrain: string,
+  globalOccupancy: OccupancyGrid,
+  mapWidth: number,
+  mapHeight: number
+): PlacementSuggestion[] {
+  const placements: PlacementSuggestion[] = [];
+
+  // Filter to flat, non-diagonal pieces matching terrain
+  const floorPieces = pieces.filter(p => {
+    const terrainMatch = p.terrainType.toLowerCase() === terrain.toLowerCase() ||
+                         p.terrainType.toLowerCase().includes(terrain.toLowerCase()) ||
+                         terrain.toLowerCase().includes(p.terrainType.toLowerCase());
+    return terrainMatch && !p.isDiagonal && classifyElevationPattern(p.elevation) === 'flat';
+  });
+
+  if (floorPieces.length === 0) {
+    return placements;
+  }
+
+  // Sort by area descending (largest first for efficient packing)
+  floorPieces.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+
+  const roomEndX = Math.min(room.x + room.width, mapWidth);
+  const roomEndY = Math.min(room.y + room.height, mapHeight);
+
+  // Multiple passes to fill gaps
+  for (let pass = 0; pass < 3; pass++) {
+    for (const piece of floorPieces) {
+      const orientations = piece.width === piece.height
+        ? [{ w: piece.width, h: piece.height, rotation: 0 }]
+        : [
+            { w: piece.width, h: piece.height, rotation: 0 },
+            { w: piece.height, h: piece.width, rotation: 90 }
+          ];
+
+      for (const { w, h, rotation } of orientations) {
+        for (let y = room.y; y + h <= roomEndY; y += 1.5) {
+          for (let x = room.x; x + w <= roomEndX; x += 1.5) {
+            if (globalOccupancy.canPlace(x, y, w, h)) {
+              placements.push({ pieceId: piece.id, x, y, rotation });
+              globalOccupancy.markOccupied(x, y, w, h);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return placements;
+}
+
+// Calculate the path segments for a corridor between two rooms
+function calculateCorridorPath(
+  fromRoom: DungeonRoom,
+  toRoom: DungeonRoom,
+  corridorWidth: number,
+  style: CorridorStyle
+): CorridorSegment[] {
+  const segments: CorridorSegment[] = [];
+
+  // Calculate room centers
+  const fromCenterX = fromRoom.x + fromRoom.width / 2;
+  const fromCenterY = fromRoom.y + fromRoom.height / 2;
+  const toCenterX = toRoom.x + toRoom.width / 2;
+  const toCenterY = toRoom.y + toRoom.height / 2;
+
+  const dx = toCenterX - fromCenterX;
+  const dy = toCenterY - fromCenterY;
+
+  if (style === 'straight') {
+    // Determine if horizontal or vertical is primary direction
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      // Horizontal corridor
+      const startX = dx > 0 ? fromRoom.x + fromRoom.width : toRoom.x + toRoom.width;
+      const endX = dx > 0 ? toRoom.x : fromRoom.x;
+      const corridorY = Math.round((fromCenterY + toCenterY) / 2 - corridorWidth / 2);
+
+      segments.push({
+        x: Math.min(startX, endX),
+        y: Math.max(0, corridorY),
+        width: Math.abs(endX - startX),
+        height: corridorWidth,
+        isHorizontal: true
+      });
+    } else {
+      // Vertical corridor
+      const startY = dy > 0 ? fromRoom.y + fromRoom.height : toRoom.y + toRoom.height;
+      const endY = dy > 0 ? toRoom.y : fromRoom.y;
+      const corridorX = Math.round((fromCenterX + toCenterX) / 2 - corridorWidth / 2);
+
+      segments.push({
+        x: Math.max(0, corridorX),
+        y: Math.min(startY, endY),
+        width: corridorWidth,
+        height: Math.abs(endY - startY),
+        isHorizontal: false
+      });
+    }
+  } else if (style === 'L-shaped') {
+    // L-shaped: horizontal first, then vertical
+    const midX = toRoom.x + (dx > 0 ? 0 : toRoom.width);
+    const corridorY1 = Math.round(fromCenterY - corridorWidth / 2);
+    const corridorX2 = Math.round(midX - corridorWidth / 2);
+
+    // Horizontal segment from fromRoom to corner
+    const hStartX = dx > 0 ? fromRoom.x + fromRoom.width : midX;
+    const hEndX = dx > 0 ? midX + corridorWidth : fromRoom.x;
+    segments.push({
+      x: Math.min(hStartX, hEndX),
+      y: Math.max(0, corridorY1),
+      width: Math.abs(hEndX - hStartX),
+      height: corridorWidth,
+      isHorizontal: true
+    });
+
+    // Vertical segment from corner to toRoom
+    const vStartY = dy > 0 ? corridorY1 : toRoom.y + toRoom.height;
+    const vEndY = dy > 0 ? toRoom.y : corridorY1 + corridorWidth;
+    segments.push({
+      x: Math.max(0, corridorX2),
+      y: Math.min(vStartY, vEndY),
+      width: corridorWidth,
+      height: Math.abs(vEndY - vStartY) + corridorWidth,
+      isHorizontal: false
+    });
+  }
+
+  return segments;
+}
+
+// Fill a corridor with appropriate pieces
+function fillDungeonCorridor(
+  corridor: DungeonCorridor,
+  rooms: DungeonRoom[],
+  pieces: AvailablePiece[],
+  terrain: string,
+  globalOccupancy: OccupancyGrid,
+  mapWidth: number,
+  mapHeight: number
+): PlacementSuggestion[] {
+  const placements: PlacementSuggestion[] = [];
+
+  const fromRoom = rooms.find(r => r.id === corridor.fromRoom);
+  const toRoom = rooms.find(r => r.id === corridor.toRoom);
+  if (!fromRoom || !toRoom) return placements;
+
+  // Get corridor path segments
+  const segments = calculateCorridorPath(fromRoom, toRoom, corridor.width, corridor.style);
+
+  // Filter pieces suitable for corridors - prefer pieces that fit the corridor width
+  const corridorPieces = pieces.filter(p => {
+    const terrainMatch = p.terrainType.toLowerCase() === terrain.toLowerCase() ||
+                         p.terrainType.toLowerCase().includes(terrain.toLowerCase()) ||
+                         terrain.toLowerCase().includes(p.terrainType.toLowerCase());
+    return terrainMatch && !p.isDiagonal && classifyElevationPattern(p.elevation) === 'flat';
+  });
+
+  if (corridorPieces.length === 0) return placements;
+
+  // Sort by how well they fit the corridor width, then by length
+  corridorPieces.sort((a, b) => {
+    const aFits = (a.width === corridor.width || a.height === corridor.width) ? 1 : 0;
+    const bFits = (b.width === corridor.width || b.height === corridor.width) ? 1 : 0;
+    if (aFits !== bFits) return bFits - aFits;
+    return Math.max(b.width, b.height) - Math.max(a.width, a.height);
+  });
+
+  // Fill each segment
+  for (const segment of segments) {
+    const segEndX = Math.min(segment.x + segment.width, mapWidth);
+    const segEndY = Math.min(segment.y + segment.height, mapHeight);
+
+    for (const piece of corridorPieces) {
+      const orientations = piece.width === piece.height
+        ? [{ w: piece.width, h: piece.height, rotation: 0 }]
+        : [
+            { w: piece.width, h: piece.height, rotation: 0 },
+            { w: piece.height, h: piece.width, rotation: 90 }
+          ];
+
+      for (const { w, h, rotation } of orientations) {
+        // Check if this orientation fits the corridor
+        if (segment.isHorizontal && h > segment.height) continue;
+        if (!segment.isHorizontal && w > segment.width) continue;
+
+        for (let y = segment.y; y + h <= segEndY; y += 1.5) {
+          for (let x = segment.x; x + w <= segEndX; x += 1.5) {
+            if (globalOccupancy.canPlace(x, y, w, h)) {
+              placements.push({ pieceId: piece.id, x, y, rotation });
+              globalOccupancy.markOccupied(x, y, w, h);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return placements;
+}
+
+// Calculate where diagonal transition pieces should be placed
+// Only place diagonals at the exact junction between corridor and room
+function calculateDiagonalTransitions(
+  corridor: DungeonCorridor,
+  rooms: DungeonRoom[],
+  corridorSegments: CorridorSegment[]
+): DiagonalTransition[] {
+  if (!corridor.useDiagonalTransitions) return [];
+  if (corridorSegments.length === 0) return [];
+
+  const transitions: DiagonalTransition[] = [];
+  const fromRoom = rooms.find(r => r.id === corridor.fromRoom);
+  const toRoom = rooms.find(r => r.id === corridor.toRoom);
+  if (!fromRoom || !toRoom) return transitions;
+
+  const diagonalSize = 3; // 3x3 corner pieces
+
+  // Helper to add transitions at a room entry point
+  function addRoomEntryTransitions(
+    room: DungeonRoom,
+    corridorX: number,
+    corridorY: number,
+    corridorW: number,
+    corridorH: number,
+    isHorizontal: boolean,
+    enteringFromLowSide: boolean // true if corridor enters from left/top of room
+  ) {
+    // Only add transitions if corridor is narrower than room
+    const roomDim = isHorizontal ? room.height : room.width;
+    const corridorDim = isHorizontal ? corridorH : corridorW;
+    if (corridorDim >= roomDim - 3) return; // Not enough space for transitions
+
+    if (isHorizontal) {
+      // Horizontal corridor entering room from east or west
+      const entryX = enteringFromLowSide ? room.x : room.x + room.width - diagonalSize;
+
+      // Top diagonal (above corridor)
+      transitions.push({
+        x: entryX,
+        y: corridorY - diagonalSize,
+        rotation: enteringFromLowSide ? 180 : 270  // ◢ or ◣
+      });
+
+      // Bottom diagonal (below corridor)
+      transitions.push({
+        x: entryX,
+        y: corridorY + corridorH,
+        rotation: enteringFromLowSide ? 90 : 0  // ◥ or ◤
+      });
+    } else {
+      // Vertical corridor entering room from north or south
+      const entryY = enteringFromLowSide ? room.y : room.y + room.height - diagonalSize;
+
+      // Left diagonal
+      transitions.push({
+        x: corridorX - diagonalSize,
+        y: entryY,
+        rotation: enteringFromLowSide ? 90 : 0  // ◥ or ◤
+      });
+
+      // Right diagonal
+      transitions.push({
+        x: corridorX + corridorW,
+        y: entryY,
+        rotation: enteringFromLowSide ? 180 : 270  // ◢ or ◣
+      });
+    }
+  }
+
+  // Get the first and last segments (they connect to rooms)
+  const firstSegment = corridorSegments[0];
+  const lastSegment = corridorSegments[corridorSegments.length - 1];
+
+  // Determine which room each segment connects to based on position
+  const fromCenterX = fromRoom.x + fromRoom.width / 2;
+  const fromCenterY = fromRoom.y + fromRoom.height / 2;
+  const toCenterX = toRoom.x + toRoom.width / 2;
+  const toCenterY = toRoom.y + toRoom.height / 2;
+
+  // For the first segment, determine if it's closer to fromRoom or toRoom
+  const firstSegCenterX = firstSegment.x + firstSegment.width / 2;
+  const firstSegCenterY = firstSegment.y + firstSegment.height / 2;
+
+  const distToFrom = Math.abs(firstSegCenterX - fromCenterX) + Math.abs(firstSegCenterY - fromCenterY);
+  const distToTo = Math.abs(firstSegCenterX - toCenterX) + Math.abs(firstSegCenterY - toCenterY);
+
+  // Add transitions at fromRoom
+  if (firstSegment.isHorizontal) {
+    const enterFromWest = fromRoom.x + fromRoom.width <= firstSegment.x + firstSegment.width / 2;
+    addRoomEntryTransitions(
+      fromRoom,
+      firstSegment.x,
+      firstSegment.y,
+      firstSegment.width,
+      firstSegment.height,
+      true,
+      !enterFromWest
+    );
+  } else {
+    const enterFromNorth = fromRoom.y + fromRoom.height <= firstSegment.y + firstSegment.height / 2;
+    addRoomEntryTransitions(
+      fromRoom,
+      firstSegment.x,
+      firstSegment.y,
+      firstSegment.width,
+      firstSegment.height,
+      false,
+      !enterFromNorth
+    );
+  }
+
+  // Add transitions at toRoom (use last segment)
+  if (lastSegment.isHorizontal) {
+    const enterFromWest = toRoom.x >= lastSegment.x + lastSegment.width / 2;
+    addRoomEntryTransitions(
+      toRoom,
+      lastSegment.x,
+      lastSegment.y,
+      lastSegment.width,
+      lastSegment.height,
+      true,
+      enterFromWest
+    );
+  } else {
+    const enterFromNorth = toRoom.y >= lastSegment.y + lastSegment.height / 2;
+    addRoomEntryTransitions(
+      toRoom,
+      lastSegment.x,
+      lastSegment.y,
+      lastSegment.width,
+      lastSegment.height,
+      false,
+      enterFromNorth
+    );
+  }
+
+  return transitions;
+}
+
+// Fill diagonal transitions with corner pieces
+function fillDiagonalTransitions(
+  transitions: DiagonalTransition[],
+  pieces: AvailablePiece[],
+  terrain: string,
+  globalOccupancy: OccupancyGrid
+): PlacementSuggestion[] {
+  const placements: PlacementSuggestion[] = [];
+
+  // Find diagonal pieces matching terrain
+  const diagonalPieces = pieces.filter(p => {
+    const terrainMatch = p.terrainType.toLowerCase() === terrain.toLowerCase() ||
+                         p.terrainType.toLowerCase().includes(terrain.toLowerCase()) ||
+                         terrain.toLowerCase().includes(p.terrainType.toLowerCase());
+    return terrainMatch && p.isDiagonal;
+  });
+
+  if (diagonalPieces.length === 0) return placements;
+
+  // Prefer 3x3 diagonal pieces
+  const sortedDiagonals = [...diagonalPieces].sort((a, b) => {
+    const aIs3x3 = a.width === 3 && a.height === 3;
+    const bIs3x3 = b.width === 3 && b.height === 3;
+    if (aIs3x3 && !bIs3x3) return -1;
+    if (!aIs3x3 && bIs3x3) return 1;
+    return (a.width * a.height) - (b.width * b.height);
+  });
+
+  const piece = sortedDiagonals[0];
+
+  for (const transition of transitions) {
+    // Check bounds and occupancy
+    if (transition.x >= 0 && transition.y >= 0 &&
+        globalOccupancy.canPlace(transition.x, transition.y, piece.width, piece.height)) {
+      placements.push({
+        pieceId: piece.id,
+        x: transition.x,
+        y: transition.y,
+        rotation: transition.rotation
+      });
+      globalOccupancy.markOccupied(transition.x, transition.y, piece.width, piece.height);
+    }
+  }
+
+  return placements;
+}
+
+// Validate dungeon layout from LLM
+function validateDungeonLayout(
+  layout: DungeonLayout,
+  mapWidth: number,
+  mapHeight: number
+): DungeonLayout {
+  // Clamp room coordinates to map bounds
+  const validRooms = layout.rooms.map(room => ({
+    ...room,
+    x: Math.max(0, Math.min(room.x, mapWidth - 6)),
+    y: Math.max(0, Math.min(room.y, mapHeight - 6)),
+    width: Math.min(room.width, mapWidth - room.x),
+    height: Math.min(room.height, mapHeight - room.y)
+  })).filter(room => room.width >= 6 && room.height >= 6);
+
+  // Validate corridors reference valid rooms
+  const roomIds = new Set(validRooms.map(r => r.id));
+  const validCorridors = layout.corridors.filter(
+    c => roomIds.has(c.fromRoom) && roomIds.has(c.toRoom)
+  );
+
+  return {
+    ...layout,
+    rooms: validRooms,
+    corridors: validCorridors
+  };
+}
+
+// Main dungeon layout generator
+async function generateDungeonLayout(
+  sceneDescription: string,
+  mapWidth: number,
+  mapHeight: number,
+  availablePieces: AvailablePiece[],
+  openRouterKey?: string
+): Promise<{
+  placements: PlacementSuggestion[];
+  description: string;
+}> {
+  const terrainTypes = [...new Set(availablePieces.map(p => p.terrainType))];
+  const hasDiagonalPieces = availablePieces.some(p => p.isDiagonal);
+
+  // Build and send prompt to LLM
+  const userPrompt = buildDungeonUserPrompt(
+    sceneDescription,
+    mapWidth,
+    mapHeight,
+    terrainTypes,
+    hasDiagonalPieces
+  );
+
+  const response = await callOpenRouter(
+    [
+      { role: 'system', content: DUNGEON_LAYOUT_SYSTEM },
+      { role: 'user', content: userPrompt }
+    ],
+    OPENROUTER_MODELS.quality,
+    3000,
+    openRouterKey
+  );
+
+  // Parse LLM response
+  let dungeonLayout: DungeonLayout;
+  try {
+    let cleanResponse = response.trim();
+    if (cleanResponse.startsWith('```json')) {
+      cleanResponse = cleanResponse.slice(7);
+    } else if (cleanResponse.startsWith('```')) {
+      cleanResponse = cleanResponse.slice(3);
+    }
+    if (cleanResponse.endsWith('```')) {
+      cleanResponse = cleanResponse.slice(0, -3);
+    }
+    cleanResponse = cleanResponse.trim();
+
+    dungeonLayout = JSON.parse(cleanResponse);
+    dungeonLayout = validateDungeonLayout(dungeonLayout, mapWidth, mapHeight);
+  } catch (error) {
+    console.error('Failed to parse dungeon layout:', response);
+    throw new Error('Failed to parse dungeon layout from LLM');
+  }
+
+  // Create occupancy grid and placements array
+  const globalOccupancy = new OccupancyGrid(mapWidth, mapHeight);
+  const allPlacements: PlacementSuggestion[] = [];
+  const terrain = dungeonLayout.terrain || terrainTypes[0] || 'stone';
+
+  console.log('Dungeon layout:', JSON.stringify(dungeonLayout, null, 2));
+
+  // PHASE 1: Fill rooms
+  for (const room of dungeonLayout.rooms) {
+    const roomPlacements = fillDungeonRoom(
+      room,
+      availablePieces,
+      terrain,
+      globalOccupancy,
+      mapWidth,
+      mapHeight
+    );
+    allPlacements.push(...roomPlacements);
+  }
+
+  // PHASE 2: Fill corridors
+  for (const corridor of dungeonLayout.corridors) {
+    const corridorPlacements = fillDungeonCorridor(
+      corridor,
+      dungeonLayout.rooms,
+      availablePieces,
+      terrain,
+      globalOccupancy,
+      mapWidth,
+      mapHeight
+    );
+    allPlacements.push(...corridorPlacements);
+  }
+
+  // PHASE 3: Add diagonal transitions
+  if (hasDiagonalPieces) {
+    for (const corridor of dungeonLayout.corridors) {
+      if (corridor.useDiagonalTransitions) {
+        const fromRoom = dungeonLayout.rooms.find(r => r.id === corridor.fromRoom);
+        const toRoom = dungeonLayout.rooms.find(r => r.id === corridor.toRoom);
+        if (fromRoom && toRoom) {
+          const segments = calculateCorridorPath(fromRoom, toRoom, corridor.width, corridor.style);
+          const transitions = calculateDiagonalTransitions(corridor, dungeonLayout.rooms, segments);
+          const diagonalPlacements = fillDiagonalTransitions(
+            transitions,
+            availablePieces,
+            terrain,
+            globalOccupancy
+          );
+          allPlacements.push(...diagonalPlacements);
+        }
+      }
+    }
+  }
+
+  return {
+    placements: allPlacements,
+    description: dungeonLayout.description || 'Dungeon layout generated'
+  };
+}
+
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
@@ -532,6 +1278,33 @@ export async function POST(
       );
     }
 
+    // Detect layout context (dungeon vs outdoor vs general)
+    const layoutContext = detectLayoutContext(body.sceneDescription, body.availablePieces);
+    console.log('Layout context:', layoutContext);
+
+    // If dungeon context detected, use dungeon-specific algorithm
+    if (layoutContext.type === 'dungeon' && layoutContext.confidence >= 0.3) {
+      try {
+        console.log('Using dungeon layout algorithm');
+        const dungeonResult = await generateDungeonLayout(
+          body.sceneDescription,
+          body.mapWidth,
+          body.mapHeight,
+          body.availablePieces,
+          openRouterKey || undefined
+        );
+
+        return NextResponse.json({
+          placements: dungeonResult.placements,
+          description: dungeonResult.description
+        });
+      } catch (error) {
+        console.warn('Dungeon layout failed, falling back to general algorithm:', error);
+        // Fall through to general layout algorithm
+      }
+    }
+
+    // General layout algorithm (for outdoor/general contexts or dungeon fallback)
     // Get unique terrain types from available pieces
     const terrainTypes = [...new Set(body.availablePieces.map(p => p.terrainType))];
 

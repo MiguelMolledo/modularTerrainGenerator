@@ -22,7 +22,8 @@ import {
 import { ExportReportDialog } from '@/components/maps/ExportReportDialog';
 import { GenerateArtDialog } from './GenerateArtDialog';
 import { AILayoutDialog } from './AILayoutDialog';
-import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2, Undo2, Redo2, Sparkles, AlertTriangle } from 'lucide-react';
+import { FillGapsDialog } from './FillGapsDialog';
+import { Save, Loader2, FilePlus, Download, ChevronDown, Search, FolderOpen, FileText, Box, Grid2X2, Grid3X3, Eye, EyeOff, Settings2, Trash2, ZoomIn, ZoomOut, RotateCcw, Magnet, Lock, Unlock, Ruler, Layers, Mountain, Users, Wand2, Undo2, Redo2, Sparkles, AlertTriangle, PaintBucket } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { useRouter } from 'next/navigation';
 import { generateThumbnail, generateFullMapSnapshot } from '@/lib/stageRef';
@@ -76,7 +77,8 @@ function MenuItem({
   onClick,
   active,
   shortcut,
-  danger
+  danger,
+  className
 }: {
   icon?: React.ComponentType<{ className?: string }>;
   label: string;
@@ -84,15 +86,16 @@ function MenuItem({
   active?: boolean;
   shortcut?: string;
   danger?: boolean;
+  className?: string;
 }) {
   return (
     <button
-      className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
+      className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-700 ${
         danger
           ? 'text-red-400 hover:bg-red-950'
           : active
             ? 'text-blue-400 bg-blue-950/50'
-            : 'text-white hover:bg-gray-700'
+            : className || 'text-white'
       }`}
       onClick={onClick}
     >
@@ -122,6 +125,7 @@ export function Toolbar() {
   const [showExportReportDialog, setShowExportReportDialog] = useState(false);
   const [showGenerateArtDialog, setShowGenerateArtDialog] = useState(false);
   const [showAILayoutDialog, setShowAILayoutDialog] = useState(false);
+  const [showFillGapsDialog, setShowFillGapsDialog] = useState(false);
   const [showMapSizeDialog, setShowMapSizeDialog] = useState(false);
   const [showNewMapDialog, setShowNewMapDialog] = useState(false);
   const [newMapName, setNewMapName] = useState('');
@@ -705,37 +709,36 @@ export function Toolbar() {
 
         <Separator orientation="vertical" className="h-8" />
 
-        {/* AI Layout button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAILayoutDialog(true)}
-              className="gap-1 text-green-400 border-green-600/50 hover:bg-green-900/30"
-            >
+        {/* AI Tools Dropdown */}
+        <DropdownMenu
+          trigger={
+            <Button variant="outline" size="sm" className="gap-1 text-purple-400 border-purple-600/50 hover:bg-purple-900/30">
               <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">Layout</span>
+              <span className="hidden sm:inline">AI Tools</span>
+              <ChevronDown className="h-3 w-3" />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>Generate terrain layout with AI</TooltipContent>
-        </Tooltip>
-
-        {/* Generate Art button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowGenerateArtDialog(true)}
-              className="gap-1 text-amber-400 border-amber-600/50 hover:bg-amber-900/30"
-            >
-              <Wand2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Art</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Generate artistic battle map from current layout</TooltipContent>
-        </Tooltip>
+          }
+        >
+          <MenuItem
+            icon={Sparkles}
+            label="Generate Layout"
+            onClick={() => setShowAILayoutDialog(true)}
+            className="text-green-400"
+          />
+          <MenuItem
+            icon={PaintBucket}
+            label="Fill Gaps"
+            onClick={() => setShowFillGapsDialog(true)}
+            className="text-blue-400"
+          />
+          <MenuDivider />
+          <MenuItem
+            icon={Wand2}
+            label="Generate Art"
+            onClick={() => setShowGenerateArtDialog(true)}
+            className="text-amber-400"
+          />
+        </DropdownMenu>
 
         <div className="flex-1" />
 
@@ -1137,6 +1140,11 @@ export function Toolbar() {
       <AILayoutDialog
         open={showAILayoutDialog}
         onOpenChange={setShowAILayoutDialog}
+      />
+
+      <FillGapsDialog
+        open={showFillGapsDialog}
+        onOpenChange={setShowFillGapsDialog}
       />
 
       {/* Delete Map Confirmation Dialog */}
