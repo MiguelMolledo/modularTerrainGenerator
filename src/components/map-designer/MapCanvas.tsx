@@ -636,6 +636,54 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
           setDragPreview((prev) => ({ ...prev, visible: false }));
         }
       }
+
+      // F key to focus view (center on selection or map)
+      if ((e.key === 'f' || e.key === 'F') && !e.repeat) {
+        e.preventDefault();
+
+        const currentPixelsPerInch = BASE_PIXELS_PER_INCH * zoom;
+
+        if (selectedPlacedPieceIds.length > 0) {
+          // Focus on selected pieces - calculate their bounding box
+          const selectedPieces = placedPieces.filter(p => selectedPlacedPieceIds.includes(p.id));
+          if (selectedPieces.length > 0) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+            selectedPieces.forEach(placed => {
+              const piece = allPieces.find(p => p.id === placed.pieceId);
+              if (piece) {
+                const isRotated = placed.rotation === 90 || placed.rotation === 270;
+                const w = isRotated ? piece.size.height : piece.size.width;
+                const h = isRotated ? piece.size.width : piece.size.height;
+
+                minX = Math.min(minX, placed.x);
+                minY = Math.min(minY, placed.y);
+                maxX = Math.max(maxX, placed.x + w);
+                maxY = Math.max(maxY, placed.y + h);
+              }
+            });
+
+            // Calculate center of bounding box in inches
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+
+            // Convert to pixels and calculate pan to center in viewport
+            const targetPanX = containerSize.width / 2 - centerX * currentPixelsPerInch;
+            const targetPanY = containerSize.height / 2 - centerY * currentPixelsPerInch;
+
+            setPan(targetPanX, targetPanY);
+          }
+        } else {
+          // Focus on entire map center
+          const mapCenterX = mapWidth / 2;
+          const mapCenterY = mapHeight / 2;
+
+          const targetPanX = containerSize.width / 2 - mapCenterX * currentPixelsPerInch;
+          const targetPanY = containerSize.height / 2 - mapCenterY * currentPixelsPerInch;
+
+          setPan(targetPanX, targetPanY);
+        }
+      }
     };
 
     // Track mouse position globally for radial menu
@@ -675,6 +723,14 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     toggle3DMode,
     openPropSearch,
     isPropSearchOpen,
+    // Focus view dependencies
+    placedPieces,
+    allPieces,
+    containerSize,
+    mapWidth,
+    mapHeight,
+    zoom,
+    setPan,
   ]);
 
   // Generate grid lines
@@ -2123,6 +2179,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                 <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs font-mono">V</div>
                 <div className="text-gray-300 flex items-center">Toggle 2D / 3D view</div>
 
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs font-mono">F</div>
+                <div className="text-gray-300 flex items-center">Focus view (selection or map center)</div>
+
                 <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs font-mono">Delete</div>
                 <div className="text-gray-300 flex items-center">Delete selected pieces</div>
 
@@ -2148,7 +2207,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
       {/* Help text */}
       <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-gray-400">
-        Left drag: Select | Right drag: Pan | Shift+Click: Add to selection | R: Rotate | Del: Delete
+        Left drag: Select | Right drag: Pan | R: Rotate | F: Focus | Del: Delete
       </div>
     </div>
   );
