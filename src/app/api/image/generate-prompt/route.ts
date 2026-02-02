@@ -61,7 +61,7 @@ function jsonToPrompt(json: Record<string, unknown>): string {
   if (keywords) styleParts.push(keywords);
 
   // Add common style keywords
-  styleParts.push('High definition, photorealistic style, tabletop RPG map, fantasy landscape.');
+  styleParts.push('High definition, photorealistic style, tabletop RPG map, fantasy landscape. Create soft transitions between colors.');
 
   parts.push(styleParts.join(', '));
 
