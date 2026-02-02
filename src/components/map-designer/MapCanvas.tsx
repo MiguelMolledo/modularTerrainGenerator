@@ -362,8 +362,15 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
       // First apply grid snap if enabled
       if (gridConfig.snapToGrid) {
+        const beforeSnapX = snappedX;
+        const beforeSnapY = snappedY;
         snappedX = Math.round(x / gridConfig.cellSize) * gridConfig.cellSize;
         snappedY = Math.round(y / gridConfig.cellSize) * gridConfig.cellSize;
+        console.log('[SNAP] Grid snap:', {
+          cellSize: gridConfig.cellSize,
+          before: { x: beforeSnapX.toFixed(2), y: beforeSnapY.toFixed(2) },
+          after: { x: snappedX.toFixed(2), y: snappedY.toFixed(2) },
+        });
       }
 
       // Apply magnetic snap to nearby pieces
@@ -477,6 +484,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       snappedX = Math.max(0, Math.min(snappedX, mapWidth - pieceWidth));
       snappedY = Math.max(0, Math.min(snappedY, mapHeight - pieceHeight));
 
+      console.log('[SNAP] Final position:', { x: snappedX.toFixed(2), y: snappedY.toFixed(2) });
       return { x: snappedX, y: snappedY };
     },
     [gridConfig.snapToGrid, gridConfig.magneticSnap, gridConfig.cellSize, mapWidth, mapHeight, placedPieces, allPieces, currentLevel]
@@ -1017,8 +1025,15 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
         // Apply grid snap if enabled
         if (gridConfig.snapToGrid) {
+          const beforeX = newX;
+          const beforeY = newY;
           newX = Math.round(newX / gridConfig.cellSize) * gridConfig.cellSize;
           newY = Math.round(newY / gridConfig.cellSize) * gridConfig.cellSize;
+          console.log('[MULTI-DRAG] Grid snap:', {
+            cellSize: gridConfig.cellSize,
+            before: { x: beforeX.toFixed(2), y: beforeY.toFixed(2) },
+            after: { x: newX.toFixed(2), y: newY.toFixed(2) },
+          });
         }
 
         // Clamp to map bounds

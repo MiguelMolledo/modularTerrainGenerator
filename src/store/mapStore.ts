@@ -118,6 +118,7 @@ interface MapState {
   setPan: (x: number, y: number) => void;
   toggleGrid: () => void;
   toggleSnapToGrid: () => void;
+  toggleMagneticSnap: () => void;
   toggleViewLock: () => void;
   addAvailablePiece: (piece: ModularPiece) => void;
   clearMap: () => void;
@@ -688,7 +689,7 @@ export const useMapStore = create<MapState>((set, get) => ({
     cellSize: GRID_CELL_SIZE,
     showGrid: true,
     snapToGrid: true,
-    magneticSnap: true,
+    magneticSnap: false,
   },
   zoom: 1,
   panX: 0,
@@ -851,6 +852,11 @@ export const useMapStore = create<MapState>((set, get) => ({
   toggleSnapToGrid: () =>
     set((state) => ({
       gridConfig: { ...state.gridConfig, snapToGrid: !state.gridConfig.snapToGrid },
+    })),
+
+  toggleMagneticSnap: () =>
+    set((state) => ({
+      gridConfig: { ...state.gridConfig, magneticSnap: !state.gridConfig.magneticSnap },
     })),
 
   toggleViewLock: () =>
@@ -1080,11 +1086,12 @@ export const useMapStore = create<MapState>((set, get) => ({
       placedPieces: uniquePieces,
       customProps: loadedCustomProps,
       generatedImages: loadedGeneratedImages,
-      gridConfig: data.gridConfig || {
+      gridConfig: {
+        // Always use config value for cellSize (ignore saved value)
         cellSize: GRID_CELL_SIZE,
-        showGrid: true,
-        snapToGrid: true,
-        magneticSnap: true,
+        showGrid: data.gridConfig?.showGrid ?? true,
+        snapToGrid: data.gridConfig?.snapToGrid ?? true,
+        magneticSnap: data.gridConfig?.magneticSnap ?? false,
       },
       // Reset UI state
       currentLevel: 0,
@@ -1140,7 +1147,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         cellSize: GRID_CELL_SIZE,
         showGrid: true,
         snapToGrid: true,
-        magneticSnap: true,
+        magneticSnap: false,
       },
       zoom: 1,
       panX: 0,

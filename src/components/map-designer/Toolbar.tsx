@@ -148,6 +148,7 @@ export function Toolbar() {
     gridConfig,
     toggleGrid,
     toggleSnapToGrid,
+    toggleMagneticSnap,
     toggleViewLock,
     isViewLocked,
     clearMap,
@@ -642,6 +643,12 @@ export function Toolbar() {
             label="Snap to Grid"
             onClick={toggleSnapToGrid}
             active={gridConfig.snapToGrid}
+          />
+          <MenuItem
+            icon={Magnet}
+            label="Magnetic Snap"
+            onClick={toggleMagneticSnap}
+            active={gridConfig.magneticSnap}
           />
           <MenuDivider />
           <MenuItem

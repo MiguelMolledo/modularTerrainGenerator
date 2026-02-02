@@ -19,7 +19,7 @@ export const DEFAULT_MAP_WIDTH = 60;  // inches
 export const DEFAULT_MAP_HEIGHT = 60; // inches
 
 // Grid configuration
-export const GRID_CELL_SIZE = 1.5; // inches - minimum common divisor
+export const GRID_CELL_SIZE = 0.5; // inches - half-inch grid for piece movement
 
 // Pixels per inch for rendering (adjustable for zoom)
 export const BASE_PIXELS_PER_INCH = 20;
