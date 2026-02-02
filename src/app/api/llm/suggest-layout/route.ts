@@ -624,10 +624,14 @@ function detectLayoutContext(
     p.elevation && (p.elevation.nw > 0 || p.elevation.ne > 0 || p.elevation.sw > 0 || p.elevation.se > 0)
   );
 
-  // Dungeon keywords
+  // Strong dungeon keywords - these alone should trigger dungeon mode
+  const strongDungeonKeywords = [
+    'dungeon', 'crypt', 'tomb', 'labyrinth', 'maze', 'catacomb'
+  ];
+
+  // Regular dungeon keywords
   const dungeonKeywords = [
-    'dungeon', 'underground', 'cavern', 'cave', 'crypt', 'tomb',
-    'corridor', 'chamber', 'vault', 'labyrinth', 'maze', 'catacomb',
+    'underground', 'cavern', 'cave', 'corridor', 'chamber', 'vault',
     'sewer', 'basement', 'cellar', 'prison', 'jail', 'lair'
   ];
 
@@ -637,6 +641,14 @@ function detectLayoutContext(
     'beach', 'desert', 'swamp', 'jungle', 'plains', 'outdoor',
     'canyon', 'valley', 'clearing', 'grove', 'woods'
   ];
+
+  // Check for strong dungeon keywords first - these trigger dungeon mode immediately
+  for (const keyword of strongDungeonKeywords) {
+    if (description.includes(keyword)) {
+      dungeonScore += 4; // Strong signal
+      indicators.push(`strong dungeon keyword: "${keyword}"`);
+    }
+  }
 
   for (const keyword of dungeonKeywords) {
     if (description.includes(keyword)) {
@@ -664,18 +676,15 @@ function detectLayoutContext(
     }
   }
 
-  // Check terrain types for dungeon indicators - but ONLY from description keywords, not terrainTypes
-  // This prevents "stone" terrain type from triggering dungeon mode for outdoor maps
-  // We've removed the terrain-based detection to avoid false positives
-
   // Check for diagonal pieces (useful for transitions)
   const hasDiagonals = availablePieces.some(p => p.isDiagonal);
   if (hasDiagonals) {
     indicators.push('has diagonal pieces');
   }
 
-  // Determine type - require stronger dungeon signals
-  if (dungeonScore >= 4 && dungeonScore > outdoorScore * 1.5) {
+  // Determine type
+  // If we have strong dungeon signal (>=4) and it's not overwhelmed by outdoor keywords
+  if (dungeonScore >= 4 && dungeonScore > outdoorScore) {
     return {
       type: 'dungeon',
       confidence: Math.min(1, dungeonScore / 10),
