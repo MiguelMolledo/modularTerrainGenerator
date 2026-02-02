@@ -189,46 +189,21 @@ export function PlacedPiece3D({
 
     if (piece.isDiagonal) {
       // Create triangle prism for diagonal pieces
+      // Always use same base shape (matching 2D), let group rotation handle orientation
       const shape = new THREE.Shape();
       const w = piece.size.width;
       const h = piece.size.height;
 
       // For diagonal pieces, we use the average height of involved corners
-      let avgHeight = pieceHeight;
+      const avgHeight = pieceHeight + (elevation.nw + elevation.ne + elevation.sw) / 3;
 
-      // Triangle based on rotation (defaultRotation for diagonal pieces)
-      const diagRotation = piece.defaultRotation || 0;
-      switch (diagRotation) {
-        case 0: // Top-left corner (NW, NE, SW)
-          shape.moveTo(-w / 2, -h / 2);  // SW
-          shape.lineTo(w / 2, -h / 2);   // SE... wait, this is NE for diagonal
-          shape.lineTo(-w / 2, h / 2);   // NW
-          shape.closePath();
-          avgHeight = pieceHeight + (elevation.nw + elevation.ne + elevation.sw) / 3;
-          break;
-        case 90: // Top-right corner (NW, NE, SE)
-          shape.moveTo(-w / 2, -h / 2);
-          shape.lineTo(w / 2, -h / 2);
-          shape.lineTo(w / 2, h / 2);
-          shape.closePath();
-          avgHeight = pieceHeight + (elevation.nw + elevation.ne + elevation.se) / 3;
-          break;
-        case 180: // Bottom-right corner (NE, SE, SW)
-          shape.moveTo(w / 2, -h / 2);
-          shape.lineTo(w / 2, h / 2);
-          shape.lineTo(-w / 2, h / 2);
-          shape.closePath();
-          avgHeight = pieceHeight + (elevation.ne + elevation.se + elevation.sw) / 3;
-          break;
-        case 270: // Bottom-left corner (NW, SE, SW)
-        default:
-          shape.moveTo(-w / 2, -h / 2);
-          shape.lineTo(-w / 2, h / 2);
-          shape.lineTo(w / 2, h / 2);
-          shape.closePath();
-          avgHeight = pieceHeight + (elevation.nw + elevation.se + elevation.sw) / 3;
-          break;
-      }
+      // Triangle matching 2D orientation: right angle at NW, legs to NE and SW
+      // In shape coords (Y up): NW is at (-w/2, h/2), after rotateX becomes back-left
+      // This matches 2D where triangle is at (0,0)-(w,0)-(0,h) with right angle at top-left
+      shape.moveTo(-w / 2, h / 2);   // NW (back-left after rotation)
+      shape.lineTo(w / 2, h / 2);    // NE (back-right after rotation)
+      shape.lineTo(-w / 2, -h / 2);  // SW (front-left after rotation)
+      shape.closePath();
 
       const extrudeSettings = {
         depth: avgHeight,

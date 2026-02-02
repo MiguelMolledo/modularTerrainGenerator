@@ -59,8 +59,8 @@ export function MapDesigner() {
       return;
     }
 
-    // Use defaultRotation for diagonal pieces, otherwise use the provided rotation
-    const finalRotation = piece.defaultRotation !== undefined ? piece.defaultRotation : rotation;
+    // Always use the rotation from the drop (which includes any R key rotations)
+    const finalRotation = rotation;
 
     const newPieceId = uuidv4();
 

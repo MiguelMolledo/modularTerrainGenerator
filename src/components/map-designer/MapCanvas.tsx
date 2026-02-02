@@ -38,6 +38,9 @@ interface DragPreview {
   isProp?: boolean;
   propEmoji?: string;
   propImage?: string;
+  // Original dimensions for diagonal pieces (before rotation swap)
+  originalWidth?: number;
+  originalHeight?: number;
 }
 
 // Hook to load image for Konva
@@ -530,11 +533,14 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       color: terrain?.color || '#666',
       visible: true,
       label: piece.isDiagonal
-        ? `${effectiveWidth}" x ${effectiveHeight}" △ (${newRotation}°)`
+        ? `${piece.size.width}" x ${piece.size.height}" △ (${newRotation}°)`
         : `${effectiveWidth}" x ${effectiveHeight}" (${newRotation}°)`,
       rotation: newRotation,
       hasCollision,
       isDiagonal: piece.isDiagonal,
+      // Store original dimensions for diagonal piece rendering
+      originalWidth: piece.isDiagonal ? piece.size.width : undefined,
+      originalHeight: piece.isDiagonal ? piece.size.height : undefined,
     };
 
     dragPreviewRef.current = newPreview;
@@ -558,7 +564,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
         // Case 1: Rotate during sidebar drag or placement mode
         if (isSidebarDragging || isPlacementMode) {
-          const newRotation = (currentRotation + 90) % 360;
+          const newRotation = (currentRotationRef.current + 90) % 360;
+          currentRotationRef.current = newRotation; // Update ref immediately
           setCurrentRotation(newRotation);
           updatePreviewAfterRotation(newRotation);
           return;
@@ -899,8 +906,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     const rawX = (e.clientX - rect.left - panX) / pixelsPerInch;
     const rawY = (e.clientY - rect.top - panY) / pixelsPerInch;
 
-    // For sidebar drag, use defaultRotation for diagonal pieces or currentRotation
-    const rotation = currentRotation ?? selectedPiece.defaultRotation ?? 0;
+    // For sidebar drag, use currentRotationRef (sync) to avoid race conditions with R key
+    const rotation = currentRotationRef.current ?? selectedPiece.defaultRotation ?? 0;
 
     // Swap dimensions if rotated 90 or 270 degrees
     const isRotated = rotation === 90 || rotation === 270;
@@ -939,6 +946,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       isProp: selectedPiece.pieceType === 'prop',
       propEmoji: selectedPiece.propEmoji,
       propImage: selectedPiece.propImage,
+      // Store original dimensions for diagonal piece rendering
+      originalWidth: selectedPiece.isDiagonal ? selectedPiece.size.width : undefined,
+      originalHeight: selectedPiece.isDiagonal ? selectedPiece.size.height : undefined,
     });
   };
 
@@ -985,8 +995,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       return;
     }
 
-    // Always use the preview position (already snapped)
-    onDrop(currentPreview.x, currentPreview.y, currentRotation);
+    // Always use the preview position and rotation (already snapped)
+    onDrop(currentPreview.x, currentPreview.y, currentPreview.rotation);
   };
 
   // Handle mouse move for sidebar drag, placement mode, map drag, selection rect, multi-drag, AND panning
@@ -1071,8 +1081,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     const isDragging = isSidebarDragging || isPlacementMode || mapDragPiece;
     if (!isDragging || !selectedPiece || !containerRef.current) return;
 
-    // For map drag, preserve the piece's rotation; for sidebar/placement, use currentRotation
-    const rotation = mapDragPiece?.rotation ?? currentRotation ?? selectedPiece.defaultRotation ?? 0;
+    // For map drag, preserve the piece's rotation; for sidebar/placement, use currentRotationRef (sync)
+    const rotation = mapDragPiece?.rotation ?? currentRotationRef.current ?? selectedPiece.defaultRotation ?? 0;
 
     // Swap dimensions if rotated 90 or 270 degrees
     const isRotated = rotation === 90 || rotation === 270;
@@ -1114,6 +1124,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
       isProp: selectedPiece.pieceType === 'prop',
       propEmoji: selectedPiece.propEmoji,
       propImage: selectedPiece.propImage,
+      // Store original dimensions for diagonal piece rendering
+      originalWidth: selectedPiece.isDiagonal ? selectedPiece.size.width : undefined,
+      originalHeight: selectedPiece.isDiagonal ? selectedPiece.size.height : undefined,
     };
 
     // Update both ref and state
@@ -1327,7 +1340,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
     // If in placement mode, place the piece (only if preview is visible and valid)
     if (isPlacementMode && selectedPiece && currentPreview.visible && !currentPreview.hasCollision) {
-      onDrop(currentPreview.x, currentPreview.y, currentRotation);
+      onDrop(currentPreview.x, currentPreview.y, currentPreview.rotation);
       exitPlacementMode();
       setDragPreview((prev) => ({ ...prev, visible: false }));
       return;
@@ -1526,27 +1539,34 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
                   )}
                 </>
               ) : dragPreview.isDiagonal ? (
-                <Group
-                  offsetX={dragPreview.width * pixelsPerInch / 2}
-                  offsetY={dragPreview.height * pixelsPerInch / 2}
-                  x={dragPreview.width * pixelsPerInch / 2}
-                  y={dragPreview.height * pixelsPerInch / 2}
-                  rotation={dragPreview.rotation}
-                >
-                  <Line
-                    points={[
-                      0, 0,
-                      dragPreview.width * pixelsPerInch, 0,
-                      0, dragPreview.height * pixelsPerInch,
-                    ]}
-                    closed
-                    fill={getPreviewColor()}
-                    opacity={dragPreview.hasCollision ? 0.5 : 0.4}
-                    stroke="#fff"
-                    strokeWidth={2}
-                    dash={[8, 4]}
-                  />
-                </Group>
+                (() => {
+                  // Use original dimensions for the triangle shape, effective dimensions for positioning
+                  const origW = (dragPreview.originalWidth ?? dragPreview.width) * pixelsPerInch;
+                  const origH = (dragPreview.originalHeight ?? dragPreview.height) * pixelsPerInch;
+                  return (
+                    <Group
+                      offsetX={origW / 2}
+                      offsetY={origH / 2}
+                      x={dragPreview.width * pixelsPerInch / 2}
+                      y={dragPreview.height * pixelsPerInch / 2}
+                      rotation={dragPreview.rotation}
+                    >
+                      <Line
+                        points={[
+                          0, 0,
+                          origW, 0,
+                          0, origH,
+                        ]}
+                        closed
+                        fill={getPreviewColor()}
+                        opacity={dragPreview.hasCollision ? 0.5 : 0.4}
+                        stroke="#fff"
+                        strokeWidth={2}
+                        dash={[8, 4]}
+                      />
+                    </Group>
+                  );
+                })()
               ) : (dragPreview.isCustom || dragPreview.isVariant) && dragPreview.cellColors && dragPreview.cellColors.length > 0 ? (
                 // Grid-based custom/variant piece preview
                 <>
