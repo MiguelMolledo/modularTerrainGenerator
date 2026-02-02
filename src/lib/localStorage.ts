@@ -31,9 +31,11 @@ const STORAGE_KEYS = {
   MAPS: 'mtc_maps',
   ELEVATIONS: 'mtc_elevations',
   APP_VERSION: 'mtc_version',
+  DEFAULTS_VERSION: 'mtc_defaults_version',
 } as const;
 
 const CURRENT_VERSION = '1.0.0';
+const DEFAULTS_VERSION = '2.0.0'; // Bump this when defaults change to force merge
 
 // Generic localStorage helpers
 function getItem<T>(key: string, defaultValue: T): T {
@@ -556,11 +558,38 @@ const DEFAULT_TERRAIN_IDS = {
   'lava-sand': '02bf230e-6fa8-45d0-8eda-4687e4cb7f91',
 } as const;
 
+// Helper to merge arrays by ID (user data overwrites defaults)
+function mergeByIdWithDefaults<T extends { id: string }>(defaults: T[], userData: T[]): T[] {
+  const map = new Map<string, T>();
+  // First add all defaults
+  for (const item of defaults) {
+    map.set(item.id, item);
+  }
+  // Then user data overwrites defaults where IDs match
+  for (const item of userData) {
+    map.set(item.id, item);
+  }
+  return Array.from(map.values());
+}
+
 export function initializeDefaultData(): void {
-  // Only initialize if no data exists
-  if (getShapes().length > 0 || getTerrainTypes().length > 0) {
+  // Check if we need to update defaults
+  const savedDefaultsVersion = getItem<string>(STORAGE_KEYS.DEFAULTS_VERSION, '');
+  const needsUpdate = savedDefaultsVersion !== DEFAULTS_VERSION;
+
+  // Get existing user data before any changes
+  const existingShapes = getShapes();
+  const existingTerrains = getTerrainTypes();
+  const existingPieces = getTerrainPieces();
+
+  // If no data exists or version changed, initialize/update defaults
+  if (existingShapes.length === 0 && existingTerrains.length === 0) {
+    // Fresh install - just save defaults
+  } else if (!needsUpdate) {
+    // Already up to date
     return;
   }
+  // Otherwise, we need to merge defaults with existing data
 
   // Default shapes (with fixed IDs and magnets)
   const defaultShapes: PieceShape[] = [
@@ -578,7 +607,9 @@ export function initializeDefaultData(): void {
     { id: DEFAULT_SHAPE_IDS['6x3-diagonal-tl'], shapeKey: '6x3-diagonal-tl', name: '6x3 Diagonal', width: 6, height: 3, isDiagonal: true, defaultRotation: 0, displayOrder: 12, magnets: [{ size: '3x2', quantity: 16 }] },
     { id: DEFAULT_SHAPE_IDS['6x6-e2-2-0-2'], shapeKey: '6x6-e2-2-0-2', name: '6x6 Block 3 Elevation', width: 6, height: 6, isDiagonal: false, defaultRotation: 0, displayOrder: 13, magnets: [{ size: '3x2', quantity: 16 }] },
   ];
-  saveShapes(defaultShapes);
+  // Merge with existing user shapes (user data takes priority)
+  const mergedShapes = mergeByIdWithDefaults(defaultShapes, existingShapes);
+  saveShapes(mergedShapes);
 
   // Default terrain types
   const defaultTerrains: StoredTerrainType[] = [
@@ -643,7 +674,9 @@ export function initializeDefaultData(): void {
       displayOrder: 6
     },
   ];
-  saveTerrainTypes(defaultTerrains);
+  // Merge with existing user terrains (user data takes priority)
+  const mergedTerrains = mergeByIdWithDefaults(defaultTerrains, existingTerrains);
+  saveTerrainTypes(mergedTerrains);
 
   // Default pieces for each terrain (with fixed IDs)
   const defaultPieces: StoredTerrainPiece[] = [
@@ -683,7 +716,9 @@ export function initializeDefaultData(): void {
     // Lava pieces
     { id: '5918d9c8-fa4b-4693-bcc7-7facde63403b', terrainTypeId: DEFAULT_TERRAIN_IDS.lava, shapeId: DEFAULT_SHAPE_IDS['6x6-flat'], quantity: 1 },
   ];
-  saveTerrainPieces(defaultPieces);
+  // Merge with existing user pieces (user data takes priority)
+  const mergedPieces = mergeByIdWithDefaults(defaultPieces, existingPieces);
+  saveTerrainPieces(mergedPieces);
 
   // Default template
   const standardTemplateId = 'standard-template-001';
@@ -702,6 +737,7 @@ export function initializeDefaultData(): void {
   saveTemplateItems(defaultTemplateItems);
 
   setItem(STORAGE_KEYS.APP_VERSION, CURRENT_VERSION);
+  setItem(STORAGE_KEYS.DEFAULTS_VERSION, DEFAULTS_VERSION);
 }
 
 /**
