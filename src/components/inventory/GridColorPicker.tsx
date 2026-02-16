@@ -60,13 +60,13 @@ export function GridColorPicker({
       {/* Terrain Selector */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-300">
+          <label className="text-sm font-medium text-muted-foreground">
             Select terrain to paint
           </label>
           <button
             type="button"
             onClick={handleFillAll}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-secondary hover:bg-accent rounded transition-colors"
             title="Fill all cells with selected terrain"
           >
             <Paintbrush className="w-3 h-3" />
@@ -81,15 +81,15 @@ export function GridColorPicker({
               onClick={() => setSelectedTerrainId(terrain.id)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
                 selectedTerrainId === terrain.id
-                  ? 'ring-2 ring-blue-500 bg-gray-700'
-                  : 'bg-gray-800 hover:bg-gray-700'
+                  ? 'ring-2 ring-ring bg-secondary'
+                  : 'bg-card hover:bg-secondary'
               }`}
             >
               <div
-                className="w-4 h-4 rounded-full border border-gray-600"
+                className="w-4 h-4 rounded-full border border-border"
                 style={{ backgroundColor: terrain.color }}
               />
-              <span className="text-sm text-white">
+              <span className="text-sm text-foreground">
                 {terrain.icon} {terrain.name}
               </span>
             </button>
@@ -99,12 +99,12 @@ export function GridColorPicker({
 
       {/* Grid Display */}
       <div>
-        <label className="text-sm font-medium text-gray-300 block mb-2">
+        <label className="text-sm font-medium text-muted-foreground block mb-2">
           Click cells to paint ({cols}x{rows} grid)
         </label>
-        <div className="bg-gray-800 rounded-lg p-4 flex items-center justify-center">
+        <div className="bg-card rounded-lg p-4 flex items-center justify-center">
           <div
-            className="border-2 border-gray-600 rounded overflow-hidden"
+            className="border-2 border-border rounded overflow-hidden"
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${cols}, ${cellPixelSize}px)`,
@@ -138,7 +138,7 @@ export function GridColorPicker({
             )}
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-2 text-center">
+        <p className="text-xs text-muted-foreground mt-2 text-center">
           Currently painting: {selectedTerrain?.icon} {selectedTerrain?.name}
         </p>
       </div>

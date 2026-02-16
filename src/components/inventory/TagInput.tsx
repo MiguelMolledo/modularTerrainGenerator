@@ -48,7 +48,7 @@ export function TagInput({ tags, onChange, placeholder = 'Add tag...' }: TagInpu
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
-                className="hover:text-white transition-colors"
+                className="hover:text-foreground transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -65,19 +65,19 @@ export function TagInput({ tags, onChange, placeholder = 'Add tag...' }: TagInpu
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="flex-1 px-3 py-2 bg-card border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
         <button
           type="button"
           onClick={addTag}
           disabled={!inputValue.trim()}
-          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg transition-colors"
+          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-secondary disabled:text-muted-foreground text-white rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
         </button>
       </div>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-muted-foreground">
         Press Enter to add a tag, Backspace to remove the last one
       </p>
     </div>

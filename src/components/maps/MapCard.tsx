@@ -131,7 +131,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
   };
 
   return (
-    <Card className={`group hover:ring-2 hover:ring-blue-500 transition-all overflow-visible relative ${isMenuOpen ? 'z-[9999]' : ''}`}>
+    <Card className={`group hover:ring-2 hover:ring-primary transition-all overflow-visible relative ${isMenuOpen ? 'z-[9999]' : ''}`}>
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -157,12 +157,12 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
         >
           {/* Front - Custom Thumbnail */}
           <div
-            className="absolute inset-0 bg-gray-800"
+            className="absolute inset-0 bg-card"
             style={{ backfaceVisibility: 'hidden' }}
             onClick={handleEdit}
           >
             {isUploading ? (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
                   <div className="animate-spin text-2xl mb-1">⏳</div>
                   <div className="text-xs">Uploading...</div>
@@ -175,7 +175,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
                   <div className="text-3xl mb-1">🗺️</div>
                   <div className="text-xs">No preview</div>
@@ -185,7 +185,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
 
             {/* Custom thumbnail badge */}
             {map.isCustomThumbnail && map.thumbnail && !isUploading && (
-              <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded">
+              <div className="absolute top-2 left-2 bg-primary text-white text-xs px-1.5 py-0.5 rounded">
                 Custom
               </div>
             )}
@@ -208,7 +208,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
 
           {/* Back - Auto-generated Snapshot */}
           <div
-            className="absolute inset-0 bg-gray-800"
+            className="absolute inset-0 bg-card"
             style={{
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
@@ -222,7 +222,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-500">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
                   <div className="text-3xl mb-1">📷</div>
                   <div className="text-xs">No snapshot</div>
@@ -231,7 +231,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
             )}
 
             {/* Snapshot badge */}
-            <div className="absolute top-2 left-2 bg-gray-600 text-white text-xs px-1.5 py-0.5 rounded">
+            <div className="absolute top-2 left-2 bg-secondary text-foreground text-xs px-1.5 py-0.5 rounded">
               Snapshot
             </div>
 
@@ -262,36 +262,36 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
         {/* Dropdown menu */}
         {isMenuOpen && (
           <div
-            className="absolute right-0 top-10 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] z-[9999] max-h-[400px] overflow-y-auto"
+            className="absolute right-0 top-10 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[160px] z-[9999] max-h-[400px] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-accent flex items-center gap-2"
               onClick={handleEdit}
             >
               <Edit2 className="h-4 w-4" /> Edit
             </button>
             <button
-              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-accent flex items-center gap-2"
               onClick={handleDuplicate}
             >
               <Copy className="h-4 w-4" /> Duplicate
             </button>
             <button
-              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-accent flex items-center gap-2"
               onClick={handleExport}
             >
               <Download className="h-4 w-4" /> Export JSON
             </button>
             <button
-              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-accent flex items-center gap-2"
               onClick={handleExportReport}
             >
               <FileText className="h-4 w-4" /> Export Report
             </button>
-            <hr className="my-1 border-gray-700" />
+            <hr className="my-1 border-border" />
             <button
-              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-700 flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-accent flex items-center gap-2"
               onClick={handleUploadClick}
               disabled={isUploading}
             >
@@ -300,18 +300,18 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
             </button>
             {map.isCustomThumbnail && (
               <button
-                className="w-full px-3 py-2 text-left text-sm text-orange-400 hover:bg-gray-700 flex items-center gap-2"
+                className="w-full px-3 py-2 text-left text-sm text-orange-400 hover:bg-accent flex items-center gap-2"
                 onClick={handleRemoveThumbnail}
               >
                 <ImageOff className="h-4 w-4" /> Remove Custom
               </button>
             )}
-            <hr className="my-1 border-gray-700" />
+            <hr className="my-1 border-border" />
             <button
               className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
                 isDeleting
-                  ? 'text-red-400 bg-red-950 hover:bg-red-900'
-                  : 'text-red-400 hover:bg-gray-700'
+                  ? 'text-destructive bg-destructive/20 hover:bg-destructive/30'
+                  : 'text-destructive hover:bg-accent'
               }`}
               onClick={handleDelete}
             >
@@ -337,12 +337,12 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
                 setIsRenaming(false);
               }
             }}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
+            className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground text-sm"
             autoFocus
           />
         ) : (
           <h3
-            className="font-medium text-white text-sm truncate cursor-pointer hover:text-blue-400"
+            className="font-medium text-foreground text-sm truncate cursor-pointer hover:text-primary"
             onClick={() => setIsRenaming(true)}
             title="Click to rename"
           >
@@ -351,7 +351,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
         )}
 
         {/* Info */}
-        <div className="mt-1 text-xs text-gray-400 flex justify-between">
+        <div className="mt-1 text-xs text-muted-foreground flex justify-between">
           <span>
             {map.mapWidth}&quot; x {map.mapHeight}&quot;
           </span>
@@ -359,7 +359,7 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
         </div>
 
         {/* Date */}
-        <div className="mt-1 text-xs text-gray-500">
+        <div className="mt-1 text-xs text-muted-foreground">
           Updated {formatDate(map.updatedAt)}
         </div>
       </CardContent>

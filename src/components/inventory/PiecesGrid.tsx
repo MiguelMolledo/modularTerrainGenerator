@@ -5,6 +5,7 @@ import { useInventoryStore } from '@/store/inventoryStore';
 import { useElevationStore, createElevationKey } from '@/store/elevationStore';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Save, Minus, Plus, Layers, Pencil, Trash2, Mountain, Eye, EyeOff } from 'lucide-react';
 import { PieceVariantFormDialog } from './PieceVariantFormDialog';
 import { CustomPiecePreview } from './CustomPiecePreview';
@@ -118,7 +119,7 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
     <div className="p-4">
       {/* Header with save button */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Set the quantity of each piece shape for this terrain
         </p>
         {hasChanges && (
@@ -129,21 +130,21 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
         )}
       </div>
 
-      {/* Grid of shapes */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {shapes.map((shape) => {
-          const quantity = quantities[shape.id] || 0;
-          const isEnabled = isShapeEnabled(shape.id);
+      {(() => {
+        const enabledShapes = shapes.filter((s) => isShapeEnabled(s.id));
+        const disabledShapes = shapes.filter((s) => !isShapeEnabled(s.id));
 
+        const renderShapeCard = (shape: PieceShape, isEnabled: boolean) => {
+          const quantity = quantities[shape.id] || 0;
           return (
-            <Card key={shape.id} className={`p-4 relative ${!isEnabled ? 'opacity-50' : ''}`}>
+            <Card key={shape.id} className={`p-4 relative transition-all duration-150 hover:shadow-md hover:scale-[1.02] ${!isEnabled ? 'opacity-50' : ''}`}>
               {/* Enable/Disable toggle */}
               <button
                 onClick={() => handleToggleEnabled(shape.id)}
                 className={`absolute top-2 right-2 p-1.5 rounded-lg transition-colors ${
                   isEnabled
                     ? 'text-green-400 hover:bg-green-900/30'
-                    : 'text-gray-500 hover:bg-gray-700/50'
+                    : 'text-muted-foreground hover:bg-secondary/50'
                 }`}
                 title={isEnabled ? 'Visible in designer (click to hide)' : 'Hidden from designer (click to show)'}
               >
@@ -171,7 +172,7 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
                   </svg>
                 ) : (
                   <div
-                    className="border-2 border-gray-600"
+                    className="border-2 border-border"
                     style={{
                       width: `${Math.min(60, shape.width * 15)}px`,
                       height: `${Math.min(60, shape.height * 15)}px`,
@@ -183,10 +184,10 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
 
               {/* Shape name */}
               <div className="text-center mb-3">
-                <span className="text-sm font-medium text-white">
+                <span className="text-sm font-medium text-foreground">
                   {shape.name}
                 </span>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {shape.width}&quot; x {shape.height}&quot;
                 </p>
               </div>
@@ -202,15 +203,9 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
                   <Minus className="h-4 w-4" />
                 </Button>
 
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) =>
-                    handleQuantityChange(shape.id, parseInt(e.target.value) || 0)
-                  }
-                  className="w-16 text-center bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white"
-                  min="0"
-                />
+                <span className="w-10 text-center text-foreground font-medium tabular-nums">
+                  {quantity}
+                </span>
 
                 <Button
                   variant="outline"
@@ -238,8 +233,8 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
                   size="sm"
                   className={`flex-1 ${
                     getShapeElevation(shape.shapeKey)
-                      ? 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/30'
-                      : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700/30'
+                      ? 'text-primary hover:text-primary hover:bg-primary/10'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/30'
                   }`}
                   onClick={() => handleEditElevation(shape)}
                   disabled={shape.isDiagonal}
@@ -251,19 +246,54 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
               </div>
             </Card>
           );
-        })}
-      </div>
+        };
 
-      {shapes.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          No shapes available. Please check your database configuration.
-        </div>
-      )}
+        return (
+          <>
+            {/* Active pieces */}
+            {enabledShapes.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <Eye className="h-4 w-4 text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Active ({enabledShapes.length})</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {enabledShapes.map((shape) => renderShapeCard(shape, true))}
+                </div>
+              </>
+            )}
+
+            {/* Separator between active and inactive */}
+            {enabledShapes.length > 0 && disabledShapes.length > 0 && (
+              <Separator className="my-6" />
+            )}
+
+            {/* Inactive pieces */}
+            {disabledShapes.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Inactive ({disabledShapes.length})</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {disabledShapes.map((shape) => renderShapeCard(shape, false))}
+                </div>
+              </>
+            )}
+
+            {shapes.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No shapes available. Please check your database configuration.
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Variants section */}
       {terrain.variants && terrain.variants.length > 0 && (
         <div className="mt-8">
-          <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
             <Layers className="h-5 w-5 text-purple-400" />
             Variants
           </h3>
@@ -288,8 +318,8 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-white font-medium truncate">{variant.name}</h4>
-                      <p className="text-gray-500 text-xs">{shape.name}</p>
+                      <h4 className="text-foreground font-medium truncate">{variant.name}</h4>
+                      <p className="text-muted-foreground text-xs">{shape.name}</p>
 
                       {/* Tags */}
                       {variant.tags.length > 0 && (
@@ -306,12 +336,12 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
                       )}
 
                       {/* Quantity */}
-                      <p className="text-gray-400 text-sm mt-2">Qty: {variant.quantity}</p>
+                      <p className="text-muted-foreground text-sm mt-2">Qty: {variant.quantity}</p>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-700">
+                  <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-border">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -323,7 +353,7 @@ export function PiecesGrid({ terrainTypeId }: PiecesGridProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
+                      className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                       onClick={() => handleDeleteVariant(variant.id)}
                     >
                       <Trash2 className="h-3 w-3 mr-1" />

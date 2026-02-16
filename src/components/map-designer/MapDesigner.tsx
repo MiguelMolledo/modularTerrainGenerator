@@ -21,10 +21,10 @@ const Map3DViewer = lazy(() =>
 
 function Loading3D() {
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gray-900">
+    <div className="w-full h-full flex items-center justify-center bg-background">
       <div className="text-center">
-        <Loader2 className="h-8 w-8 text-blue-500 animate-spin mx-auto" />
-        <p className="text-gray-400 mt-2">Loading 3D view...</p>
+        <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto" />
+        <p className="text-muted-foreground mt-2">Loading 3D view...</p>
       </div>
     </div>
   );
@@ -84,7 +84,7 @@ export function MapDesigner() {
   };
 
   return (
-    <div className="h-[calc(100vh-3rem)] flex flex-col bg-gray-900">
+    <div className="h-[calc(100vh-3rem)] flex flex-col bg-background">
       <UnsavedChangesGuard />
       <Toolbar />
       <div className="flex-1 flex overflow-hidden min-h-0">

@@ -10,10 +10,10 @@ import * as THREE from 'three';
 
 function LoadingFallback() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+    <div className="absolute inset-0 flex items-center justify-center bg-background">
       <div className="text-center">
-        <Loader2 className="h-8 w-8 text-blue-500 animate-spin mx-auto" />
-        <p className="text-gray-400 mt-2">Loading 3D view...</p>
+        <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto" />
+        <p className="text-muted-foreground mt-2">Loading 3D view...</p>
       </div>
     </div>
   );
@@ -62,7 +62,7 @@ export function Map3DViewer() {
   const cameraHeight = cameraDistance * 0.6;
 
   return (
-    <div className="w-full h-full relative bg-gray-900">
+    <div className="w-full h-full relative bg-background">
       <Suspense fallback={<LoadingFallback />}>
         <Canvas
           shadows
@@ -85,12 +85,12 @@ export function Map3DViewer() {
       </Suspense>
 
       {/* 3D View Controls Legend */}
-      <div className="absolute bottom-4 left-4 bg-gray-800/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-gray-300">
+      <div className="absolute bottom-4 left-4 bg-card/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-muted-foreground">
         <div className="space-y-1">
-          <div><span className="text-gray-500">Rotate:</span> Left click + drag</div>
-          <div><span className="text-gray-500">Pan:</span> Right click + drag</div>
-          <div><span className="text-gray-500">Zoom:</span> Scroll wheel</div>
-          <div><span className="text-gray-500">Toggle 2D:</span> V</div>
+          <div><span className="text-muted-foreground">Rotate:</span> Left click + drag</div>
+          <div><span className="text-muted-foreground">Pan:</span> Right click + drag</div>
+          <div><span className="text-muted-foreground">Zoom:</span> Scroll wheel</div>
+          <div><span className="text-muted-foreground">Toggle 2D:</span> V</div>
         </div>
       </div>
     </div>

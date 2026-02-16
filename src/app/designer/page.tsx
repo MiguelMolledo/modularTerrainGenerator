@@ -94,7 +94,7 @@ function MapLoader() {
 
 export default function DesignerPage() {
   return (
-    <Suspense fallback={<div className="h-[calc(100vh-3rem)] bg-gray-900 flex items-center justify-center text-white">Loading...</div>}>
+    <Suspense fallback={<div className="h-[calc(100vh-3rem)] bg-background flex items-center justify-center text-foreground">Loading...</div>}>
       <MapLoader />
     </Suspense>
   );

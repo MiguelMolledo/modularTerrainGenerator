@@ -36,7 +36,7 @@ export function ObjectsList({ terrainTypeId }: ObjectsListProps) {
     <div className="p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-muted-foreground">
           3D objects for this terrain (dimensions in inches)
         </p>
         <Button size="sm" onClick={() => setIsAddDialogOpen(true)}>
@@ -55,19 +55,19 @@ export function ObjectsList({ terrainTypeId }: ObjectsListProps) {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-white">{obj.name}</h4>
-                <p className="text-sm text-gray-400">
+                <h4 className="font-medium text-foreground">{obj.name}</h4>
+                <p className="text-sm text-muted-foreground">
                   {obj.width}&quot; x {obj.height}&quot; x {obj.depth}&quot;
                 </p>
                 {obj.description && (
-                  <p className="text-xs text-gray-500 truncate">{obj.description}</p>
+                  <p className="text-xs text-muted-foreground truncate">{obj.description}</p>
                 )}
               </div>
 
               {/* Quantity */}
               <div className="text-center">
-                <span className="text-lg font-semibold text-white">{obj.quantity}</span>
-                <p className="text-xs text-gray-500">qty</p>
+                <span className="text-lg font-semibold text-foreground">{obj.quantity}</span>
+                <p className="text-xs text-muted-foreground">qty</p>
               </div>
 
               {/* Actions */}
@@ -78,7 +78,7 @@ export function ObjectsList({ terrainTypeId }: ObjectsListProps) {
                   className="h-8 w-8"
                   onClick={() => setEditingObject(obj)}
                 >
-                  <Edit2 className="h-4 w-4 text-gray-400" />
+                  <Edit2 className="h-4 w-4 text-muted-foreground" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -88,14 +88,14 @@ export function ObjectsList({ terrainTypeId }: ObjectsListProps) {
                 >
                   <Trash2
                     className={`h-4 w-4 ${
-                      deletingId === obj.id ? 'text-red-500' : 'text-gray-400'
+                      deletingId === obj.id ? 'text-destructive' : 'text-muted-foreground'
                     }`}
                   />
                 </Button>
               </div>
             </div>
             {deletingId === obj.id && (
-              <p className="text-xs text-red-400 mt-2">
+              <p className="text-xs text-destructive mt-2">
                 Click again to confirm delete
               </p>
             )}
@@ -103,7 +103,7 @@ export function ObjectsList({ terrainTypeId }: ObjectsListProps) {
         ))}
 
         {terrain.objects.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             <p>No 3D objects yet</p>
             <p className="text-sm mt-1">Add objects like trees, rocks, or buildings</p>
           </div>

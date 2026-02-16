@@ -23,11 +23,11 @@ export function TopNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="h-12 bg-gray-950 border-b border-gray-800 flex items-center px-4">
+    <nav className="h-12 bg-background border-b border-border flex items-center px-4">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2 mr-8">
         <span className="text-2xl">🗺️</span>
-        <span className="font-bold text-white hidden sm:inline">Terrain Creator</span>
+        <span className="font-bold text-foreground hidden sm:inline">Terrain Creator</span>
       </Link>
 
       {/* Navigation links */}
@@ -42,8 +42,8 @@ export function TopNav() {
               href={item.href}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                 isActive
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                  ? 'bg-card text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
               }`}
             >
               {item.icon}
@@ -57,7 +57,7 @@ export function TopNav() {
       <div className="flex-1" />
 
       {/* Right side - could add user menu, etc. */}
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-muted-foreground">
         Modular Terrain Creator
       </div>
     </nav>

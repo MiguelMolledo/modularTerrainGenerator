@@ -118,14 +118,14 @@ export function PiecesSummaryPanel() {
       {/* Toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-24 bg-gray-800 hover:bg-gray-700 border border-gray-600 border-r-0 rounded-l-lg flex items-center justify-center self-center transition-colors"
+        className="w-10 h-24 bg-card hover:bg-accent border border-border border-r-0 rounded-l-lg flex items-center justify-center self-center transition-colors"
         title={isOpen ? 'Hide summary' : 'Show summary'}
       >
         <div className="flex flex-col items-center gap-1">
           {isOpen ? (
-            <ChevronRight className="w-5 h-5 text-gray-300" />
+            <ChevronRight className="w-5 h-5 text-foreground" />
           ) : (
-            <ChevronLeft className="w-5 h-5 text-gray-300" />
+            <ChevronLeft className="w-5 h-5 text-foreground" />
           )}
           {totalPieces > 0 && (
             <span
@@ -140,10 +140,10 @@ export function PiecesSummaryPanel() {
       </button>
 
       {/* Panel content */}
-      <div className="w-64 bg-gray-800 border-l border-gray-600 flex flex-col h-full">
-        <div className="p-3 border-b border-gray-700">
-          <h2 className="text-sm font-semibold text-white">Pieces Summary</h2>
-          <p className="text-xs text-gray-400">
+      <div className="w-64 bg-card border-l border-border flex flex-col h-full">
+        <div className="p-3 border-b border-border">
+          <h2 className="text-sm font-semibold text-foreground">Pieces Summary</h2>
+          <p className="text-xs text-muted-foreground">
             {totalPieces} pieces on map
             {overusedCount > 0 && (
               <span className="text-red-400 ml-2">({overusedCount} overused)</span>
@@ -152,7 +152,7 @@ export function PiecesSummaryPanel() {
         </div>
 
         {usedPieces.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-gray-500 text-sm p-4 text-center">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm p-4 text-center">
             No pieces placed yet.
             <br />
             Drag pieces from the left sidebar.
@@ -163,10 +163,10 @@ export function PiecesSummaryPanel() {
               {usedPieces.map(({ piece, used, remaining, terrain }) => (
                 <div
                   key={piece.id}
-                  className={`p-2 rounded border ${
+                  className={`p-2 rounded border transition-all duration-150 ${
                     remaining < 0
                       ? 'border-red-500/50 bg-red-950/30'
-                      : 'border-gray-700 bg-gray-900/50'
+                      : 'border-border bg-background/50 hover:bg-accent hover:scale-[1.02] hover:shadow-md'
                   }`}
                 >
                   <div className="flex justify-between items-start">
@@ -175,20 +175,20 @@ export function PiecesSummaryPanel() {
                         <span style={{ color: terrain?.color }}>
                           {terrain?.icon}
                         </span>
-                        <span className="text-sm text-white truncate">
+                        <span className="text-sm text-foreground truncate">
                           {piece.name}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {piece.size.label}
                         {piece.isDiagonal && ' (Diagonal)'}
                       </p>
                     </div>
                     <div className="text-right shrink-0 ml-2">
                       <div className="text-sm">
-                        <span className="text-white font-medium">{used}</span>
-                        <span className="text-gray-500"> / </span>
-                        <span className="text-gray-400">{piece.quantity}</span>
+                        <span className="text-foreground font-medium">{used}</span>
+                        <span className="text-muted-foreground"> / </span>
+                        <span className="text-muted-foreground">{piece.quantity}</span>
                       </div>
                       {remaining < 0 && (
                         <span className="text-xs text-red-400 font-bold">
@@ -234,17 +234,17 @@ export function PiecesSummaryPanel() {
 
         {/* Summary footer */}
         {usedPieces.length > 0 && (
-          <div className="p-3 border-t border-gray-700 bg-gray-900">
-            <div className="text-xs text-gray-400 space-y-1">
+          <div className="p-3 border-t border-border bg-background">
+            <div className="text-xs text-muted-foreground space-y-1">
               <div className="flex justify-between">
                 <span>Unique piece types:</span>
-                <span className="text-white">{usedPieces.length}</span>
+                <span className="text-foreground">{usedPieces.length}</span>
               </div>
               <div className="flex justify-between">
                 <span>Total pieces needed:</span>
                 <span
                   className={
-                    overusedCount > 0 ? 'text-red-400 font-bold' : 'text-white'
+                    overusedCount > 0 ? 'text-destructive font-bold' : 'text-foreground'
                   }
                 >
                   {usedPieces.reduce(
@@ -257,10 +257,10 @@ export function PiecesSummaryPanel() {
 
             {/* Magnet Summary */}
             {totalMagnets > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-700">
+              <div className="mt-3 pt-3 border-t border-border">
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-sm">🧲</span>
-                  <span className="text-xs font-medium text-gray-300">
+                  <span className="text-xs font-medium text-foreground">
                     Magnets
                   </span>
                 </div>
@@ -268,7 +268,7 @@ export function PiecesSummaryPanel() {
                 {/* Magnets for map */}
                 <div className="space-y-1 mb-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">For map:</span>
+                    <span className="text-muted-foreground">For map:</span>
                     <span className="text-purple-400 font-bold">{totalMagnets}</span>
                   </div>
                   {magnetSummary.map(({ size, quantity }) => (
@@ -276,15 +276,15 @@ export function PiecesSummaryPanel() {
                       key={size}
                       className="flex justify-between text-xs pl-2"
                     >
-                      <span className="text-gray-500 font-mono">{size}</span>
-                      <span className="text-gray-300">{quantity}</span>
+                      <span className="text-muted-foreground font-mono">{size}</span>
+                      <span className="text-foreground">{quantity}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Magnets needed for pieces to build */}
                 {totalMagnetsNeeded > 0 && (
-                  <div className="space-y-1 pt-2 border-t border-gray-700/50">
+                  <div className="space-y-1 pt-2 border-t border-border/50">
                     <div className="flex justify-between text-xs">
                       <span className="text-red-400">To build:</span>
                       <span className="text-red-400 font-bold">{totalMagnetsNeeded}</span>
@@ -294,7 +294,7 @@ export function PiecesSummaryPanel() {
                         key={`need-${size}`}
                         className="flex justify-between text-xs pl-2"
                       >
-                        <span className="text-gray-500 font-mono">{size}</span>
+                        <span className="text-muted-foreground font-mono">{size}</span>
                         <span className="text-red-300">{quantity}</span>
                       </div>
                     ))}

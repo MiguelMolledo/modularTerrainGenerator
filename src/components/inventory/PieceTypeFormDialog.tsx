@@ -280,7 +280,7 @@ export function PieceTypeFormDialog({
 
         <div className="space-y-4 py-4">
           {/* Preview */}
-          <div className="flex justify-center py-4 bg-gray-800 rounded-lg">
+          <div className="flex justify-center py-4 bg-card rounded-lg">
             {isDiagonal ? (
               <svg
                 width="80"
@@ -347,7 +347,7 @@ export function PieceTypeFormDialog({
               </svg>
             ) : (
               <div
-                className="border-2 border-gray-600 bg-gray-700"
+                className="border-2 border-border bg-secondary"
                 style={{
                   width: `${Math.min(80, width * 15)}px`,
                   height: `${Math.min(80, height * 15)}px`,
@@ -358,7 +358,7 @@ export function PieceTypeFormDialog({
 
           {/* Name */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-2">
+            <label className="text-sm font-medium text-muted-foreground block mb-2">
               Name (optional)
             </label>
             <input
@@ -366,20 +366,20 @@ export function PieceTypeFormDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={generateDefaultName()}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           {/* Dimensions */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Width (inches)
               </label>
               <select
                 value={width}
                 onChange={(e) => setWidth(Number(e.target.value))}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {STANDARD_SIZES.map((size) => (
                   <option key={size} value={size}>
@@ -389,13 +389,13 @@ export function PieceTypeFormDialog({
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Height (inches)
               </label>
               <select
                 value={height}
                 onChange={(e) => setHeight(Number(e.target.value))}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {STANDARD_SIZES.map((size) => (
                   <option key={size} value={size}>
@@ -418,9 +418,9 @@ export function PieceTypeFormDialog({
                   setDefaultRotation(0);
                 }
               }}
-              className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+              className="w-4 h-4 rounded border-border bg-card text-primary focus:ring-ring"
             />
-            <label htmlFor="isDiagonal" className="text-sm text-gray-300">
+            <label htmlFor="isDiagonal" className="text-sm text-muted-foreground">
               Diagonal (triangular) piece
             </label>
           </div>
@@ -428,7 +428,7 @@ export function PieceTypeFormDialog({
           {/* Rotation for diagonal */}
           {isDiagonal && (
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Corner Position
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -444,14 +444,14 @@ export function PieceTypeFormDialog({
                     onClick={() => setDefaultRotation(option.value)}
                     className={`p-2 rounded-lg border text-center ${
                       defaultRotation === option.value
-                        ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500'
-                        : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                        ? 'bg-primary/20 border-primary ring-1 ring-ring'
+                        : 'bg-card border-border hover:border-border'
                     }`}
                   >
-                    <div className="text-sm font-medium text-white">
+                    <div className="text-sm font-medium text-foreground">
                       {option.label}
                     </div>
-                    <div className="text-xs text-gray-400">{option.desc}</div>
+                    <div className="text-xs text-muted-foreground">{option.desc}</div>
                   </button>
                 ))}
               </div>
@@ -460,7 +460,7 @@ export function PieceTypeFormDialog({
 
           {/* Base Height */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-2">
+            <label className="text-sm font-medium text-muted-foreground block mb-2">
               Base Height (3D thickness)
             </label>
             <div className="flex flex-wrap gap-2">
@@ -471,46 +471,46 @@ export function PieceTypeFormDialog({
                   onClick={() => setBaseHeight(h)}
                   className={`px-3 py-1.5 rounded-lg border text-sm ${
                     baseHeight === h
-                      ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500 text-white'
-                      : 'bg-gray-800 border-gray-700 hover:border-gray-600 text-gray-300'
+                      ? 'bg-primary/20 border-primary ring-1 ring-ring text-foreground'
+                      : 'bg-card border-border hover:border-border text-muted-foreground'
                   }`}
                 >
                   {h}&quot;
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Thickness of the piece in 3D view (default: 0.5&quot;)
             </p>
           </div>
 
           {/* Elevation Section (only for non-diagonal) */}
           {!isDiagonal && (
-            <div className="border border-gray-700 rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowElevation(!showElevation)}
-                className="w-full px-4 py-3 flex items-center justify-between bg-gray-800/50 hover:bg-gray-800 transition-colors"
+                className="w-full px-4 py-3 flex items-center justify-between bg-secondary/50 hover:bg-card transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-300">
+                  <span className="text-sm font-medium text-muted-foreground">
                     3D Elevation
                   </span>
                   {hasElevation && (
-                    <span className="text-xs bg-blue-600/30 text-blue-400 px-2 py-0.5 rounded">
+                    <span className="text-xs bg-primary/30 text-primary px-2 py-0.5 rounded">
                       Configured
                     </span>
                   )}
                 </div>
                 {showElevation ? (
-                  <ChevronUp className="h-4 w-4 text-gray-400" />
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 )}
               </button>
 
               {showElevation && (
-                <div className="p-4 space-y-4 border-t border-gray-700">
+                <div className="p-4 space-y-4 border-t border-border">
                   {/* Presets */}
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -564,10 +564,10 @@ export function PieceTypeFormDialog({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">NW</span>
-                        <span className="text-white font-mono">
+                        <span className="text-muted-foreground">NW</span>
+                        <span className="text-foreground font-mono">
                           {(baseHeight + elevation.nw).toFixed(1)}&quot;
-                          <span className="text-gray-500 text-xs ml-1">(+{elevation.nw.toFixed(1)})</span>
+                          <span className="text-muted-foreground text-xs ml-1">(+{elevation.nw.toFixed(1)})</span>
                         </span>
                       </div>
                       <Slider
@@ -580,10 +580,10 @@ export function PieceTypeFormDialog({
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">NE</span>
-                        <span className="text-white font-mono">
+                        <span className="text-muted-foreground">NE</span>
+                        <span className="text-foreground font-mono">
                           {(baseHeight + elevation.ne).toFixed(1)}&quot;
-                          <span className="text-gray-500 text-xs ml-1">(+{elevation.ne.toFixed(1)})</span>
+                          <span className="text-muted-foreground text-xs ml-1">(+{elevation.ne.toFixed(1)})</span>
                         </span>
                       </div>
                       <Slider
@@ -596,10 +596,10 @@ export function PieceTypeFormDialog({
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">SW</span>
-                        <span className="text-white font-mono">
+                        <span className="text-muted-foreground">SW</span>
+                        <span className="text-foreground font-mono">
                           {(baseHeight + elevation.sw).toFixed(1)}&quot;
-                          <span className="text-gray-500 text-xs ml-1">(+{elevation.sw.toFixed(1)})</span>
+                          <span className="text-muted-foreground text-xs ml-1">(+{elevation.sw.toFixed(1)})</span>
                         </span>
                       </div>
                       <Slider
@@ -612,10 +612,10 @@ export function PieceTypeFormDialog({
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">SE</span>
-                        <span className="text-white font-mono">
+                        <span className="text-muted-foreground">SE</span>
+                        <span className="text-foreground font-mono">
                           {(baseHeight + elevation.se).toFixed(1)}&quot;
-                          <span className="text-gray-500 text-xs ml-1">(+{elevation.se.toFixed(1)})</span>
+                          <span className="text-muted-foreground text-xs ml-1">(+{elevation.se.toFixed(1)})</span>
                         </span>
                       </div>
                       <Slider
@@ -628,7 +628,7 @@ export function PieceTypeFormDialog({
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Base height: {baseHeight}&quot;. Sliders add 0-2.5&quot; elevation per corner (total: {baseHeight}&quot; - {(baseHeight + MAX_ELEVATION).toFixed(1)}&quot;).
                   </p>
                 </div>
@@ -637,14 +637,14 @@ export function PieceTypeFormDialog({
           )}
 
           {/* Magnets Section */}
-          <div className="border border-gray-700 rounded-lg overflow-hidden">
+          <div className="border border-border rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setShowMagnets(!showMagnets)}
-              className="w-full px-4 py-3 flex items-center justify-between bg-gray-800/50 hover:bg-gray-800 transition-colors"
+              className="w-full px-4 py-3 flex items-center justify-between bg-secondary/50 hover:bg-card transition-colors"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-300">
+                <span className="text-sm font-medium text-muted-foreground">
                   🧲 Magnets
                 </span>
                 {magnets.length > 0 && (
@@ -654,16 +654,16 @@ export function PieceTypeFormDialog({
                 )}
               </div>
               {showMagnets ? (
-                <ChevronUp className="h-4 w-4 text-gray-400" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
             </button>
 
             {showMagnets && (
-              <div className="p-4 space-y-3 border-t border-gray-700">
+              <div className="p-4 space-y-3 border-t border-border">
                 {magnets.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-2">
+                  <p className="text-sm text-muted-foreground text-center py-2">
                     No magnets configured
                   </p>
                 ) : (
@@ -675,20 +675,20 @@ export function PieceTypeFormDialog({
                           value={magnet.size}
                           onChange={(e) => updateMagnet(index, 'size', e.target.value)}
                           placeholder="Size (e.g., 3x2)"
-                          className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          className="flex-1 bg-card border border-border rounded px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
                         />
-                        <span className="text-gray-500 text-sm">×</span>
+                        <span className="text-muted-foreground text-sm">×</span>
                         <input
                           type="number"
                           value={magnet.quantity}
                           onChange={(e) => updateMagnet(index, 'quantity', parseInt(e.target.value) || 1)}
                           min={1}
-                          className="w-16 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-white text-center focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          className="w-16 bg-card border border-border rounded px-2 py-1.5 text-sm text-foreground text-center focus:outline-none focus:ring-1 focus:ring-purple-500"
                         />
                         <button
                           type="button"
                           onClick={() => removeMagnet(index)}
-                          className="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
+                          className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -708,7 +708,7 @@ export function PieceTypeFormDialog({
                   Add Magnet Type
                 </Button>
 
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Enter magnet dimensions (e.g., 3x2, 5x10) and quantity per piece.
                 </p>
               </div>
@@ -716,12 +716,12 @@ export function PieceTypeFormDialog({
           </div>
 
           {/* Generated key preview */}
-          <div className={`rounded-lg p-3 ${existingConflict ? 'bg-red-900/30 border border-red-500/50' : 'bg-gray-800/50'}`}>
-            <p className="text-xs text-gray-400">
-              Shape key: <span className="text-white font-mono">{shapeKey}</span>
+          <div className={`rounded-lg p-3 ${existingConflict ? 'bg-destructive/20 border border-destructive/50' : 'bg-secondary/50'}`}>
+            <p className="text-xs text-muted-foreground">
+              Shape key: <span className="text-foreground font-mono">{shapeKey}</span>
             </p>
             {existingConflict && (
-              <p className="text-xs text-red-400 mt-1">
+              <p className="text-xs text-destructive mt-1">
                 ⚠ Conflict: "{existingConflict.name}" already uses this key
               </p>
             )}

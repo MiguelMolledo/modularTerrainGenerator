@@ -369,12 +369,12 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
           <div className="grid grid-cols-2 gap-4">
             {/* Source Map Preview */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-foreground block mb-2">
                 Source {is3DMode ? '3D View' : 'Map'}
               </label>
-              <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden border border-gray-700 flex items-center justify-center">
+              <div className="aspect-video bg-card rounded-lg overflow-hidden border border-border flex items-center justify-center">
                 {status === 'capturing' ? (
-                  <div className="text-gray-400 flex flex-col items-center gap-2">
+                  <div className="text-muted-foreground flex flex-col items-center gap-2">
                     <Loader2 className="h-6 w-6 animate-spin" />
                     <span className="text-sm">Capturing...</span>
                   </div>
@@ -385,7 +385,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <div className="text-gray-500 flex flex-col items-center gap-2">
+                  <div className="text-muted-foreground flex flex-col items-center gap-2">
                     <ImageIcon className="h-8 w-8" />
                     <span className="text-sm">No preview</span>
                   </div>
@@ -395,15 +395,15 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
 
             {/* Generated Result */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-foreground block mb-2">
                 Generated Art
               </label>
-              <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden border border-gray-700 flex items-center justify-center">
+              <div className="aspect-video bg-card rounded-lg overflow-hidden border border-border flex items-center justify-center">
                 {isGenerating ? (
                   <div className="text-amber-400 flex flex-col items-center gap-2">
                     <Loader2 className="h-6 w-6 animate-spin" />
                     <span className="text-sm">Generating...</span>
-                    <span className="text-xs text-gray-500">This may take a moment</span>
+                    <span className="text-xs text-muted-foreground">This may take a moment</span>
                   </div>
                 ) : generatedImageUrl ? (
                   <img
@@ -412,7 +412,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <div className="text-gray-500 flex flex-col items-center gap-2">
+                  <div className="text-muted-foreground flex flex-col items-center gap-2">
                     <Wand2 className="h-8 w-8" />
                     <span className="text-sm">Result will appear here</span>
                   </div>
@@ -422,7 +422,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
           </div>
 
           {/* Map Info */}
-          <div className="text-xs text-gray-500 space-y-1">
+          <div className="text-xs text-muted-foreground space-y-1">
             <div className="flex gap-4">
               <span>Size: {mapWidth}" x {mapHeight}"</span>
               <span>Pieces: {placedPieces.length}</span>
@@ -432,7 +432,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                 {terrainDetails.slice(0, 4).map((t) => (
                   <span
                     key={t.name}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-gray-300"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-foreground"
                     style={{ backgroundColor: `${t.color}30` }}
                   >
                     <span
@@ -448,7 +448,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
 
           {/* Style Selector */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-2">
+            <label className="text-sm font-medium text-foreground block mb-2">
               Art Style
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -482,7 +482,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
           {/* Editable Prompt */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-300">
+              <label className="text-sm font-medium text-foreground">
                 Prompt (editable)
               </label>
               <div className="flex gap-2">
@@ -518,15 +518,15 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
               placeholder="The prompt will be generated based on your terrain..."
               rows={5}
               disabled={isGenerating}
-              className={`w-full bg-gray-800 border rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none disabled:opacity-50 font-mono ${
-                editablePrompt.length > 2000 ? 'border-red-500' : 'border-gray-700'
+              className={`w-full bg-card border rounded-lg px-3 py-2 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none disabled:opacity-50 font-mono ${
+                editablePrompt.length > 2000 ? 'border-destructive' : 'border-border'
               }`}
             />
             <div className="flex justify-between items-center mt-1">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Edit the prompt or click <span className="text-purple-400">AI Prompt</span> (Gemini) for a creative version, or <span className="text-amber-400">Simple</span> for a basic template.
               </p>
-              <span className={`text-xs ${editablePrompt.length > 2000 ? 'text-red-400' : editablePrompt.length > 1800 ? 'text-yellow-400' : 'text-gray-500'}`}>
+              <span className={`text-xs ${editablePrompt.length > 2000 ? 'text-destructive' : editablePrompt.length > 1800 ? 'text-yellow-400' : 'text-muted-foreground'}`}>
                 {editablePrompt.length}/2000
               </span>
             </div>
@@ -536,12 +536,12 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
               <div className="mt-2">
                 <button
                   onClick={() => setShowJson(!showJson)}
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
                 >
                   {showJson ? '▼' : '▶'} View generated JSON
                 </button>
                 {showJson && (
-                  <pre className="mt-2 p-2 bg-gray-900 rounded text-xs text-gray-300 overflow-x-auto max-h-48">
+                  <pre className="mt-2 p-2 bg-background rounded text-xs text-foreground overflow-x-auto max-h-48">
                     {JSON.stringify(generatedJson, null, 2)}
                   </pre>
                 )}
@@ -550,20 +550,20 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
           </div>
 
           {/* Advanced Settings - Collapsible */}
-          <div className="border border-gray-700 rounded-lg">
+          <div className="border border-border rounded-lg">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full px-3 py-2 flex items-center justify-between text-sm text-gray-400 hover:text-gray-200"
+              className="w-full px-3 py-2 flex items-center justify-between text-sm text-muted-foreground hover:text-foreground"
             >
               <span>Advanced Settings</span>
               <span>{showAdvanced ? '▲' : '▼'}</span>
             </button>
 
             {showAdvanced && (
-              <div className="px-3 pb-3 space-y-3 border-t border-gray-700 pt-3">
+              <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
                 {/* Aspect Ratio */}
                 <div>
-                  <label className="text-xs font-medium text-gray-400 block mb-1">
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
                     Aspect Ratio
                   </label>
                   <div className="flex flex-wrap gap-1">
@@ -575,7 +575,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                         className={`px-2 py-1 text-xs rounded transition-colors ${
                           aspectRatio === ar.id
                             ? 'bg-amber-600 text-white'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            : 'bg-secondary text-foreground hover:bg-accent'
                         } disabled:opacity-50`}
                       >
                         {ar.label}
@@ -586,7 +586,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
 
                 {/* Output Format */}
                 <div>
-                  <label className="text-xs font-medium text-gray-400 block mb-1">
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
                     Output Format
                   </label>
                   <div className="flex gap-1">
@@ -598,7 +598,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                         className={`px-2 py-1 text-xs rounded transition-colors ${
                           outputFormat === fmt.id
                             ? 'bg-amber-600 text-white'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            : 'bg-secondary text-foreground hover:bg-accent'
                         } disabled:opacity-50`}
                       >
                         {fmt.label}
@@ -607,7 +607,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Model: nano-banana-pro/edit (Google Gemini)
                 </p>
               </div>
@@ -616,7 +616,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
 
           {/* Error Display */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300">
+            <div className="flex items-center gap-2 p-3 bg-destructive/20 border border-destructive rounded-lg text-destructive">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>
@@ -632,10 +632,10 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
 
           {/* History Section */}
           {generatedImages.length > 0 && (
-            <div className="border border-gray-700 rounded-lg">
+            <div className="border border-border rounded-lg">
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className="w-full px-3 py-2 flex items-center justify-between text-sm text-gray-400 hover:text-gray-200"
+                className="w-full px-3 py-2 flex items-center justify-between text-sm text-muted-foreground hover:text-foreground"
               >
                 <span className="flex items-center gap-2">
                   <History className="h-4 w-4" />
@@ -645,12 +645,12 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
               </button>
 
               {showHistory && (
-                <div className="px-3 pb-3 border-t border-gray-700 pt-3">
+                <div className="px-3 pb-3 border-t border-border pt-3">
                   <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                     {generatedImages.map((img) => (
                       <div
                         key={img.id}
-                        className="relative group rounded-lg overflow-hidden border border-gray-600"
+                        className="relative group rounded-lg overflow-hidden border border-border"
                       >
                         <img
                           src={img.url}
@@ -682,21 +682,21 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                           </button>
                           <button
                             onClick={() => removeGeneratedImage(img.id)}
-                            className="p-1.5 bg-red-600 hover:bg-red-700 rounded text-white"
+                            className="p-1.5 bg-destructive hover:bg-destructive/80 rounded text-white"
                             title="Delete"
                           >
                             <Trash2 className="h-3 w-3" />
                           </button>
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
-                          <p className="text-[10px] text-gray-300 truncate capitalize">
+                          <p className="text-[10px] text-foreground truncate capitalize">
                             {img.style}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Hover over images to download or delete. Images are saved with the map.
                   </p>
                 </div>
@@ -765,12 +765,12 @@ function StyleCard({
       disabled={disabled}
       className={`p-3 rounded-lg text-left transition-all ${
         selected
-          ? 'bg-amber-600/20 ring-2 ring-amber-500 text-white'
-          : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+          ? 'bg-amber-600/20 ring-2 ring-amber-500 text-foreground'
+          : 'bg-card hover:bg-accent text-muted-foreground'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <div className="font-medium text-sm">{style.name}</div>
-      <div className="text-xs text-gray-400 mt-1">{style.description}</div>
+      <div className="text-xs text-muted-foreground mt-1">{style.description}</div>
     </button>
   );
 }

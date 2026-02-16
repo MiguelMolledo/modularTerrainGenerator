@@ -59,7 +59,7 @@ function DropdownMenu({
       <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
       {isOpen && (
         <div
-          className={`absolute top-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 min-w-[180px] py-1 ${
+          className={`absolute top-full mt-1 bg-card border border-border rounded-lg shadow-xl z-50 min-w-[180px] py-1 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
           onClick={() => setIsOpen(false)}
@@ -90,25 +90,25 @@ function MenuItem({
 }) {
   return (
     <button
-      className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-700 ${
+      className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-accent ${
         danger
-          ? 'text-red-400 hover:bg-red-950'
+          ? 'text-destructive hover:bg-destructive/10'
           : active
-            ? 'text-blue-400 bg-blue-950/50'
-            : className || 'text-white'
+            ? 'text-primary bg-primary/10'
+            : className || 'text-foreground'
       }`}
       onClick={onClick}
     >
       {Icon && <Icon className="h-4 w-4" />}
       <span className="flex-1">{label}</span>
-      {shortcut && <span className="text-xs text-gray-500">{shortcut}</span>}
-      {active && <span className="text-xs text-blue-400">✓</span>}
+      {shortcut && <span className="text-xs text-muted-foreground">{shortcut}</span>}
+      {active && <span className="text-xs text-primary">✓</span>}
     </button>
   );
 }
 
 function MenuDivider() {
-  return <hr className="my-1 border-gray-700" />;
+  return <hr className="my-1 border-border" />;
 }
 
 // Detect Mac platform for keyboard shortcut display
@@ -422,13 +422,13 @@ export function Toolbar() {
 
   return (
     <TooltipProvider>
-      <div className="h-14 bg-gray-800 border-b border-gray-700 flex items-center px-3 gap-2">
+      <div className="h-14 bg-card border-b border-border flex items-center px-3 gap-2">
         {/* Map name */}
         <input
           type="text"
           value={mapName}
           onChange={(e) => setMapName(e.target.value)}
-          className="bg-transparent border-b border-transparent hover:border-gray-600 focus:border-blue-500 outline-none text-white font-semibold text-base px-1 min-w-0 max-w-[150px]"
+          className="bg-transparent border-b border-transparent hover:border-border focus:border-primary outline-none text-foreground font-semibold text-base px-1 min-w-0 max-w-[150px]"
         />
 
         <Separator orientation="vertical" className="h-8" />
@@ -472,14 +472,14 @@ export function Toolbar() {
         <Separator orientation="vertical" className="h-8" />
 
         {/* Edit Mode Toggle (Terrain vs Props) */}
-        <div className="flex items-center gap-0.5 bg-gray-700 rounded-md p-0.5">
+        <div className="flex items-center gap-0.5 bg-secondary rounded-md p-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant={editMode === 'terrain' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setEditMode('terrain')}
-                className={`px-2 h-7 ${editMode === 'terrain' ? '' : 'text-gray-400 hover:text-white'}`}
+                className={`px-2 h-7 ${editMode === 'terrain' ? '' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Mountain className="h-4 w-4" />
               </Button>
@@ -492,7 +492,7 @@ export function Toolbar() {
                 variant={editMode === 'props' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setEditMode('props')}
-                className={`px-2 h-7 ${editMode === 'props' ? '' : 'text-gray-400 hover:text-white'}`}
+                className={`px-2 h-7 ${editMode === 'props' ? '' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Users className="h-4 w-4" />
               </Button>
@@ -502,14 +502,14 @@ export function Toolbar() {
         </div>
 
         {/* Visibility Toggles */}
-        <div className="flex items-center gap-0.5 bg-gray-700 rounded-md p-0.5">
+        <div className="flex items-center gap-0.5 bg-secondary rounded-md p-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant={showTerrain ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setShowTerrain(!showTerrain)}
-                className={`px-2 h-7 relative ${showTerrain ? '' : 'text-gray-400 hover:text-white'}`}
+                className={`px-2 h-7 relative ${showTerrain ? '' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Mountain className="h-4 w-4" />
                 {!showTerrain && <EyeOff className="h-3 w-3 absolute -right-0.5 -bottom-0.5" />}
@@ -523,7 +523,7 @@ export function Toolbar() {
                 variant={showProps ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setShowProps(!showProps)}
-                className={`px-2 h-7 relative ${showProps ? '' : 'text-gray-400 hover:text-white'}`}
+                className={`px-2 h-7 relative ${showProps ? '' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Users className="h-4 w-4" />
                 {!showProps && <EyeOff className="h-3 w-3 absolute -right-0.5 -bottom-0.5" />}
@@ -537,7 +537,7 @@ export function Toolbar() {
 
         {/* Level selector - compact */}
         <div className="flex items-center gap-1">
-          <span className="text-xs text-gray-400 hidden sm:inline">Level:</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">Level:</span>
           <div className="flex gap-0.5">
             {levels.map((level) => (
               <Button
@@ -583,7 +583,7 @@ export function Toolbar() {
                 step={5}
                 className="w-16"
               />
-              <span className="text-xs text-gray-400 w-6">
+              <span className="text-xs text-muted-foreground w-6">
                 {Math.round(referenceLevelOpacity * 100)}%
               </span>
             </div>
@@ -602,7 +602,7 @@ export function Toolbar() {
             </Button>
           }
         >
-          <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-700">
+          <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
             Zoom: {Math.round(zoom * 100)}%
           </div>
           <MenuItem icon={ZoomIn} label="Zoom In" onClick={handleZoomIn} shortcut="+" />
@@ -627,7 +627,7 @@ export function Toolbar() {
             </Button>
           }
         >
-          <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-700">
+          <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
             Map: {mapWidth}" × {mapHeight}"
           </div>
           <MenuItem
@@ -666,14 +666,14 @@ export function Toolbar() {
         <Separator orientation="vertical" className="h-8" />
 
         {/* 2D/3D Toggle - compact */}
-        <div className="flex items-center gap-0.5 bg-gray-700 rounded-md p-0.5">
+        <div className="flex items-center gap-0.5 bg-secondary rounded-md p-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant={!is3DMode ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => is3DMode && toggle3DMode()}
-                className={`px-2 h-7 ${!is3DMode ? '' : 'text-gray-400 hover:text-white'}`}
+                className={`px-2 h-7 ${!is3DMode ? '' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Grid2X2 className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline text-xs">2D</span>
@@ -687,7 +687,7 @@ export function Toolbar() {
                 variant={is3DMode ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => !is3DMode && toggle3DMode()}
-                className={`px-2 h-7 ${is3DMode ? '' : 'text-gray-400 hover:text-white'}`}
+                className={`px-2 h-7 ${is3DMode ? '' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Box className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline text-xs">3D</span>
@@ -700,8 +700,8 @@ export function Toolbar() {
         {/* Rotation indicator - only on larger screens and 2D mode */}
         {!is3DMode && (
           <div className="hidden md:flex items-center gap-1">
-            <span className="text-xs text-gray-500">R:</span>
-            <span className="text-xs text-white bg-gray-700 px-1.5 py-0.5 rounded">
+            <span className="text-xs text-muted-foreground">R:</span>
+            <span className="text-xs text-foreground bg-secondary px-1.5 py-0.5 rounded">
               {currentRotation}°
             </span>
           </div>
@@ -729,7 +729,7 @@ export function Toolbar() {
             icon={PaintBucket}
             label="Fill Gaps"
             onClick={() => setShowFillGapsDialog(true)}
-            className="text-blue-400"
+            className="text-primary"
           />
           <MenuDivider />
           <MenuItem
@@ -758,18 +758,18 @@ export function Toolbar() {
           </Button>
 
           {showMapSelector && (
-            <div className="absolute right-0 top-full mt-1 w-72 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 overflow-hidden">
+            <div className="absolute right-0 top-full mt-1 w-72 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
               {/* Search input */}
-              <div className="p-2 border-b border-gray-700">
+              <div className="p-2 border-b border-border">
                 <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     ref={searchInputRef}
                     type="text"
                     value={mapSearchQuery}
                     onChange={(e) => setMapSearchQuery(e.target.value)}
                     placeholder="Search maps..."
-                    className="w-full bg-gray-700 border border-gray-600 rounded pl-8 pr-3 py-1.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full bg-secondary border border-border rounded pl-8 pr-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                 </div>
               </div>
@@ -777,7 +777,7 @@ export function Toolbar() {
               {/* Maps list */}
               <div className="max-h-64 overflow-y-auto">
                 {filteredMaps.length === 0 ? (
-                  <div className="p-4 text-center text-gray-400 text-sm">
+                  <div className="p-4 text-center text-muted-foreground text-sm">
                     {mapSearchQuery ? 'No maps found' : 'No saved maps'}
                   </div>
                 ) : (
@@ -785,18 +785,18 @@ export function Toolbar() {
                     <button
                       key={map.id}
                       onClick={() => handleSelectMap(map.id)}
-                      className={`w-full px-3 py-2 text-left hover:bg-gray-700 transition-colors flex items-center justify-between ${
-                        currentMapId === map.id ? 'bg-blue-600/20 border-l-2 border-blue-500' : ''
+                      className={`w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-center justify-between ${
+                        currentMapId === map.id ? 'bg-primary/20 border-l-2 border-primary' : ''
                       }`}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm text-white truncate">{map.name}</div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-sm text-foreground truncate">{map.name}</div>
+                        <div className="text-xs text-muted-foreground">
                           {map.placedPieces.length} pieces
                         </div>
                       </div>
                       {currentMapId === map.id && (
-                        <span className="text-xs text-blue-400 ml-2 shrink-0">Active</span>
+                        <span className="text-xs text-primary ml-2 shrink-0">Active</span>
                       )}
                     </button>
                   ))
@@ -858,7 +858,7 @@ export function Toolbar() {
                 size="sm"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isDeleting}
-                className="gap-1 text-red-400 hover:text-red-300 hover:bg-red-950/50 border-red-800"
+                className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50"
               >
                 {isDeleting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -884,7 +884,7 @@ export function Toolbar() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-foreground block mb-2">
                 Map Name
               </label>
               <input
@@ -892,17 +892,17 @@ export function Toolbar() {
                 value={saveName}
                 onChange={(e) => setSaveName(e.target.value)}
                 placeholder="Enter map name..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {placedPieces.length} pieces will be saved
             </p>
           </div>
           {/* Delete confirmation */}
           {showDeleteConfirm && currentMapId && (
-            <div className="bg-red-950/50 border border-red-700 rounded-lg p-3 mb-4">
-              <p className="text-sm text-red-300 mb-3">
+            <div className="bg-destructive/10 border border-destructive/50 rounded-lg p-3 mb-4">
+              <p className="text-sm text-destructive mb-3">
                 Are you sure you want to delete this map? This action cannot be undone.
               </p>
               <div className="flex gap-2">
@@ -919,7 +919,7 @@ export function Toolbar() {
                   size="sm"
                   onClick={handleDeleteMap}
                   disabled={isDeleting}
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-destructive hover:bg-destructive/80"
                 >
                   {isDeleting ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -938,7 +938,7 @@ export function Toolbar() {
               <Button
                 variant="outline"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="flex-1 sm:flex-none text-red-400 hover:text-red-300 hover:bg-red-950/50"
+                className="flex-1 sm:flex-none text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete
@@ -995,7 +995,7 @@ export function Toolbar() {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-300 block mb-2">
+                <label className="text-sm font-medium text-foreground block mb-2">
                   Width (inches)
                 </label>
                 <input
@@ -1005,11 +1005,11 @@ export function Toolbar() {
                   min={12}
                   max={200}
                   step={6}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300 block mb-2">
+                <label className="text-sm font-medium text-foreground block mb-2">
                   Height (inches)
                 </label>
                 <input
@@ -1019,12 +1019,12 @@ export function Toolbar() {
                   min={12}
                   max={200}
                   step={6}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
-            <p className="text-sm text-gray-400">
-              Common sizes: 36×36, 48×48, 60×60, 72×48
+            <p className="text-sm text-muted-foreground">
+              Common sizes: 36x36, 48x48, 60x60, 72x48
             </p>
             <div className="flex gap-2 flex-wrap">
               {[
@@ -1042,9 +1042,9 @@ export function Toolbar() {
                     setTempMapWidth(w);
                     setTempMapHeight(h);
                   }}
-                  className={tempMapWidth === w && tempMapHeight === h ? 'ring-2 ring-blue-500' : ''}
+                  className={tempMapWidth === w && tempMapHeight === h ? 'ring-2 ring-ring' : ''}
                 >
-                  {w}×{h}
+                  {w}x{h}
                 </Button>
               ))}
             </div>
@@ -1070,10 +1070,10 @@ export function Toolbar() {
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-gray-300">
+            <p className="text-foreground">
               You have unsaved changes on the current map.
             </p>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               If you create a new map, these changes will be lost. Do you want to continue?
             </p>
           </div>
@@ -1096,7 +1096,7 @@ export function Toolbar() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-foreground block mb-2">
                 Map Name
               </label>
               <input
@@ -1104,7 +1104,7 @@ export function Toolbar() {
                 value={newMapName}
                 onChange={(e) => setNewMapName(e.target.value)}
                 placeholder="Enter map name..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 autoFocus
                 disabled={isCreatingMap}
                 onKeyDown={(e) => {
@@ -1151,16 +1151,16 @@ export function Toolbar() {
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-400">
+            <DialogTitle className="flex items-center gap-2 text-destructive">
               <Trash2 className="h-5 w-5" />
               Delete Map
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-gray-300">
-              Are you sure you want to delete <span className="font-semibold text-white">&quot;{mapName}&quot;</span>?
+            <p className="text-foreground">
+              Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{mapName}&quot;</span>?
             </p>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               This action cannot be undone. The map and all its pieces will be permanently deleted.
             </p>
           </div>
@@ -1176,7 +1176,7 @@ export function Toolbar() {
               variant="destructive"
               onClick={handleDeleteMap}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/80"
             >
               {isDeleting ? (
                 <>

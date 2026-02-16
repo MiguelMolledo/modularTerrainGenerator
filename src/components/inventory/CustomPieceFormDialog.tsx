@@ -127,7 +127,7 @@ export function CustomPieceFormDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Name
             </label>
             <input
@@ -135,7 +135,7 @@ export function CustomPieceFormDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., River Bend, Coast Corner"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               required
             />
           </div>
@@ -143,7 +143,7 @@ export function CustomPieceFormDialog({
           {/* Size controls */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-1">
+              <label className="text-sm font-medium text-muted-foreground block mb-1">
                 Width (inches)
               </label>
               <div className="flex items-center gap-2">
@@ -167,7 +167,7 @@ export function CustomPieceFormDialog({
                   step={1.5}
                   min={1.5}
                   max={12}
-                  className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-20 bg-card border border-border rounded-lg px-3 py-1.5 text-foreground text-center focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <Button
                   type="button"
@@ -182,7 +182,7 @@ export function CustomPieceFormDialog({
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-1">
+              <label className="text-sm font-medium text-muted-foreground block mb-1">
                 Height (inches)
               </label>
               <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export function CustomPieceFormDialog({
                   step={1.5}
                   min={1.5}
                   max={12}
-                  className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-20 bg-card border border-border rounded-lg px-3 py-1.5 text-foreground text-center focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <Button
                   type="button"
@@ -223,7 +223,7 @@ export function CustomPieceFormDialog({
           </div>
 
           {/* Grid info */}
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Piece size: {width}&quot; × {height}&quot; = {cols}×{rows} grid ({cols * rows} cells)
           </p>
 
@@ -240,7 +240,7 @@ export function CustomPieceFormDialog({
 
           {/* Quantity */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Quantity
             </label>
             <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export function CustomPieceFormDialog({
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(0, Number(e.target.value)))}
                 min={0}
-                className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-20 bg-card border border-border rounded-lg px-3 py-1.5 text-foreground text-center focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <Button
                 type="button"
@@ -274,10 +274,10 @@ export function CustomPieceFormDialog({
 
           {/* Preview */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-2">
+            <label className="text-sm font-medium text-muted-foreground block mb-2">
               Preview
             </label>
-            <div className="bg-gray-800 rounded-lg p-4 flex items-center justify-center min-h-[100px]">
+            <div className="bg-card rounded-lg p-4 flex items-center justify-center min-h-[100px]">
               {cellColors.length > 0 && (
                 <CustomPiecePreview
                   width={width}

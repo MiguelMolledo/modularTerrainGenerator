@@ -115,8 +115,8 @@ export function ElevationEditor({
 
         <div className="space-y-6 py-4">
           {/* 3D Preview */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <div className="text-xs text-gray-400 mb-2 text-center">Preview (isometric view)</div>
+          <div className="bg-card rounded-lg p-4">
+            <div className="text-xs text-muted-foreground mb-2 text-center">Preview (isometric view)</div>
             <svg
               viewBox="0 0 200 150"
               className="w-full h-32"
@@ -202,7 +202,7 @@ export function ElevationEditor({
 
           {/* Presets */}
           <div>
-            <div className="text-sm font-medium text-gray-300 mb-2">Quick Presets</div>
+            <div className="text-sm font-medium text-muted-foreground mb-2">Quick Presets</div>
             <div className="grid grid-cols-5 gap-2">
               <Button
                 variant="outline"
@@ -286,8 +286,8 @@ export function ElevationEditor({
             {/* NW */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">NW (top-left)</span>
-                <span className="text-white font-mono">{elevation.nw.toFixed(1)}&quot;</span>
+                <span className="text-muted-foreground">NW (top-left)</span>
+                <span className="text-foreground font-mono">{elevation.nw.toFixed(1)}&quot;</span>
               </div>
               <Slider
                 value={[elevation.nw]}
@@ -302,8 +302,8 @@ export function ElevationEditor({
             {/* NE */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">NE (top-right)</span>
-                <span className="text-white font-mono">{elevation.ne.toFixed(1)}&quot;</span>
+                <span className="text-muted-foreground">NE (top-right)</span>
+                <span className="text-foreground font-mono">{elevation.ne.toFixed(1)}&quot;</span>
               </div>
               <Slider
                 value={[elevation.ne]}
@@ -318,8 +318,8 @@ export function ElevationEditor({
             {/* SW */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">SW (bottom-left)</span>
-                <span className="text-white font-mono">{elevation.sw.toFixed(1)}&quot;</span>
+                <span className="text-muted-foreground">SW (bottom-left)</span>
+                <span className="text-foreground font-mono">{elevation.sw.toFixed(1)}&quot;</span>
               </div>
               <Slider
                 value={[elevation.sw]}
@@ -334,8 +334,8 @@ export function ElevationEditor({
             {/* SE */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">SE (bottom-right)</span>
-                <span className="text-white font-mono">{elevation.se.toFixed(1)}&quot;</span>
+                <span className="text-muted-foreground">SE (bottom-right)</span>
+                <span className="text-foreground font-mono">{elevation.se.toFixed(1)}&quot;</span>
               </div>
               <Slider
                 value={[elevation.se]}
@@ -349,11 +349,11 @@ export function ElevationEditor({
           </div>
 
           {/* Summary */}
-          <div className="bg-gray-800/50 rounded-lg p-3 text-sm">
+          <div className="bg-secondary/50 rounded-lg p-3 text-sm">
             {isFlat ? (
-              <span className="text-gray-400">Flat piece (base height 0.5&quot;)</span>
+              <span className="text-muted-foreground">Flat piece (base height 0.5&quot;)</span>
             ) : (
-              <span className="text-blue-400">
+              <span className="text-primary">
                 Sloped piece: {elevation.nw}&quot; / {elevation.ne}&quot; / {elevation.sw}&quot; / {elevation.se}&quot;
               </span>
             )}

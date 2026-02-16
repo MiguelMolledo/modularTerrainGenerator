@@ -5,6 +5,7 @@ import { Stage, Layer, Rect, Line, Group, Text, Circle, Image as KonvaImage } fr
 import Konva from 'konva';
 import { useMapStore } from '@/store/mapStore';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
+import { useMapNavigation } from '@/hooks/useMapNavigation';
 import { BASE_PIXELS_PER_INCH } from '@/config/terrain';
 import { PlacedPiece, ModularPiece } from '@/types';
 import { DEFAULT_PROPS } from '@/config/props';
@@ -169,9 +170,18 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   // Ref to track selection mode (for immediate drag cancellation)
   const isSelectingRef = useRef(false);
 
-  // Right-click panning state
-  const [isPanning, setIsPanning] = useState(false);
-  const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null);
+  // Navigation hook (handles wheel pan/zoom, space+drag, right-click pan, animated focus)
+  const {
+    isPanning: isNavPanning,
+    isSpaceHeld,
+    cursorClass: navCursorClass,
+    handleNavigationMouseDown,
+    handleNavigationMouseMove,
+    handleNavigationMouseUp,
+    handleNavigationMouseLeave,
+    focusOnPoint,
+    focusOnBounds,
+  } = useMapNavigation({ containerRef, containerSize });
 
   // Multi-drag state (for moving multiple selected pieces)
   const [multiDragState, setMultiDragState] = useState<{
@@ -207,7 +217,6 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     currentRotation,
     isSidebarDragging,
     setPan,
-    setZoom,
     removePlacedPiece,
     updatePlacedPiece,
     updatePlacedPieces,
@@ -637,11 +646,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
         }
       }
 
-      // F key to focus view (center on selection or map)
+      // F key to focus view (center on selection or map) with animation
       if ((e.key === 'f' || e.key === 'F') && !e.repeat) {
         e.preventDefault();
-
-        const currentPixelsPerInch = BASE_PIXELS_PER_INCH * zoom;
 
         if (selectedPlacedPieceIds.length > 0) {
           // Focus on selected pieces - calculate their bounding box
@@ -663,25 +670,11 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
               }
             });
 
-            // Calculate center of bounding box in inches
-            const centerX = (minX + maxX) / 2;
-            const centerY = (minY + maxY) / 2;
-
-            // Convert to pixels and calculate pan to center in viewport
-            const targetPanX = containerSize.width / 2 - centerX * currentPixelsPerInch;
-            const targetPanY = containerSize.height / 2 - centerY * currentPixelsPerInch;
-
-            setPan(targetPanX, targetPanY);
+            focusOnBounds(minX, minY, maxX, maxY);
           }
         } else {
           // Focus on entire map center
-          const mapCenterX = mapWidth / 2;
-          const mapCenterY = mapHeight / 2;
-
-          const targetPanX = containerSize.width / 2 - mapCenterX * currentPixelsPerInch;
-          const targetPanY = containerSize.height / 2 - mapCenterY * currentPixelsPerInch;
-
-          setPan(targetPanX, targetPanY);
+          focusOnPoint(mapWidth / 2, mapHeight / 2);
         }
       }
     };
@@ -726,11 +719,10 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     // Focus view dependencies
     placedPieces,
     allPieces,
-    containerSize,
     mapWidth,
     mapHeight,
-    zoom,
-    setPan,
+    focusOnPoint,
+    focusOnBounds,
   ]);
 
   // Generate grid lines
@@ -834,24 +826,12 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     return placedPieces.filter((p) => p.level !== currentLevel);
   }, [placedPieces, currentLevel, showReferenceLevels]);
 
-  // Handle wheel zoom - using native event listener for passive: false
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setZoom(zoom + delta);
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, [zoom, setZoom]);
-
   // Handle mousedown on placed piece - prepare for potential drag
   const handlePieceMouseDown = (placedId: string, e: any) => {
     e.cancelBubble = true;
+
+    // If space is held, skip piece interactions (we're in hand/pan mode)
+    if (isSpaceHeld) return;
 
     // If in sidebar drag mode (placing new piece), don't intercept - let the piece be placed
     if (isSidebarDragging) {
@@ -1060,13 +1040,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    // Handle right-click panning
-    if (isPanning && panStartRef.current) {
-      const deltaX = e.clientX - panStartRef.current.mouseX;
-      const deltaY = e.clientY - panStartRef.current.mouseY;
-      setPan(panStartRef.current.panX + deltaX, panStartRef.current.panY + deltaY);
-      return;
-    }
+    // Delegate to navigation hook first (space+drag and right-click panning)
+    if (handleNavigationMouseMove(e)) return;
 
     const rawX = (e.clientX - rect.left - panX) / pixelsPerInch;
     const rawY = (e.clientY - rect.top - panY) / pixelsPerInch;
@@ -1193,12 +1168,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   // Handle mouse up to place piece from sidebar drag or map drag
   // KEY INSIGHT: The preview is ALWAYS accurate, so we just use its position directly
   const handleMouseUp = (e: React.MouseEvent) => {
-    // Handle right-click panning end
-    if (isPanning) {
-      setIsPanning(false);
-      panStartRef.current = null;
-      return;
-    }
+    // Delegate to navigation hook first (space+drag / right-click pan end)
+    if (handleNavigationMouseUp()) return;
 
     // Handle selection rectangle finalization
     if (selectionRect?.active) {
@@ -1255,6 +1226,9 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
           // Clear selection if no pieces in rect and not holding shift
           clearSelection();
         }
+      } else {
+        // Rect was just a click (too small) — deselect everything
+        clearSelection();
       }
 
       setSelectionRect(null);
@@ -1346,11 +1320,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
   // Handle mouse leave to hide preview and cancel map drag
   const handleMouseLeave = () => {
-    // Stop panning
-    if (isPanning) {
-      setIsPanning(false);
-      panStartRef.current = null;
-    }
+    // Stop navigation panning
+    handleNavigationMouseLeave();
     // Clear selection rectangle
     if (selectionRect) {
       isSelectingRef.current = false;
@@ -1413,19 +1384,8 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
     const isBackground = e.target === e.currentTarget || e.target.attrs?.name === 'background';
     const mouseButton = e.evt?.button;
 
-    // Right click (button 2): start panning
-    if (mouseButton === 2 && !isViewLocked) {
-      e.evt?.preventDefault();
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) {
-        panStartRef.current = {
-          mouseX: e.evt.clientX,
-          mouseY: e.evt.clientY,
-          panX: panX,
-          panY: panY,
-        };
-        setIsPanning(true);
-      }
+    // Delegate to navigation hook (space+drag, right-click pan)
+    if (e.evt && handleNavigationMouseDown(e.evt)) {
       return;
     }
 
@@ -1498,7 +1458,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
   return (
     <div
       ref={containerRef}
-      className={`flex-1 h-full min-h-0 overflow-hidden bg-gray-900 relative ${isPanning ? 'cursor-grabbing' : ''}`}
+      className={`flex-1 h-full min-h-0 overflow-hidden bg-gray-900 relative ${navCursorClass}`}
       onDrop={handleCanvasDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -2145,28 +2105,44 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
             <DialogTitle>Keyboard Shortcuts</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-4">
-            <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
-              <div className="font-medium text-gray-400">Mouse</div>
+            <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
+              <div className="font-medium text-gray-400">Navigation</div>
               <div className="text-white"></div>
 
-              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Left Click</div>
-              <div className="text-gray-300 flex items-center">Select piece</div>
+              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Scroll / Trackpad</div>
+              <div className="text-gray-300 flex items-center">Pan the map</div>
 
-              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Left Drag</div>
-              <div className="text-gray-300 flex items-center">Selection rectangle / Move piece</div>
+              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Pinch / Ctrl+Scroll</div>
+              <div className="text-gray-300 flex items-center">Zoom to cursor</div>
 
               <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Right Drag</div>
               <div className="text-gray-300 flex items-center">Pan the map</div>
 
-              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Shift+Click</div>
-              <div className="text-gray-300 flex items-center">Add to selection</div>
-
-              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Double Click</div>
-              <div className="text-gray-300 flex items-center">Delete piece</div>
+              <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Space + Drag</div>
+              <div className="text-gray-300 flex items-center">Pan the map (hand tool)</div>
             </div>
 
             <div className="border-t border-gray-700 pt-3">
-              <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+              <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
+                <div className="font-medium text-gray-400">Mouse</div>
+                <div className="text-white"></div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Left Click</div>
+                <div className="text-gray-300 flex items-center">Select piece</div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Left Drag</div>
+                <div className="text-gray-300 flex items-center">Selection rectangle / Move piece</div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Shift+Click</div>
+                <div className="text-gray-300 flex items-center">Add to selection</div>
+
+                <div className="bg-gray-700 px-2 py-1 rounded text-center text-xs">Double Click</div>
+                <div className="text-gray-300 flex items-center">Delete piece</div>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-700 pt-3">
+              <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
                 <div className="font-medium text-gray-400">Keyboard</div>
                 <div className="text-white"></div>
 
@@ -2207,7 +2183,7 @@ export function MapCanvas({ onDrop }: MapCanvasProps) {
 
       {/* Help text */}
       <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-gray-400">
-        Left drag: Select | Right drag: Pan | R: Rotate | F: Focus | Del: Delete
+        Scroll: Pan | Pinch/Ctrl+Scroll: Zoom | Space+Drag: Pan | R: Rotate | F: Focus
       </div>
     </div>
   );

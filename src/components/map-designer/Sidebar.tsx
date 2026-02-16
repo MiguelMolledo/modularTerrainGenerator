@@ -514,20 +514,20 @@ export function Sidebar() {
     >
       {/* Sidebar content */}
       <div
-        className={`w-72 bg-gray-800 border-r border-gray-700 flex flex-col absolute left-0 top-0 h-full transition-transform duration-300 ease-in-out ${
+        className={`w-72 bg-card border-r border-border flex flex-col absolute left-0 top-0 h-full transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Mode indicator header */}
-        <div className="px-3 py-2 bg-gray-900 border-b border-gray-700 flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-400">
+        <div className="px-3 py-2 bg-background border-b border-border flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
             {editMode === 'terrain' ? 'Terrain Pieces' : 'Props & NPCs'}
           </span>
           {editMode === 'terrain' && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50"
               onClick={() => setShowTagGroups(!showTagGroups)}
               title={showTagGroups ? 'Show flat list' : 'Show grouped by tags'}
             >
@@ -559,7 +559,7 @@ export function Sidebar() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+                className="h-6 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10"
                 onClick={() => setShowCampaignAnalyzer(true)}
                 title="Analyze campaign text"
               >
@@ -581,27 +581,27 @@ export function Sidebar() {
         </div>
 
         {/* Search/Filter */}
-        <div className="px-2 py-2 border-b border-gray-700">
+        <div className="px-2 py-2 border-b border-border">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={editMode === 'terrain' ? 'Search terrain...' : 'Search props...'}
-              className="w-full bg-gray-700 border border-gray-600 rounded-md pl-8 pr-8 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full bg-secondary border border-border rounded-md pl-8 pr-8 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
           {searchQuery && (
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {editMode === 'terrain'
                 ? `${filteredTerrainPieces.length} pieces found`
                 : `${filteredProps.length} props found`}
@@ -625,21 +625,21 @@ export function Sidebar() {
                 const isTerrainExpanded = isSearching || expandedTerrainTypes.has(terrainId);
 
                 return (
-                  <div key={terrainId} className="border border-gray-700 rounded-lg overflow-hidden">
+                  <div key={terrainId} className="border border-border rounded-lg overflow-hidden">
                     {/* Terrain Type Header */}
                     <button
                       onClick={() => toggleTerrainType(terrainId)}
-                      className="w-full flex items-center gap-2 px-2 py-2 hover:bg-gray-700/50 transition-colors"
+                      className="w-full flex items-center gap-2 px-2 py-2 hover:bg-secondary/50 transition-colors"
                       style={{ backgroundColor: `${terrain.color}15` }}
                     >
                       {isTerrainExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       )}
                       <span className="text-lg">{terrain.icon}</span>
-                      <span className="text-sm font-medium text-white">{terrain.name}</span>
-                      <span className="text-xs text-gray-400 ml-auto">({totalPieces})</span>
+                      <span className="text-sm font-medium text-foreground">{terrain.name}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">({totalPieces})</span>
                       <div
                         className="w-3 h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: terrain.color }}
@@ -648,9 +648,9 @@ export function Sidebar() {
 
                     {/* Tag Categories within Terrain (Grouped View) */}
                     {isTerrainExpanded && showTagGroups && (
-                      <div className="border-t border-gray-700 bg-gray-800/50">
+                      <div className="border-t border-border bg-card/50">
                         {totalPieces === 0 && (
-                          <div className="text-center py-4 px-3 text-gray-500 text-xs">
+                          <div className="text-center py-4 px-3 text-muted-foreground text-xs">
                             No pieces for this terrain yet.
                             <br />
                             Go to Settings → Inventory to add pieces.
@@ -664,19 +664,19 @@ export function Sidebar() {
                           const isSubCategoryExpanded = isSearching || expandedTerrainSubCategories.has(subCategoryKey);
 
                           return (
-                            <div key={category.id} className="border-b border-gray-700/50 last:border-b-0">
+                            <div key={category.id} className="border-b border-border/50 last:border-b-0">
                               <button
                                 onClick={() => toggleTerrainSubCategory(terrainId, category.id)}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-700/30 transition-colors"
+                                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary/30 transition-colors"
                               >
                                 {isSubCategoryExpanded ? (
-                                  <ChevronDown className="h-3 w-3 text-gray-500" />
+                                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 ) : (
-                                  <ChevronRight className="h-3 w-3 text-gray-500" />
+                                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
                                 )}
                                 <span className="text-sm">{category.icon}</span>
-                                <span className="text-xs text-gray-400">{category.name}</span>
-                                <span className="text-xs text-gray-500">({categoryPieces.length})</span>
+                                <span className="text-xs text-muted-foreground">{category.name}</span>
+                                <span className="text-xs text-muted-foreground">({categoryPieces.length})</span>
                               </button>
 
                               {isSubCategoryExpanded && (
@@ -691,9 +691,9 @@ export function Sidebar() {
                                       <Card
                                         key={piece.id}
                                         onMouseDown={(e) => handleMouseDown(e, piece.id)}
-                                        className={`cursor-grab active:cursor-grabbing transition-all select-none ${
-                                          isSelected ? 'ring-2 ring-blue-500' : ''
-                                        } ${isOverused ? 'border-red-500 bg-red-950/30' : 'hover:bg-gray-700'}`}
+                                        className={`cursor-grab active:cursor-grabbing transition-all duration-150 select-none ${
+                                          isSelected ? 'ring-2 ring-ring bg-accent/50' : ''
+                                        } ${isOverused ? 'border-destructive bg-destructive/10' : 'hover:bg-accent hover:scale-[1.02] hover:shadow-md'}`}
                                         style={{
                                           borderLeft: `4px solid ${isOverused ? '#ef4444' : terrain.color}`,
                                         }}
@@ -707,11 +707,11 @@ export function Sidebar() {
                                               terrainTypes={terrainTypes}
                                             />
                                             <div className="flex-1 min-w-0">
-                                              <h3 className={`font-medium text-sm truncate ${isOverused ? 'text-red-300' : 'text-white'}`}>
+                                              <h3 className={`font-medium text-sm truncate ${isOverused ? 'text-red-300' : 'text-foreground'}`}>
                                                 {piece.size.label}
                                                 {piece.isDiagonal && ' △'}
                                               </h3>
-                                              <p className="text-xs text-gray-500">
+                                              <p className="text-xs text-muted-foreground">
                                                 {piece.elevation && (piece.elevation.nw !== 0 || piece.elevation.ne !== 0 || piece.elevation.sw !== 0 || piece.elevation.se !== 0)
                                                   ? `↗ ${Math.max(piece.elevation.nw, piece.elevation.ne, piece.elevation.sw, piece.elevation.se)}"`
                                                   : ''}
@@ -721,7 +721,7 @@ export function Sidebar() {
                                               <span className={`text-sm font-bold ${available > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                                 {available}
                                               </span>
-                                              <span className="text-xs text-gray-500">/{piece.quantity}</span>
+                                              <span className="text-xs text-muted-foreground">/{piece.quantity}</span>
                                             </div>
                                           </div>
                                         </CardContent>
@@ -738,9 +738,9 @@ export function Sidebar() {
 
                     {/* Flat View (without tag groups) */}
                     {isTerrainExpanded && !showTagGroups && (
-                      <div className="border-t border-gray-700 bg-gray-800/50 space-y-1 p-2">
+                      <div className="border-t border-border bg-card/50 space-y-1 p-2">
                         {totalPieces === 0 && (
-                          <div className="text-center py-4 px-3 text-gray-500 text-xs">
+                          <div className="text-center py-4 px-3 text-muted-foreground text-xs">
                             No pieces for this terrain yet.
                             <br />
                             Go to Settings → Inventory to add pieces.
@@ -757,9 +757,9 @@ export function Sidebar() {
                             <Card
                               key={piece.id}
                               onMouseDown={(e) => handleMouseDown(e, piece.id)}
-                              className={`cursor-grab active:cursor-grabbing transition-all select-none ${
-                                isSelected ? 'ring-2 ring-blue-500' : ''
-                              } ${isOverused ? 'border-red-500 bg-red-950/30' : 'hover:bg-gray-700'}`}
+                              className={`cursor-grab active:cursor-grabbing transition-all duration-150 select-none ${
+                                isSelected ? 'ring-2 ring-ring bg-accent/50' : ''
+                              } ${isOverused ? 'border-destructive bg-destructive/10' : 'hover:bg-accent hover:scale-[1.02] hover:shadow-md'}`}
                               style={{
                                 borderLeft: `4px solid ${isOverused ? '#ef4444' : terrain.color}`,
                               }}
@@ -773,11 +773,11 @@ export function Sidebar() {
                                     terrainTypes={terrainTypes}
                                   />
                                   <div className="flex-1 min-w-0">
-                                    <h3 className={`font-medium text-sm truncate ${isOverused ? 'text-red-300' : 'text-white'}`}>
+                                    <h3 className={`font-medium text-sm truncate ${isOverused ? 'text-red-300' : 'text-foreground'}`}>
                                       {piece.size.label}
                                       {piece.isDiagonal && ' △'}
                                     </h3>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-muted-foreground">
                                       {piece.elevation && (piece.elevation.nw !== 0 || piece.elevation.ne !== 0 || piece.elevation.sw !== 0 || piece.elevation.se !== 0)
                                         ? `↗ ${Math.max(piece.elevation.nw, piece.elevation.ne, piece.elevation.sw, piece.elevation.se)}"`
                                         : ''}
@@ -787,7 +787,7 @@ export function Sidebar() {
                                     <span className={`text-sm font-bold ${available > 0 ? 'text-green-400' : 'text-red-400'}`}>
                                       {available}
                                     </span>
-                                    <span className="text-xs text-gray-500">/{piece.quantity}</span>
+                                    <span className="text-xs text-muted-foreground">/{piece.quantity}</span>
                                   </div>
                                 </div>
                               </CardContent>
@@ -817,16 +817,16 @@ export function Sidebar() {
                   <div key={category.id}>
                     <button
                       onClick={() => togglePropCategory(category.id)}
-                      className="w-full flex items-center gap-2 mb-1 px-1 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                      className="w-full flex items-center gap-2 mb-1 px-1 py-1 rounded hover:bg-secondary/50 transition-colors"
                     >
                       {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-gray-500" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       )}
                       <span className="text-lg">{category.icon}</span>
-                      <span className="text-xs font-medium text-gray-400">{category.name}</span>
-                      <span className="text-xs text-gray-500">({categoryProps.length})</span>
+                      <span className="text-xs font-medium text-muted-foreground">{category.name}</span>
+                      <span className="text-xs text-muted-foreground">({categoryProps.length})</span>
                     </button>
                     {isExpanded && (
                       <div className="space-y-1 ml-2">
@@ -838,8 +838,8 @@ export function Sidebar() {
                             <Card
                               key={prop.id}
                               onMouseDown={(e) => handleMouseDown(e, prop.id)}
-                              className={`cursor-grab active:cursor-grabbing transition-all select-none ${
-                                isSelected ? 'ring-2 ring-blue-500' : 'hover:bg-gray-700'
+                              className={`cursor-grab active:cursor-grabbing transition-all duration-150 select-none ${
+                                isSelected ? 'ring-2 ring-ring bg-accent/50' : 'hover:bg-accent hover:scale-[1.02] hover:shadow-md'
                               }`}
                               style={{
                                 borderLeft: '4px solid #6366f1',
@@ -857,10 +857,10 @@ export function Sidebar() {
                                     <span className="text-2xl">{prop.propEmoji}</span>
                                   )}
                                   <div className="flex-1 min-w-0">
-                                    <h3 className="font-medium text-sm text-white truncate">
+                                    <h3 className="font-medium text-sm text-foreground truncate">
                                       {prop.name}
                                     </h3>
-                                    <p className="text-xs text-gray-400">
+                                    <p className="text-xs text-muted-foreground">
                                       {prop.size.label}
                                     </p>
                                   </div>
@@ -869,7 +869,7 @@ export function Sidebar() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-6 w-6 p-0 text-gray-500 hover:text-blue-400"
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleEditProp(prop);
@@ -881,7 +881,7 @@ export function Sidebar() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-6 w-6 p-0 text-gray-500 hover:text-red-400"
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           removeCustomProp(prop.id);
@@ -898,7 +898,7 @@ export function Sidebar() {
                           );
                         })}
                         {category.id === 'custom' && categoryProps.length === 0 && (
-                          <div className="text-center py-4 text-gray-500 text-xs">
+                          <div className="text-center py-4 text-muted-foreground text-xs">
                             No custom props yet.
                             <br />
                             Click &quot;New&quot; to create one.
@@ -916,15 +916,15 @@ export function Sidebar() {
         <Separator />
 
         {/* Stats footer */}
-        <div className="p-3 bg-gray-900">
-          <div className="text-xs text-gray-400">
+        <div className="p-3 bg-background">
+          <div className="text-xs text-muted-foreground">
             <div className="flex justify-between">
               <span>Pieces on map:</span>
-              <span className="text-white">{placedPieces.length}</span>
+              <span className="text-foreground">{placedPieces.length}</span>
             </div>
             <div className="flex justify-between">
               <span>Current level:</span>
-              <span className="text-white">
+              <span className="text-foreground">
                 {currentLevel === 0
                   ? 'Ground'
                   : currentLevel > 0
@@ -934,7 +934,7 @@ export function Sidebar() {
             </div>
             <div className="flex justify-between">
               <span>Mode:</span>
-              <span className="text-white capitalize">{editMode}</span>
+              <span className="text-foreground capitalize">{editMode}</span>
             </div>
           </div>
         </div>
@@ -943,15 +943,15 @@ export function Sidebar() {
       {/* Toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`absolute top-1/2 -translate-y-1/2 w-6 h-16 bg-gray-800 hover:bg-gray-700 border border-gray-600 border-l-0 rounded-r-lg flex items-center justify-center transition-all duration-300 z-10 ${
+        className={`absolute top-1/2 -translate-y-1/2 w-6 h-16 bg-card hover:bg-accent border border-border border-l-0 rounded-r-lg flex items-center justify-center transition-all duration-300 z-10 ${
           isOpen ? 'left-72' : 'left-0'
         }`}
         title={isOpen ? 'Hide sidebar' : 'Show sidebar'}
       >
         {isOpen ? (
-          <ChevronLeft className="w-4 h-4 text-gray-300" />
+          <ChevronLeft className="w-4 h-4 text-muted-foreground" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-gray-300" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
         )}
       </button>
 
@@ -964,19 +964,19 @@ export function Sidebar() {
           <div className="space-y-4 py-4">
             {/* Name */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">Name</label>
+              <label className="text-sm font-medium text-foreground block mb-2">Name</label>
               <input
                 type="text"
                 value={newPropName}
                 onChange={(e) => setNewPropName(e.target.value)}
                 placeholder="Enter prop name..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             {/* Image or Emoji */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-foreground block mb-2">
                 Image or Emoji
               </label>
 
@@ -988,18 +988,18 @@ export function Sidebar() {
                       <img
                         src={newPropImage}
                         alt="Prop preview"
-                        className="w-16 h-16 object-cover rounded-lg border border-gray-600"
+                        className="w-16 h-16 object-cover rounded-lg border border-border"
                       />
                       <button
                         type="button"
                         onClick={() => setNewPropImage(null)}
-                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-600"
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-white text-xs hover:bg-destructive/80"
                       >
                         ×
                       </button>
                     </div>
                   ) : (
-                    <label className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition-colors">
+                    <label className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-accent rounded-lg cursor-pointer transition-colors">
                       <Upload className="h-4 w-4" />
                       <span className="text-sm">Upload Image</span>
                       <input
@@ -1011,7 +1011,7 @@ export function Sidebar() {
                     </label>
                   )}
                   {!newPropImage && (
-                    <span className="text-gray-500 text-sm">or select an emoji below</span>
+                    <span className="text-muted-foreground text-sm">or select an emoji below</span>
                   )}
                 </div>
               </div>
@@ -1020,17 +1020,17 @@ export function Sidebar() {
               {!newPropImage && (
                 <>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-gray-400">Selected:</span>
+                    <span className="text-sm text-muted-foreground">Selected:</span>
                     <span className="text-2xl">{newPropEmoji}</span>
                   </div>
-                  <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto bg-gray-900 p-2 rounded-lg">
+                  <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto bg-background p-2 rounded-lg">
                     {COMMON_PROP_EMOJIS.map((emoji) => (
                       <button
                         key={emoji}
                         type="button"
                         onClick={() => setNewPropEmoji(emoji)}
-                        className={`text-xl p-1 rounded hover:bg-gray-700 ${
-                          newPropEmoji === emoji ? 'bg-blue-600' : ''
+                        className={`text-xl p-1 rounded hover:bg-accent ${
+                          newPropEmoji === emoji ? 'bg-primary' : ''
                         }`}
                       >
                         {emoji}
@@ -1043,7 +1043,7 @@ export function Sidebar() {
 
             {/* Category */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">Category</label>
+              <label className="text-sm font-medium text-foreground block mb-2">Category</label>
               <div className="flex flex-wrap gap-2">
                 {PROP_CATEGORIES.map((cat) => (
                   <button
@@ -1052,8 +1052,8 @@ export function Sidebar() {
                     onClick={() => setNewPropCategory(cat.id)}
                     className={`px-3 py-1 rounded text-sm ${
                       newPropCategory === cat.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-primary text-white'
+                        : 'bg-secondary text-foreground hover:bg-accent'
                     }`}
                   >
                     {cat.icon} {cat.name}
@@ -1064,7 +1064,7 @@ export function Sidebar() {
 
             {/* Size */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">Size (D&D)</label>
+              <label className="text-sm font-medium text-foreground block mb-2">Size (D&D)</label>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(PROP_SIZES).map(([key, size]) => (
                   <button
@@ -1073,8 +1073,8 @@ export function Sidebar() {
                     onClick={() => setNewPropSize(key)}
                     className={`px-3 py-1 rounded text-sm ${
                       newPropSize === key
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-primary text-white'
+                        : 'bg-secondary text-foreground hover:bg-accent'
                     }`}
                   >
                     {size.label}
@@ -1113,19 +1113,19 @@ export function Sidebar() {
           <div className="space-y-4 py-4">
             {/* Name */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">Name</label>
+              <label className="text-sm font-medium text-foreground block mb-2">Name</label>
               <input
                 type="text"
                 value={newPropName}
                 onChange={(e) => setNewPropName(e.target.value)}
                 placeholder="Enter prop name..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             {/* Image or Emoji */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-foreground block mb-2">
                 Image or Emoji
               </label>
 
@@ -1137,18 +1137,18 @@ export function Sidebar() {
                       <img
                         src={newPropImage}
                         alt="Prop preview"
-                        className="w-16 h-16 object-cover rounded-lg border border-gray-600"
+                        className="w-16 h-16 object-cover rounded-lg border border-border"
                       />
                       <button
                         type="button"
                         onClick={() => setNewPropImage(null)}
-                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-600"
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-white text-xs hover:bg-destructive/80"
                       >
                         ×
                       </button>
                     </div>
                   ) : (
-                    <label className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition-colors">
+                    <label className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-accent rounded-lg cursor-pointer transition-colors">
                       <Upload className="h-4 w-4" />
                       <span className="text-sm">Upload Image</span>
                       <input
@@ -1160,7 +1160,7 @@ export function Sidebar() {
                     </label>
                   )}
                   {!newPropImage && (
-                    <span className="text-gray-500 text-sm">or select an emoji below</span>
+                    <span className="text-muted-foreground text-sm">or select an emoji below</span>
                   )}
                 </div>
               </div>
@@ -1169,17 +1169,17 @@ export function Sidebar() {
               {!newPropImage && (
                 <>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-gray-400">Selected:</span>
+                    <span className="text-sm text-muted-foreground">Selected:</span>
                     <span className="text-2xl">{newPropEmoji}</span>
                   </div>
-                  <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto bg-gray-900 p-2 rounded-lg">
+                  <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto bg-background p-2 rounded-lg">
                     {COMMON_PROP_EMOJIS.map((emoji) => (
                       <button
                         key={emoji}
                         type="button"
                         onClick={() => setNewPropEmoji(emoji)}
-                        className={`text-xl p-1 rounded hover:bg-gray-700 ${
-                          newPropEmoji === emoji ? 'bg-blue-600' : ''
+                        className={`text-xl p-1 rounded hover:bg-accent ${
+                          newPropEmoji === emoji ? 'bg-primary' : ''
                         }`}
                       >
                         {emoji}
@@ -1192,7 +1192,7 @@ export function Sidebar() {
 
             {/* Category */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">Category</label>
+              <label className="text-sm font-medium text-foreground block mb-2">Category</label>
               <div className="flex flex-wrap gap-2">
                 {PROP_CATEGORIES.map((cat) => (
                   <button
@@ -1201,8 +1201,8 @@ export function Sidebar() {
                     onClick={() => setNewPropCategory(cat.id)}
                     className={`px-3 py-1 rounded text-sm ${
                       newPropCategory === cat.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-primary text-white'
+                        : 'bg-secondary text-foreground hover:bg-accent'
                     }`}
                   >
                     {cat.icon} {cat.name}
@@ -1213,7 +1213,7 @@ export function Sidebar() {
 
             {/* Size */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">Size (D&D)</label>
+              <label className="text-sm font-medium text-foreground block mb-2">Size (D&D)</label>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(PROP_SIZES).map(([key, size]) => (
                   <button
@@ -1222,8 +1222,8 @@ export function Sidebar() {
                     onClick={() => setNewPropSize(key)}
                     className={`px-3 py-1 rounded text-sm ${
                       newPropSize === key
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-primary text-white'
+                        : 'bg-secondary text-foreground hover:bg-accent'
                     }`}
                   >
                     {size.label}

@@ -97,7 +97,7 @@ export function ExportReportDialog({
           {/* Map preview */}
           {map.snapshot && (
             <div className="space-y-2">
-              <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
+              <div className="aspect-video bg-card rounded-lg overflow-hidden">
                 <img
                   src={map.snapshot}
                   alt={map.name}
@@ -119,47 +119,47 @@ export function ExportReportDialog({
           {/* Map info */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Map:</span>
-              <span className="font-medium text-white">{map.name}</span>
+              <span className="text-muted-foreground">Map:</span>
+              <span className="font-medium text-foreground">{map.name}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Dimensions:</span>
-              <span className="text-white">{map.mapWidth}&quot; x {map.mapHeight}&quot;</span>
+              <span className="text-muted-foreground">Dimensions:</span>
+              <span className="text-foreground">{map.mapWidth}&quot; x {map.mapHeight}&quot;</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Total pieces:</span>
-              <span className="text-white">{totalUsed}</span>
+              <span className="text-muted-foreground">Total pieces:</span>
+              <span className="text-foreground">{totalUsed}</span>
             </div>
           </div>
 
           {/* Status summary */}
-          <div className="bg-gray-800/50 rounded-lg p-3 space-y-2">
-            <div className="text-sm font-medium text-gray-300 mb-2">Piece Status</div>
+          <div className="bg-secondary/50 rounded-lg p-3 space-y-2">
+            <div className="text-sm font-medium text-foreground mb-2">Piece Status</div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-green-900/30 rounded p-2">
                 <div className="flex items-center justify-center gap-1 text-green-400">
                   <CheckCircle className="h-4 w-4" />
                   <span className="font-bold">{okCount}</span>
                 </div>
-                <div className="text-xs text-gray-400">OK</div>
+                <div className="text-xs text-muted-foreground">OK</div>
               </div>
               <div className="bg-yellow-900/30 rounded p-2">
                 <div className="flex items-center justify-center gap-1 text-yellow-400">
                   <AlertTriangle className="h-4 w-4" />
                   <span className="font-bold">{warningCount}</span>
                 </div>
-                <div className="text-xs text-gray-400">Exact</div>
+                <div className="text-xs text-muted-foreground">Exact</div>
               </div>
               <div className="bg-red-900/30 rounded p-2">
                 <div className="flex items-center justify-center gap-1 text-red-400">
                   <AlertCircle className="h-4 w-4" />
                   <span className="font-bold">{overusedCount}</span>
                 </div>
-                <div className="text-xs text-gray-400">Over</div>
+                <div className="text-xs text-muted-foreground">Over</div>
               </div>
             </div>
             {overusedCount > 0 && (
-              <p className="text-xs text-red-400 mt-2">
+              <p className="text-xs text-destructive mt-2">
                 {overusedCount} piece type{overusedCount > 1 ? 's' : ''} exceed{overusedCount === 1 ? 's' : ''} available inventory
               </p>
             )}
@@ -179,7 +179,7 @@ export function ExportReportDialog({
                     className="bg-purple-800/40 px-2 py-1 rounded text-xs"
                   >
                     <span className="text-purple-300">{magnet.size}:</span>
-                    <span className="text-white ml-1 font-bold">{magnet.totalNeeded}</span>
+                    <span className="text-foreground ml-1 font-bold">{magnet.totalNeeded}</span>
                   </div>
                 ))}
               </div>
@@ -188,50 +188,50 @@ export function ExportReportDialog({
 
           {/* Format selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300">Export Format</label>
+            <label className="text-sm font-medium text-foreground">Export Format</label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => setFormat('markdown')}
                 className={`p-3 rounded-lg border text-center transition-all ${
                   format === 'markdown'
-                    ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500'
-                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                    ? 'bg-primary/20 border-primary ring-1 ring-primary'
+                    : 'bg-card border-border hover:border-border'
                 }`}
               >
-                <FileText className="h-5 w-5 mx-auto mb-1 text-gray-300" />
-                <div className="text-sm font-medium text-white">Markdown</div>
-                <div className="text-xs text-gray-400">.md</div>
+                <FileText className="h-5 w-5 mx-auto mb-1 text-foreground" />
+                <div className="text-sm font-medium text-foreground">Markdown</div>
+                <div className="text-xs text-muted-foreground">.md</div>
               </button>
               <button
                 onClick={() => setFormat('pdf')}
                 className={`p-3 rounded-lg border text-center transition-all ${
                   format === 'pdf'
-                    ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500'
-                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                    ? 'bg-primary/20 border-primary ring-1 ring-primary'
+                    : 'bg-card border-border hover:border-border'
                 }`}
               >
-                <FileDown className="h-5 w-5 mx-auto mb-1 text-gray-300" />
-                <div className="text-sm font-medium text-white">PDF</div>
-                <div className="text-xs text-gray-400">.pdf</div>
+                <FileDown className="h-5 w-5 mx-auto mb-1 text-foreground" />
+                <div className="text-sm font-medium text-foreground">PDF</div>
+                <div className="text-xs text-muted-foreground">.pdf</div>
               </button>
               <button
                 onClick={() => setFormat('both')}
                 className={`p-3 rounded-lg border text-center transition-all ${
                   format === 'both'
-                    ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500'
-                    : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                    ? 'bg-primary/20 border-primary ring-1 ring-primary'
+                    : 'bg-card border-border hover:border-border'
                 }`}
               >
-                <Download className="h-5 w-5 mx-auto mb-1 text-gray-300" />
-                <div className="text-sm font-medium text-white">Both</div>
-                <div className="text-xs text-gray-400">.md + .pdf</div>
+                <Download className="h-5 w-5 mx-auto mb-1 text-foreground" />
+                <div className="text-sm font-medium text-foreground">Both</div>
+                <div className="text-xs text-muted-foreground">.md + .pdf</div>
               </button>
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-sm text-red-400">
+          <div className="bg-destructive/20 border border-destructive rounded-lg p-3 text-sm text-destructive">
             {error}
           </div>
         )}

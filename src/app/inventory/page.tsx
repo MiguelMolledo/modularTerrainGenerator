@@ -77,14 +77,14 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-3rem)] bg-gray-900">
+    <div className="min-h-[calc(100vh-3rem)] bg-background">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 py-4 px-4">
+      <header className="bg-card border-b border-border py-4 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">Inventory</h1>
-              <p className="text-sm text-gray-400 mt-1">
+              <h1 className="text-2xl font-bold text-foreground">Inventory</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 {activeTab === 'terrain'
                   ? 'Manage your terrain types, modular pieces, and 3D objects'
                   : 'Manage your props, NPCs, creatures, and items'}
@@ -113,7 +113,7 @@ export default function InventoryPage() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeTab === 'terrain'
                   ? 'bg-amber-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-secondary text-muted-foreground hover:bg-accent'
               }`}
             >
               <Mountain className="h-4 w-4" />
@@ -124,7 +124,7 @@ export default function InventoryPage() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeTab === 'props'
                   ? 'bg-purple-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-secondary text-muted-foreground hover:bg-accent'
               }`}
             >
               <Boxes className="h-4 w-4" />
@@ -137,8 +137,8 @@ export default function InventoryPage() {
       {/* Error message */}
       {error && (
         <div className="max-w-7xl mx-auto px-4 mt-4">
-          <div className="bg-red-900/50 border border-red-700 rounded-lg p-4 flex justify-between items-center">
-            <span className="text-red-200">{error}</span>
+          <div className="bg-destructive/10 border border-destructive/50 rounded-lg p-4 flex justify-between items-center">
+            <span className="text-destructive">{error}</span>
             <Button variant="ghost" size="sm" onClick={clearError}>
               Dismiss
             </Button>
@@ -153,8 +153,8 @@ export default function InventoryPage() {
           isLoading && !selectedTerrainId ? (
             <div className="flex items-center justify-center py-20">
               <div className="text-center">
-                <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mx-auto" />
-                <p className="text-gray-400 mt-4">Loading inventory...</p>
+                <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin mx-auto" />
+                <p className="text-muted-foreground mt-4">Loading inventory...</p>
               </div>
             </div>
           ) : (

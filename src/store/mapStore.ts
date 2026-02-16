@@ -116,6 +116,7 @@ interface MapState {
   refreshFromInventory: () => Promise<void>;
   setZoom: (zoom: number) => void;
   setPan: (x: number, y: number) => void;
+  setZoomAndPan: (zoom: number, x: number, y: number) => void;
   toggleGrid: () => void;
   toggleSnapToGrid: () => void;
   toggleMagneticSnap: () => void;
@@ -840,9 +841,11 @@ export const useMapStore = create<MapState>((set, get) => ({
     });
   },
 
-  setZoom: (zoom) => set({ zoom: Math.max(0.25, Math.min(2, zoom)) }),
+  setZoom: (zoom) => set({ zoom: Math.max(0.1, Math.min(4, zoom)) }),
 
   setPan: (x, y) => set({ panX: x, panY: y }),
+
+  setZoomAndPan: (zoom, x, y) => set({ zoom: Math.max(0.1, Math.min(4, zoom)), panX: x, panY: y }),
 
   toggleGrid: () =>
     set((state) => ({

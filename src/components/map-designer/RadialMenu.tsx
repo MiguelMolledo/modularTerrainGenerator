@@ -135,9 +135,9 @@ export function RadialMenu() {
   if (itemCount === 0) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pointer-events-none">
-        <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 text-center">
-          <p className="text-gray-300 text-sm">No recently used pieces</p>
-          <p className="text-gray-500 text-xs mt-1">Place some pieces first!</p>
+        <div className="bg-card border border-border rounded-lg p-4 text-center">
+          <p className="text-foreground text-sm">No recently used pieces</p>
+          <p className="text-muted-foreground text-xs mt-1">Place some pieces first!</p>
         </div>
       </div>
     );
@@ -219,7 +219,7 @@ export function RadialMenu() {
 
         {/* Center circle */}
         <div
-          className="absolute rounded-full bg-gray-700 border-2 border-gray-500 flex items-center justify-center"
+          className="absolute rounded-full bg-secondary border-2 border-border flex items-center justify-center"
           style={{
             width: CENTER_SIZE,
             height: CENTER_SIZE,
@@ -228,7 +228,7 @@ export function RadialMenu() {
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <span className="text-gray-400 text-xs font-bold">T</span>
+          <span className="text-muted-foreground text-xs font-bold">T</span>
         </div>
 
         {/* Menu items */}
@@ -239,8 +239,8 @@ export function RadialMenu() {
               key={item.pieceId}
               className={`absolute rounded-lg border-2 flex flex-col items-center justify-center transition-all duration-100 ${
                 item.isSelected
-                  ? 'bg-gray-700 border-blue-400 scale-110 shadow-lg'
-                  : 'bg-gray-800 border-gray-600'
+                  ? 'bg-secondary border-primary scale-110 shadow-lg'
+                  : 'bg-card border-border'
               }`}
               style={{
                 width: ITEM_SIZE,
@@ -329,7 +329,7 @@ export function RadialMenu() {
         {/* Selected item label */}
         {selectedItem && (
           <div
-            className="absolute whitespace-nowrap bg-gray-900/90 px-2 py-1 rounded text-sm text-white border border-gray-600"
+            className="absolute whitespace-nowrap bg-background/90 px-2 py-1 rounded text-sm text-foreground border border-border"
             style={{
               left: '50%',
               top: `calc(50% + ${MENU_RADIUS + ITEM_SIZE / 2 + 16}px)`,
@@ -340,7 +340,7 @@ export function RadialMenu() {
               {selectedItem.terrain?.icon}
             </span>{' '}
             {selectedItem.piece.name}
-            <span className="text-gray-400 ml-2 text-xs">
+            <span className="text-muted-foreground ml-2 text-xs">
               {selectedItem.piece.size.label}
             </span>
           </div>
@@ -348,9 +348,9 @@ export function RadialMenu() {
       </div>
 
       {/* Instructions */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-gray-900/90 px-4 py-2 rounded-lg border border-gray-600">
-        <p className="text-gray-300 text-sm">
-          Move mouse to select • Release <kbd className="bg-gray-700 px-1.5 py-0.5 rounded mx-1">T</kbd> to place
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-background/90 px-4 py-2 rounded-lg border border-border">
+        <p className="text-foreground text-sm">
+          Move mouse to select • Release <kbd className="bg-secondary px-1.5 py-0.5 rounded mx-1">T</kbd> to place
         </p>
       </div>
     </div>

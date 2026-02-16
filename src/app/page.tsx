@@ -65,14 +65,14 @@ export default function Home() {
   const recentMaps = savedMaps.slice(0, 4);
 
   return (
-    <div className="min-h-[calc(100vh-3rem)] bg-gray-900">
+    <div className="min-h-[calc(100vh-3rem)] bg-background">
       {/* Hero section */}
-      <div className="bg-gradient-to-b from-gray-800 to-gray-900 py-16">
+      <div className="bg-gradient-to-b from-card to-background py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
             Modular Terrain Creator
           </h1>
-          <p className="text-xl text-gray-400 mb-8">
+          <p className="text-xl text-muted-foreground mb-8">
             Design and manage your tabletop terrain layouts with ease
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -93,25 +93,25 @@ export default function Home() {
       {/* Recent maps section */}
       <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-            <Clock className="h-5 w-5 text-gray-400" />
+          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+            <Clock className="h-5 w-5 text-muted-foreground" />
             Recent Maps
           </h2>
           {savedMaps.length > 4 && (
-            <Link href="/maps" className="text-sm text-blue-400 hover:text-blue-300">
+            <Link href="/maps" className="text-sm text-primary hover:text-primary/80">
               View all ({savedMaps.length})
             </Link>
           )}
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-gray-400">Loading...</div>
+          <div className="text-center py-12 text-muted-foreground">Loading...</div>
         ) : recentMaps.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {recentMaps.map((map) => (
               <Link key={map.id} href={`/designer?mapId=${map.id}`}>
-                <Card className="hover:ring-2 hover:ring-blue-500 transition-all cursor-pointer h-full">
-                  <div className="h-24 bg-gray-800 flex items-center justify-center">
+                <Card className="hover:ring-2 hover:ring-ring transition-all cursor-pointer h-full">
+                  <div className="h-24 bg-card flex items-center justify-center">
                     {map.thumbnail ? (
                       <img
                         src={map.thumbnail}
@@ -119,14 +119,14 @@ export default function Home() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Map className="h-8 w-8 text-gray-600" />
+                      <Map className="h-8 w-8 text-muted-foreground" />
                     )}
                   </div>
                   <CardContent className="p-3">
-                    <h3 className="font-medium text-white text-sm truncate">
+                    <h3 className="font-medium text-foreground text-sm truncate">
                       {map.name}
                     </h3>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {map.placedPieces.length} pieces
                     </p>
                   </CardContent>
@@ -135,11 +135,11 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <Card className="bg-gray-800/50 border-dashed">
+          <Card className="bg-secondary border-dashed">
             <CardContent className="py-12 text-center">
-              <Map className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg text-gray-400 mb-2">No maps yet</h3>
-              <p className="text-gray-500 mb-4">
+              <Map className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg text-muted-foreground mb-2">No maps yet</h3>
+              <p className="text-muted-foreground mb-4">
                 Create your first terrain map to get started
               </p>
               <Button onClick={handleNewMapClick}>
@@ -158,7 +158,7 @@ export default function Home() {
             <DialogTitle>Create New Map</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <label className="text-sm font-medium text-gray-300 block mb-2">
+            <label className="text-sm font-medium text-muted-foreground block mb-2">
               Map Name
             </label>
             <input
@@ -171,7 +171,7 @@ export default function Home() {
                 }
               }}
               placeholder="Enter map name..."
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               autoFocus
             />
           </div>
@@ -204,32 +204,32 @@ export default function Home() {
       </Dialog>
 
       {/* Features section */}
-      <div className="max-w-6xl mx-auto px-4 py-12 border-t border-gray-800">
-        <h2 className="text-xl font-semibold text-white mb-6 text-center">Features</h2>
+      <div className="max-w-6xl mx-auto px-4 py-12 border-t border-border">
+        <h2 className="text-xl font-semibold text-foreground mb-6 text-center">Features</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gray-800/50">
+          <Card className="bg-secondary">
             <CardContent className="p-6 text-center">
               <div className="text-3xl mb-3">🎨</div>
-              <h3 className="font-medium text-white mb-2">Visual Designer</h3>
-              <p className="text-sm text-gray-400">
+              <h3 className="font-medium text-foreground mb-2">Visual Designer</h3>
+              <p className="text-sm text-muted-foreground">
                 Drag and drop terrain pieces with real-time preview
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-gray-800/50">
+          <Card className="bg-secondary">
             <CardContent className="p-6 text-center">
               <div className="text-3xl mb-3">📐</div>
-              <h3 className="font-medium text-white mb-2">Snap to Grid</h3>
-              <p className="text-sm text-gray-400">
+              <h3 className="font-medium text-foreground mb-2">Snap to Grid</h3>
+              <p className="text-sm text-muted-foreground">
                 Precise placement with magnetic snapping
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-gray-800/50">
+          <Card className="bg-secondary">
             <CardContent className="p-6 text-center">
               <div className="text-3xl mb-3">☁️</div>
-              <h3 className="font-medium text-white mb-2">Cloud Storage</h3>
-              <p className="text-sm text-gray-400">
+              <h3 className="font-medium text-foreground mb-2">Cloud Storage</h3>
+              <p className="text-sm text-muted-foreground">
                 Save your maps to the cloud with Supabase
               </p>
             </CardContent>

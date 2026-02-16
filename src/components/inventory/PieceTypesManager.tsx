@@ -98,14 +98,14 @@ export function PieceTypesManager() {
             </svg>
           ) : (
             <div
-              className="border-2 border-gray-600 bg-gray-700 relative"
+              className="border-2 border-border bg-secondary relative"
               style={{
                 width: `${Math.min(60, shape.width * 15)}px`,
                 height: `${Math.min(60, shape.height * 15)}px`,
               }}
             >
               {hasElevation && (
-                <div className="absolute inset-0 bg-gradient-to-t from-transparent to-blue-500/30" />
+                <div className="absolute inset-0 bg-gradient-to-t from-transparent to-primary/30" />
               )}
             </div>
           )}
@@ -113,13 +113,13 @@ export function PieceTypesManager() {
 
         {/* Shape info */}
         <div className="text-center mb-3">
-          <h3 className="text-sm font-medium text-white">{shape.name}</h3>
-          <p className="text-xs text-gray-500">
+          <h3 className="text-sm font-medium text-foreground">{shape.name}</h3>
+          <p className="text-xs text-muted-foreground">
             {shape.width}&quot; x {shape.height}&quot;
             {shape.isDiagonal && ' (diagonal)'}
           </p>
           {hasElevation && (
-            <p className="text-xs text-blue-400 mt-1">
+            <p className="text-xs text-primary mt-1">
               Has elevation
             </p>
           )}
@@ -149,7 +149,7 @@ export function PieceTypesManager() {
             <Button
               variant="ghost"
               size="icon"
-              className={`h-8 w-8 ${hasElevation ? 'text-blue-400' : ''}`}
+              className={`h-8 w-8 ${hasElevation ? 'text-primary' : ''}`}
               onClick={() => handleEditElevation(shape)}
               title="Edit elevation"
             >
@@ -159,7 +159,7 @@ export function PieceTypesManager() {
           <Button
             variant="ghost"
             size="icon"
-            className={`h-8 w-8 ${deletingId === shape.id ? 'text-red-500' : ''}`}
+            className={`h-8 w-8 ${deletingId === shape.id ? 'text-destructive' : ''}`}
             onClick={() => handleDelete(shape.id)}
             title={deletingId === shape.id ? 'Click again to confirm' : 'Delete'}
           >
@@ -168,7 +168,7 @@ export function PieceTypesManager() {
         </div>
 
         {deletingId === shape.id && (
-          <p className="text-xs text-red-400 text-center mt-2">
+          <p className="text-xs text-destructive text-center mt-2">
             Click again to confirm
           </p>
         )}
@@ -184,7 +184,7 @@ export function PieceTypesManager() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Piece Types Catalog</CardTitle>
-              <p className="text-sm text-gray-400 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Define the piece shapes available for all terrain types
               </p>
             </div>
@@ -242,8 +242,8 @@ export function PieceTypesManager() {
       {shapes.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-gray-400">No piece types defined yet.</p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-muted-foreground">No piece types defined yet.</p>
+            <p className="text-sm text-muted-foreground mt-1">
               Create your first piece type to get started.
             </p>
             <Button className="mt-4" onClick={handleCreate}>

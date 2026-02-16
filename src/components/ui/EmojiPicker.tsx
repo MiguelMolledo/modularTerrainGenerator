@@ -8,7 +8,7 @@ import { Button } from './button';
 // Dynamically import Picker to avoid SSR issues
 const Picker = dynamic(
   () => import('@emoji-mart/react').then((mod) => mod.default),
-  { ssr: false, loading: () => <div className="w-[352px] h-[435px] bg-gray-800 animate-pulse rounded-lg" /> }
+  { ssr: false, loading: () => <div className="w-[352px] h-[435px] bg-card animate-pulse rounded-lg" /> }
 );
 
 interface EmojiPickerProps {
@@ -54,9 +54,9 @@ export function EmojiPicker({ value, onChange, className }: EmojiPickerProps) {
         type="button"
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
-        className="h-12 w-12 text-2xl p-0 border-gray-700 hover:border-gray-600"
+        className="h-12 w-12 text-2xl p-0 border-border hover:border-border"
       >
-        {value || <Smile className="h-5 w-5 text-gray-400" />}
+        {value || <Smile className="h-5 w-5 text-muted-foreground" />}
       </Button>
 
       {isOpen && emojiData && (

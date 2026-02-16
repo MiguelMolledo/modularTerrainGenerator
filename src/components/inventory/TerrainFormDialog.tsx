@@ -82,7 +82,7 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-foreground block mb-1">
               Name
             </label>
             <input
@@ -90,14 +90,14 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g., Snow"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               required
             />
           </div>
 
           {/* Slug */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-foreground block mb-1">
               Slug (ID)
             </label>
             <input
@@ -105,22 +105,22 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="e.g., snow"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Used as identifier. Only lowercase letters, numbers, and hyphens.
             </p>
           </div>
 
           {/* Icon */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-foreground block mb-1">
               Icon
             </label>
             <div className="flex items-center gap-3">
               <EmojiPicker value={icon} onChange={setIcon} />
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 Click to select an emoji
               </span>
             </div>
@@ -128,7 +128,7 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
 
           {/* Color */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-foreground block mb-1">
               Color
             </label>
             <div className="flex flex-wrap gap-2">
@@ -138,7 +138,7 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
                   type="button"
                   onClick={() => setColor(c)}
                   className={`w-8 h-8 rounded-full transition-all ${
-                    color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900' : ''
+                    color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-background' : ''
                   }`}
                   style={{ backgroundColor: c }}
                 />
@@ -148,11 +148,11 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
 
           {/* Piece Template */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-2">
+            <label className="text-sm font-medium text-muted-foreground block mb-2">
               Piece Template
             </label>
             {pieceTemplates.length === 0 ? (
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Loading templates...
               </p>
             ) : (
@@ -168,20 +168,20 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
                       onClick={() => setSelectedTemplateId(template.id)}
                       className={`p-3 rounded-lg border text-left transition-all ${
                         isSelected
-                          ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500'
-                          : 'bg-gray-800 border-gray-700 hover:bg-gray-750 hover:border-gray-600'
+                          ? 'bg-primary/20 border-primary ring-1 ring-primary'
+                          : 'bg-card border-border hover:bg-accent hover:border-border'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-xl">{template.icon}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-white text-sm truncate">
+                          <div className="font-medium text-foreground text-sm truncate">
                             {template.name}
                             {!template.isDefault && (
                               <span className="ml-1 text-xs text-amber-400">*</span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-muted-foreground">
                             {pieceCount === 0 ? 'No pieces' : `${pieceCount} pieces`}
                           </div>
                         </div>
@@ -194,7 +194,7 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
 
             {/* Template description */}
             {selectedTemplate && (
-              <p className="text-xs text-gray-400 mt-2 px-1">
+              <p className="text-xs text-muted-foreground mt-2 px-1">
                 {selectedTemplate.description || 'No description'}
               </p>
             )}
@@ -202,18 +202,19 @@ export function TerrainFormDialog({ open, onOpenChange }: TerrainFormDialogProps
 
           {/* Description */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
-              Description <span className="text-red-400">*</span>
+            <label className="text-sm font-medium text-foreground block mb-1">
+              Description <span className="text-destructive">*</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe this terrain for AI image generation (e.g., 'Sandy desert with dunes, dry earth, and cacti')"
               rows={3}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Used for AI image generation. Describe the visual appearance and features.
             </p>
           </div>

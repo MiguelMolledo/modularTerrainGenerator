@@ -44,7 +44,7 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
   if (!terrain) {
     return (
       <Card>
-        <CardContent className="p-8 text-center text-gray-500">
+        <CardContent className="p-8 text-center text-muted-foreground">
           Terrain type not found
         </CardContent>
       </Card>
@@ -63,7 +63,7 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
 
   return (
     <Card className="overflow-visible">
-      <CardHeader className="border-b border-gray-800 overflow-visible">
+      <CardHeader className="border-b border-border overflow-visible">
         <div className="flex items-start gap-4">
           {/* Icon picker */}
           <EmojiPicker
@@ -84,12 +84,12 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
                 setHasChanges(true);
               }}
               disabled={terrain.isDefault}
-              className="text-xl font-bold bg-transparent border-b border-transparent hover:border-gray-600 focus:border-blue-500 outline-none text-white w-full disabled:cursor-not-allowed disabled:opacity-50"
+              className="text-xl font-bold bg-transparent border-b border-transparent hover:border-border focus:border-ring outline-none text-foreground w-full disabled:cursor-not-allowed disabled:opacity-50"
             />
 
             {/* Color picker */}
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-sm text-gray-400">Color:</span>
+              <span className="text-sm text-muted-foreground">Color:</span>
               <div className="flex gap-1">
                 {TERRAIN_COLORS.map((c) => (
                   <button
@@ -100,7 +100,7 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
                     }}
                     disabled={terrain.isDefault}
                     className={`w-5 h-5 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                      editedColor === c ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-900' : ''
+                      editedColor === c ? 'ring-2 ring-white ring-offset-1 ring-offset-background' : ''
                     }`}
                     style={{ backgroundColor: c }}
                   />
@@ -109,7 +109,7 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
             </div>
 
             {terrain.isDefault && (
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Default terrain types cannot be renamed
               </p>
             )}
@@ -125,10 +125,10 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
         </div>
 
         {/* Description section - collapsible */}
-        <div className="mt-4 pt-4 border-t border-gray-700">
+        <div className="mt-4 pt-4 border-t border-border">
           <button
             onClick={() => setShowDescriptionEditor(!showDescriptionEditor)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors w-full"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
           >
             <Wand2 className="h-4 w-4 text-amber-500" />
             <span className="font-medium">AI Image Description</span>
@@ -138,7 +138,7 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
               <ChevronDown className="h-4 w-4 ml-auto" />
             )}
             {editedDescription && !showDescriptionEditor && (
-              <span className="text-xs text-gray-500 truncate max-w-xs ml-2">
+              <span className="text-xs text-muted-foreground truncate max-w-xs ml-2">
                 {editedDescription.substring(0, 50)}...
               </span>
             )}
@@ -154,9 +154,9 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
                 }}
                 placeholder="Describe this terrain for AI image generation. Be detailed about textures, colors, features, and atmosphere..."
                 rows={4}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
               />
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 This description is used when generating artistic battlemaps. Include details about textures, colors, typical features, and atmosphere.
               </p>
             </div>
@@ -165,11 +165,11 @@ export function TerrainEditor({ terrainTypeId }: TerrainEditorProps) {
       </CardHeader>
 
       <Tabs defaultValue="pieces" className="w-full">
-        <TabsList className="w-full justify-start border-b border-gray-800 rounded-none bg-transparent px-4">
-          <TabsTrigger value="pieces" className="data-[state=active]:bg-gray-800">
+        <TabsList className="w-full justify-start border-b border-border rounded-none bg-transparent px-4">
+          <TabsTrigger value="pieces" className="data-[state=active]:bg-card">
             Modular Pieces
           </TabsTrigger>
-          <TabsTrigger value="objects" className="data-[state=active]:bg-gray-800">
+          <TabsTrigger value="objects" className="data-[state=active]:bg-card">
             3D Objects
           </TabsTrigger>
         </TabsList>

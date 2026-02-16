@@ -106,7 +106,7 @@ export function ObjectFormDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Name
             </label>
             <input
@@ -114,48 +114,48 @@ export function ObjectFormDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Pine Tree"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               required
             />
           </div>
 
           {/* Dimensions */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Dimensions (inches)
             </label>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="text-xs text-gray-500">Width</label>
+                <label className="text-xs text-muted-foreground">Width</label>
                 <input
                   type="number"
                   value={width}
                   onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
                   step="0.5"
                   min="0.5"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500">Height</label>
+                <label className="text-xs text-muted-foreground">Height</label>
                 <input
                   type="number"
                   value={height}
                   onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
                   step="0.5"
                   min="0.5"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500">Depth</label>
+                <label className="text-xs text-muted-foreground">Depth</label>
                 <input
                   type="number"
                   value={depth}
                   onChange={(e) => setDepth(parseFloat(e.target.value) || 0)}
                   step="0.5"
                   min="0.5"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
@@ -163,7 +163,7 @@ export function ObjectFormDialog({
 
           {/* Emoji */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Icon
             </label>
             <div className="flex flex-wrap gap-2">
@@ -174,8 +174,8 @@ export function ObjectFormDialog({
                   onClick={() => setEmoji(e)}
                   className={`w-10 h-10 text-xl rounded-lg transition-all ${
                     emoji === e
-                      ? 'bg-blue-600 ring-2 ring-blue-400'
-                      : 'bg-gray-800 hover:bg-gray-700'
+                      ? 'bg-primary ring-2 ring-primary'
+                      : 'bg-card hover:bg-secondary'
                   }`}
                 >
                   {e}
@@ -186,7 +186,7 @@ export function ObjectFormDialog({
 
           {/* Quantity */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Quantity
             </label>
             <input
@@ -194,13 +194,13 @@ export function ObjectFormDialog({
               value={quantity}
               onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
               min="1"
-              className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-24 bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Description (optional)
             </label>
             <textarea
@@ -208,7 +208,7 @@ export function ObjectFormDialog({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional description..."
               rows={2}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
           </div>
 

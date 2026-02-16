@@ -209,7 +209,7 @@ export function SceneDescriptionDialog({ open, onOpenChange }: SceneDescriptionD
 
         <div className="flex-1 overflow-hidden flex flex-col gap-4 py-2">
           {/* Map Summary */}
-          <div className="text-sm text-gray-400 space-y-1">
+          <div className="text-sm text-muted-foreground space-y-1">
             <div className="flex gap-4">
               <span>Map: {mapWidth}" x {mapHeight}"</span>
               <span>({Math.round(mapWidth / 12)}ft x {Math.round(mapHeight / 12)}ft)</span>
@@ -217,14 +217,14 @@ export function SceneDescriptionDialog({ open, onOpenChange }: SceneDescriptionD
             {terrainInfo.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {terrainInfo.slice(0, 4).map((t) => (
-                  <span key={t.name} className="text-xs bg-gray-800 px-2 py-0.5 rounded">
+                  <span key={t.name} className="text-xs bg-card px-2 py-0.5 rounded">
                     {t.name} ({Math.round(t.percentage)}%)
                   </span>
                 ))}
               </div>
             )}
             {propsInfo.length > 0 && (
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-muted-foreground">
                 Props: {propsInfo.slice(0, 5).map((p) => `${p.emoji} ${p.name}`).join(', ')}
                 {propsInfo.length > 5 && ` +${propsInfo.length - 5} more`}
               </div>
@@ -234,7 +234,7 @@ export function SceneDescriptionDialog({ open, onOpenChange }: SceneDescriptionD
           {/* Context Input - show before generating */}
           {!hasResults && (
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-foreground block mb-2">
                 Additional Context (optional)
               </label>
               <textarea
@@ -248,7 +248,7 @@ Examples:
 - 'A tense negotiation is about to take place here'"
                 disabled={isGenerating}
                 rows={3}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none disabled:opacity-50"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none disabled:opacity-50"
               />
             </div>
           )}
@@ -257,13 +257,13 @@ Examples:
           {hasResults && (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Tabs */}
-              <div className="flex border-b border-gray-700 mb-3">
+              <div className="flex border-b border-border mb-3">
                 <button
                   onClick={() => setActiveTab('readAloud')}
                   className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
                     activeTab === 'readAloud'
                       ? 'text-indigo-400 border-b-2 border-indigo-400'
-                      : 'text-gray-400 hover:text-gray-300'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Eye className="h-4 w-4" />
@@ -274,7 +274,7 @@ Examples:
                   className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
                     activeTab === 'dmNotes'
                       ? 'text-indigo-400 border-b-2 border-indigo-400'
-                      : 'text-gray-400 hover:text-gray-300'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Shield className="h-4 w-4" />
@@ -287,7 +287,7 @@ Examples:
                 {activeTab === 'readAloud' ? (
                   <div className="space-y-3">
                     <div className="bg-indigo-900/20 border border-indigo-700/50 rounded-lg p-4">
-                      <p className="text-gray-200 whitespace-pre-wrap leading-relaxed italic">
+                      <p className="text-foreground whitespace-pre-wrap leading-relaxed italic">
                         {readAloud}
                       </p>
                     </div>
@@ -312,8 +312,8 @@ Examples:
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                      <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">
+                    <div className="bg-card border border-border rounded-lg p-4">
+                      <p className="text-foreground whitespace-pre-wrap leading-relaxed">
                         {dmNotes}
                       </p>
                     </div>
@@ -344,7 +344,7 @@ Examples:
                 variant="ghost"
                 size="sm"
                 onClick={resetState}
-                className="mt-3 text-gray-400"
+                className="mt-3 text-muted-foreground"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Generate new description
@@ -354,7 +354,7 @@ Examples:
 
           {/* Error Display */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300">
+            <div className="flex items-center gap-2 p-3 bg-destructive/20 border border-destructive rounded-lg text-destructive">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>

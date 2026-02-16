@@ -148,7 +148,7 @@ export function AIPropsDialog() {
                 className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
                   mode === m.id
                     ? 'bg-purple-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    : 'bg-card text-muted-foreground hover:bg-accent'
                 }`}
               >
                 {m.name}
@@ -158,7 +158,7 @@ export function AIPropsDialog() {
 
           {/* Prompt Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300">
+            <label className="text-sm font-medium text-foreground">
               {mode === 'quick' ? 'Describe your scene' : 'Paste your campaign text'}
             </label>
             {mode === 'quick' ? (
@@ -167,7 +167,7 @@ export function AIPropsDialog() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="e.g., medieval tavern with patrons"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                 onKeyDown={(e) => e.key === 'Enter' && canGenerate && handleGenerate()}
               />
             ) : (
@@ -176,19 +176,19 @@ export function AIPropsDialog() {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Paste your encounter description, campaign notes, or any text describing the scene..."
                 rows={4}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
               />
             )}
 
             {/* Quick examples */}
             {mode === 'quick' && !hasGeneratedProps && (
               <div className="flex flex-wrap gap-1">
-                <span className="text-xs text-gray-500">Try:</span>
+                <span className="text-xs text-muted-foreground">Try:</span>
                 {QUICK_EXAMPLES.slice(0, 3).map((example) => (
                   <button
                     key={example}
                     onClick={() => useExample(example)}
-                    className="text-xs px-2 py-0.5 bg-gray-800 text-gray-400 rounded hover:bg-gray-700 hover:text-gray-300"
+                    className="text-xs px-2 py-0.5 bg-card text-muted-foreground rounded hover:bg-accent hover:text-foreground"
                   >
                     {example}
                   </button>
@@ -199,7 +199,7 @@ export function AIPropsDialog() {
 
           {/* Count Selector */}
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-300">Number of props:</label>
+            <label className="text-sm font-medium text-foreground">Number of props:</label>
             <div className="flex gap-1">
               {[3, 5, 10, 15, 20].map((n) => (
                 <button
@@ -208,7 +208,7 @@ export function AIPropsDialog() {
                   className={`px-3 py-1 rounded text-sm ${
                     count === n
                       ? 'bg-purple-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-card text-muted-foreground hover:bg-accent'
                   }`}
                 >
                   {n}
@@ -238,7 +238,7 @@ export function AIPropsDialog() {
 
           {/* Error Display */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300">
+            <div className="flex items-center gap-2 p-3 bg-destructive/20 border border-destructive rounded-lg text-destructive">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>
@@ -248,7 +248,7 @@ export function AIPropsDialog() {
           {hasGeneratedProps && (
             <div className="flex flex-col min-h-0">
               <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-muted-foreground">
                   Generated {generatedProps.length} props
                   {selectedCount > 0 && ` (${selectedCount} selected)`}
                 </span>
@@ -262,7 +262,7 @@ export function AIPropsDialog() {
                   {selectedCount > 0 && (
                     <button
                       onClick={clearSelection}
-                      className="text-xs px-2 py-1 text-gray-400 hover:text-gray-300"
+                      className="text-xs px-2 py-1 text-muted-foreground hover:text-foreground"
                     >
                       Clear
                     </button>
@@ -283,7 +283,7 @@ export function AIPropsDialog() {
                         className={`cursor-pointer transition-all ${
                           isSelected
                             ? 'ring-2 ring-purple-500 bg-purple-900/20'
-                            : 'hover:bg-gray-800'
+                            : 'hover:bg-card'
                         }`}
                       >
                         <CardContent className="p-3">
@@ -293,7 +293,7 @@ export function AIPropsDialog() {
                               className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 ${
                                 isSelected
                                   ? 'bg-purple-600 border-purple-600'
-                                  : 'border-gray-600'
+                                  : 'border-border'
                               }`}
                             >
                               {isSelected && <Check className="h-3 w-3 text-white" />}
@@ -304,10 +304,10 @@ export function AIPropsDialog() {
 
                             {/* Info */}
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-white text-sm truncate">
+                              <h4 className="font-medium text-foreground text-sm truncate">
                                 {prop.name}
                               </h4>
-                              <div className="flex items-center gap-2 text-xs text-gray-400">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <span>{categoryInfo.icon} {categoryInfo.name}</span>
                                 <span>•</span>
                                 <span>{getSizeLabel(prop.size)}</span>
@@ -317,7 +317,7 @@ export function AIPropsDialog() {
                                   {prop.tags.slice(0, 3).map((tag) => (
                                     <span
                                       key={tag}
-                                      className="text-xs px-1.5 py-0.5 bg-gray-800 text-gray-500 rounded"
+                                      className="text-xs px-1.5 py-0.5 bg-card text-muted-foreground rounded"
                                     >
                                       {tag}
                                     </span>

@@ -92,7 +92,7 @@ export function PropSearchDialog({ isOpen, onClose, position }: PropSearchDialog
 
       {/* Dialog */}
       <div
-        className="fixed z-50 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl overflow-hidden"
+        className="fixed z-50 bg-card border border-border rounded-lg shadow-2xl overflow-hidden"
         style={{
           left: Math.min(position.x, window.innerWidth - 320),
           top: Math.min(position.y, window.innerHeight - 400),
@@ -102,27 +102,27 @@ export function PropSearchDialog({ isOpen, onClose, position }: PropSearchDialog
         onKeyDown={handleKeyDown}
       >
         {/* Search input */}
-        <div className="p-2 border-b border-gray-700">
+        <div className="p-2 border-b border-border">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               ref={inputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search props by name or tag..."
-              className="w-full pl-8 pr-8 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              className="w-full pl-8 pr-8 py-2 bg-background border border-border rounded text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-1 px-1">
+          <p className="text-xs text-muted-foreground mt-1 px-1">
             Press Enter to select first, Esc to close
           </p>
         </div>
@@ -130,7 +130,7 @@ export function PropSearchDialog({ isOpen, onClose, position }: PropSearchDialog
         {/* Results list */}
         <div className="overflow-y-auto max-h-[280px]">
           {filteredProps.length === 0 ? (
-            <div className="p-4 text-center text-gray-500 text-sm">
+            <div className="p-4 text-center text-muted-foreground text-sm">
               No props found for &quot;{searchQuery}&quot;
             </div>
           ) : (
@@ -139,17 +139,17 @@ export function PropSearchDialog({ isOpen, onClose, position }: PropSearchDialog
                 <button
                   key={prop.id}
                   onClick={() => handlePropSelect(prop)}
-                  className="w-full flex items-center gap-3 p-2 rounded hover:bg-gray-700 transition-colors text-left"
+                  className="w-full flex items-center gap-3 p-2 rounded hover:bg-accent transition-colors text-left"
                 >
                   <span className="text-2xl flex-shrink-0">{prop.propEmoji}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white font-medium truncate">
+                    <div className="text-sm text-foreground font-medium truncate">
                       {prop.name}
                     </div>
-                    <div className="text-xs text-gray-400 truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {prop.size.label} • {prop.propCategory}
                       {prop.tags && prop.tags.length > 0 && (
-                        <span className="ml-1 text-gray-500">
+                        <span className="ml-1 text-muted-foreground">
                           • {prop.tags.slice(0, 2).join(', ')}
                           {prop.tags.length > 2 && '...'}
                         </span>

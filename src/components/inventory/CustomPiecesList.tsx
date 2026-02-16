@@ -42,7 +42,7 @@ export function CustomPiecesList() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Custom Pieces</h3>
+        <h3 className="text-lg font-semibold text-foreground">Custom Pieces</h3>
         <Button
           size="sm"
           onClick={() => {
@@ -58,7 +58,7 @@ export function CustomPiecesList() {
       {customPieces.length === 0 ? (
         <div className="text-center py-8">
           <div className="text-4xl mb-2">🧩</div>
-          <p className="text-gray-400 text-sm mb-4">
+          <p className="text-muted-foreground text-sm mb-4">
             No custom pieces yet. Create your first custom piece with any size and multiple terrain colors!
           </p>
           <Button
@@ -79,7 +79,7 @@ export function CustomPiecesList() {
             return (
               <div
                 key={piece.id}
-                className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
+                className="bg-card rounded-lg p-4 border border-border hover:border-border transition-colors"
               >
                 {/* Preview */}
                 <div className="flex items-center justify-center mb-3 py-2">
@@ -94,36 +94,36 @@ export function CustomPiecesList() {
 
                 {/* Info */}
                 <div className="space-y-1">
-                  <h4 className="font-medium text-white truncate" title={piece.name}>
+                  <h4 className="font-medium text-foreground truncate" title={piece.name}>
                     {piece.name}
                   </h4>
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{piece.width}&quot; x {piece.height}&quot;</span>
-                    <span className="bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded">
+                    <span className="bg-secondary text-muted-foreground px-1.5 py-0.5 rounded">
                       {cols}x{rows} grid
                     </span>
                   </div>
                   <div className="flex items-center gap-1 flex-wrap text-xs">
                     {terrains.map((terrain, idx) => (
                       <React.Fragment key={terrain!.id}>
-                        {idx > 0 && <span className="text-gray-600">+</span>}
+                        {idx > 0 && <span className="text-muted-foreground">+</span>}
                         <div className="flex items-center gap-1">
                           <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: terrain!.color }}
                           />
-                          <span className="text-gray-400">{terrain!.name}</span>
+                          <span className="text-muted-foreground">{terrain!.name}</span>
                         </div>
                       </React.Fragment>
                     ))}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     Quantity: {piece.quantity}
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 mt-3 pt-3 border-t border-gray-700">
+                <div className="flex gap-2 mt-3 pt-3 border-t border-border">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -138,8 +138,8 @@ export function CustomPiecesList() {
                     size="sm"
                     className={`flex-1 ${
                       deletingId === piece.id
-                        ? 'text-red-400 bg-red-950 hover:bg-red-900'
-                        : 'text-red-400 hover:text-red-300'
+                        ? 'text-destructive bg-destructive/20 hover:bg-destructive/30'
+                        : 'text-destructive hover:text-destructive/80'
                     }`}
                     onClick={() => handleDelete(piece.id)}
                     disabled={isLoading}

@@ -99,7 +99,7 @@ export function PieceVariantFormDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Piece info banner */}
-          <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-card rounded-lg">
             <div
               className="w-10 h-10 rounded flex items-center justify-center text-2xl"
               style={{ backgroundColor: terrainType.color }}
@@ -107,8 +107,8 @@ export function PieceVariantFormDialog({
               {terrainType.icon}
             </div>
             <div>
-              <p className="text-white font-medium">{terrainType.name} {shape.name}</p>
-              <p className="text-gray-400 text-sm">
+              <p className="text-foreground font-medium">{terrainType.name} {shape.name}</p>
+              <p className="text-muted-foreground text-sm">
                 {shape.width}&quot; x {shape.height}&quot; ({cols}x{rows} grid)
               </p>
             </div>
@@ -116,7 +116,7 @@ export function PieceVariantFormDialog({
 
           {/* Name */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Variant Name
             </label>
             <input
@@ -124,14 +124,14 @@ export function PieceVariantFormDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., River Corner, Beach Edge"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
             />
           </div>
 
           {/* Tags */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Tags (for identification)
             </label>
             <TagInput
@@ -154,7 +154,7 @@ export function PieceVariantFormDialog({
 
           {/* Quantity */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Quantity
             </label>
             <div className="flex items-center gap-2">
@@ -172,7 +172,7 @@ export function PieceVariantFormDialog({
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(0, Number(e.target.value)))}
                 min={0}
-                className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-20 bg-card border border-border rounded-lg px-3 py-1.5 text-foreground text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
               <Button
                 type="button"
@@ -188,10 +188,10 @@ export function PieceVariantFormDialog({
 
           {/* Preview */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-2">
+            <label className="text-sm font-medium text-muted-foreground block mb-2">
               Preview
             </label>
-            <div className="bg-gray-800 rounded-lg p-4 flex items-center justify-center min-h-[100px]">
+            <div className="bg-card rounded-lg p-4 flex items-center justify-center min-h-[100px]">
               {cellColors.length > 0 && (
                 <CustomPiecePreview
                   width={shape.width}

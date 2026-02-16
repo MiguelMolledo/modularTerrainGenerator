@@ -72,22 +72,22 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-          <div className="max-w-lg w-full bg-gray-800 rounded-lg shadow-xl p-6 text-center">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <div className="max-w-lg w-full bg-card rounded-lg shadow-xl p-6 text-center">
             {/* Error Icon */}
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-red-900/50 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-red-400" />
+              <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
               </div>
             </div>
 
             {/* Title */}
-            <h1 className="text-2xl font-bold text-white mb-2">
+            <h1 className="text-2xl font-bold text-foreground mb-2">
               Something went wrong
             </h1>
 
             {/* Description */}
-            <p className="text-gray-400 mb-6">
+            <p className="text-muted-foreground mb-6">
               An unexpected error occurred. Your work may have been saved automatically.
               Try refreshing the page or going back to the home screen.
             </p>
@@ -95,14 +95,14 @@ export class ErrorBoundary extends Component<Props, State> {
             {/* Error Details (collapsible) */}
             {this.state.error && (
               <details className="mb-6 text-left">
-                <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-400 flex items-center gap-2">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
                   <Bug className="w-4 h-4" />
                   Technical details
                 </summary>
-                <div className="mt-2 p-3 bg-gray-900 rounded text-xs text-red-400 font-mono overflow-auto max-h-40">
+                <div className="mt-2 p-3 bg-background rounded text-xs text-destructive font-mono overflow-auto max-h-40">
                   <p className="font-bold mb-1">{this.state.error.name}: {this.state.error.message}</p>
                   {this.state.errorInfo?.componentStack && (
-                    <pre className="text-gray-500 whitespace-pre-wrap">
+                    <pre className="text-muted-foreground whitespace-pre-wrap">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   )}
@@ -138,13 +138,13 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Help Text */}
-            <p className="mt-6 text-xs text-gray-600">
+            <p className="mt-6 text-xs text-muted-foreground">
               If this problem persists, please{' '}
               <a
                 href="https://github.com/anthropics/claude-code/issues"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
+                className="text-primary hover:underline"
               >
                 report the issue
               </a>

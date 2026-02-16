@@ -192,7 +192,7 @@ export function AILayoutDialog({ open, onOpenChange }: AILayoutDialogProps) {
 
         <div className="flex-1 overflow-y-auto space-y-4 py-2">
           {/* Map Info */}
-          <div className="text-sm text-gray-400 flex gap-4">
+          <div className="text-sm text-muted-foreground flex gap-4">
             <span>Map: {mapWidth}" x {mapHeight}"</span>
             <span>Available pieces: {availablePiecesWithQuantity.length} types</span>
           </div>
@@ -201,7 +201,7 @@ export function AILayoutDialog({ open, onOpenChange }: AILayoutDialogProps) {
           {!hasResults && (
             <>
               <div>
-                <label className="text-sm font-medium text-gray-300 block mb-2">
+                <label className="text-sm font-medium text-foreground block mb-2">
                   Describe the Scene
                 </label>
                 <textarea
@@ -212,13 +212,13 @@ export function AILayoutDialog({ open, onOpenChange }: AILayoutDialogProps) {
 Example: A forest clearing with a small river running through it, some elevated rocky terrain on the north side, and dense trees to the east and west."
                   disabled={isGenerating}
                   rows={4}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none disabled:opacity-50"
+                  className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-green-500 resize-none disabled:opacity-50"
                 />
               </div>
 
               {/* Example Prompts */}
               <div>
-                <label className="text-xs text-gray-500 block mb-2">
+                <label className="text-xs text-muted-foreground block mb-2">
                   Quick examples:
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -227,7 +227,7 @@ Example: A forest clearing with a small river running through it, some elevated 
                       key={i}
                       onClick={() => useExample(prompt)}
                       disabled={isGenerating}
-                      className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-300 transition-colors disabled:opacity-50"
+                      className="text-xs px-2 py-1 rounded bg-card text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
                     >
                       {prompt.slice(0, 30)}...
                     </button>
@@ -248,8 +248,8 @@ Example: A forest clearing with a small river running through it, some elevated 
               )}
 
               {/* Suggestions Summary */}
-              <div className="bg-gray-800 rounded-lg p-4">
-                <h4 className="font-medium text-white mb-3 flex items-center gap-2">
+              <div className="bg-card rounded-lg p-4">
+                <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-400" />
                   {suggestions.length} pieces will be placed
                 </h4>
@@ -267,9 +267,9 @@ Example: A forest clearing with a small river running through it, some elevated 
                     });
 
                     return Array.from(grouped.entries()).map(([name, count]) => (
-                      <div key={name} className="flex justify-between text-gray-300">
+                      <div key={name} className="flex justify-between text-foreground">
                         <span>{name}</span>
-                        <span className="text-gray-500">x{count}</span>
+                        <span className="text-muted-foreground">x{count}</span>
                       </div>
                     ));
                   })()}
@@ -281,7 +281,7 @@ Example: A forest clearing with a small river running through it, some elevated 
                 variant="ghost"
                 size="sm"
                 onClick={resetState}
-                className="text-gray-400"
+                className="text-muted-foreground"
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Generate different layout
@@ -291,7 +291,7 @@ Example: A forest clearing with a small river running through it, some elevated 
 
           {/* Error Display */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300">
+            <div className="flex items-center gap-2 p-3 bg-destructive/20 border border-destructive rounded-lg text-destructive">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>

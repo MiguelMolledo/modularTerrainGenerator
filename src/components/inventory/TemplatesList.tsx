@@ -48,8 +48,8 @@ export function TemplatesList() {
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Piece Templates</h3>
-          <p className="text-sm text-gray-400">
+          <h3 className="text-lg font-semibold text-foreground">Piece Templates</h3>
+          <p className="text-sm text-muted-foreground">
             Pre-defined piece sets for quickly setting up new terrains
           </p>
         </div>
@@ -68,24 +68,24 @@ export function TemplatesList() {
       {/* Custom Templates */}
       {customTemplates.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-300 mb-3">Your Templates</h4>
+          <h4 className="text-sm font-medium text-foreground mb-3">Your Templates</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {customTemplates.map((template) => (
               <Card
                 key={template.id}
-                className="p-4 bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors"
+                className="p-4 bg-card border-border hover:border-border transition-colors"
               >
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">{template.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-white truncate">
+                    <h4 className="font-medium text-foreground truncate">
                       {template.name}
                     </h4>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {getTotalPieces(template)} pieces
                     </p>
                     {template.description && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                         {template.description}
                       </p>
                     )}
@@ -97,20 +97,20 @@ export function TemplatesList() {
                   {template.items.slice(0, 4).map((item) => (
                     <span
                       key={item.id}
-                      className="text-xs bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded"
+                      className="text-xs bg-secondary text-foreground px-1.5 py-0.5 rounded"
                     >
                       {item.shape?.name}: {item.quantity}
                     </span>
                   ))}
                   {template.items.length > 4 && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       +{template.items.length - 4} more
                     </span>
                   )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 mt-3 pt-3 border-t border-gray-700">
+                <div className="flex gap-2 mt-3 pt-3 border-t border-border">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -125,8 +125,8 @@ export function TemplatesList() {
                     size="sm"
                     className={`flex-1 ${
                       deletingId === template.id
-                        ? 'text-red-400 bg-red-950 hover:bg-red-900'
-                        : 'text-red-400 hover:text-red-300'
+                        ? 'text-destructive bg-destructive/20 hover:bg-destructive/30'
+                        : 'text-destructive hover:text-destructive/80'
                     }`}
                     onClick={() => handleDelete(template.id)}
                     disabled={isLoading}
@@ -143,7 +143,7 @@ export function TemplatesList() {
 
       {/* Default Templates */}
       <div>
-        <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+        <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
           <Lock className="h-3 w-3" />
           Default Templates
         </h4>
@@ -151,19 +151,19 @@ export function TemplatesList() {
           {defaultTemplates.map((template) => (
             <Card
               key={template.id}
-              className="p-4 bg-gray-800/50 border-gray-700"
+              className="p-4 bg-card/50 border-border"
             >
               <div className="flex items-start gap-3">
                 <span className="text-2xl">{template.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-white truncate">
+                  <h4 className="font-medium text-foreground truncate">
                     {template.name}
                   </h4>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {getTotalPieces(template)} pieces
                   </p>
                   {template.description && (
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {template.description}
                     </p>
                   )}
@@ -175,18 +175,18 @@ export function TemplatesList() {
                 {template.items.slice(0, 4).map((item) => (
                   <span
                     key={item.id}
-                    className="text-xs bg-gray-700/50 text-gray-400 px-1.5 py-0.5 rounded"
+                    className="text-xs bg-secondary/50 text-muted-foreground px-1.5 py-0.5 rounded"
                   >
                     {item.shape?.name}: {item.quantity}
                   </span>
                 ))}
                 {template.items.length > 4 && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     +{template.items.length - 4} more
                   </span>
                 )}
                 {template.items.length === 0 && (
-                  <span className="text-xs text-gray-500 italic">No pieces</span>
+                  <span className="text-xs text-muted-foreground italic">No pieces</span>
                 )}
               </div>
             </Card>

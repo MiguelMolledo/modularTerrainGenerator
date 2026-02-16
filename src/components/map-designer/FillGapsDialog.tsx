@@ -192,7 +192,7 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <PaintBucket className="h-5 w-5 text-blue-400" />
+            <PaintBucket className="h-5 w-5 text-primary" />
             Fill Empty Spaces
           </DialogTitle>
           <DialogDescription>
@@ -202,7 +202,7 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
 
         <div className="space-y-4 py-4">
           {/* Map Info */}
-          <div className="text-sm text-gray-400 flex gap-4">
+          <div className="text-sm text-muted-foreground flex gap-4">
             <span>Map: {mapWidth}" x {mapHeight}"</span>
             <span>Placed: {placedPiecesWithDimensions.length} pieces</span>
           </div>
@@ -210,7 +210,7 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
           {/* Terrain Selection */}
           {!hasResults && (
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-foreground block mb-2">
                 Select Terrain Type
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -221,18 +221,18 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
                     disabled={isFilling}
                     className={`p-3 rounded-lg border text-left transition-colors ${
                       selectedTerrain === terrain.id
-                        ? 'border-blue-500 bg-blue-500/20 text-white'
-                        : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600'
+                        ? 'border-primary bg-primary/20 text-foreground'
+                        : 'border-border bg-card text-muted-foreground hover:border-border'
                     } disabled:opacity-50`}
                   >
                     <div className="font-medium">{terrain.name}</div>
-                    <div className="text-xs text-gray-500">{terrain.count} piece types</div>
+                    <div className="text-xs text-muted-foreground">{terrain.count} piece types</div>
                   </button>
                 ))}
               </div>
 
               {terrainOptions.length === 0 && (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-4 text-muted-foreground">
                   No terrain pieces available in inventory
                 </div>
               )}
@@ -241,12 +241,12 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
 
           {/* Results */}
           {hasResults && result && (
-            <div className="bg-gray-800 rounded-lg p-4">
-              <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+            <div className="bg-card rounded-lg p-4">
+              <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-400" />
                 {result.placements.length} pieces will be placed
               </h4>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Filling approximately {result.filledArea} square inches
               </p>
 
@@ -265,14 +265,14 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
                   return Array.from(grouped.entries())
                     .slice(0, 5)
                     .map(([name, count]) => (
-                      <div key={name} className="flex justify-between text-gray-300">
+                      <div key={name} className="flex justify-between text-foreground">
                         <span>{name}</span>
-                        <span className="text-gray-500">x{count}</span>
+                        <span className="text-muted-foreground">x{count}</span>
                       </div>
                     ));
                 })()}
                 {result.placements.length > 5 && (
-                  <div className="text-gray-500 text-xs">
+                  <div className="text-muted-foreground text-xs">
                     ... and more
                   </div>
                 )}
@@ -282,7 +282,7 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
 
           {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300">
+            <div className="flex items-center gap-2 p-3 bg-destructive/20 border border-destructive rounded-lg text-destructive">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>
@@ -297,7 +297,7 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
           {hasResults ? (
             <Button
               onClick={handleApply}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/80"
             >
               <Check className="h-4 w-4 mr-2" />
               Apply
@@ -306,7 +306,7 @@ export function FillGapsDialog({ open, onOpenChange }: FillGapsDialogProps) {
             <Button
               onClick={handleFill}
               disabled={!selectedTerrain || isFilling || terrainOptions.length === 0}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/80"
             >
               {isFilling ? (
                 <>

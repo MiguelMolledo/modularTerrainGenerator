@@ -125,7 +125,7 @@ export function TemplateFormDialog({
 
   const renderShapeGroup = (title: string, shapeList: typeof shapes) => (
     <div className="space-y-2">
-      <h4 className="text-xs font-medium text-gray-400 uppercase">{title}</h4>
+      <h4 className="text-xs font-medium text-muted-foreground uppercase">{title}</h4>
       <div className="grid grid-cols-2 gap-2">
         {shapeList.map((shape) => {
           const qty = quantities[shape.id] || 0;
@@ -134,18 +134,18 @@ export function TemplateFormDialog({
               key={shape.id}
               className={`flex items-center justify-between p-2 rounded-lg border ${
                 qty > 0
-                  ? 'bg-blue-900/20 border-blue-600'
-                  : 'bg-gray-800 border-gray-700'
+                  ? 'bg-primary/10 border-primary'
+                  : 'bg-card border-border'
               }`}
             >
-              <span className="text-sm text-white truncate flex-1 mr-2">
+              <span className="text-sm text-foreground truncate flex-1 mr-2">
                 {shape.name}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => handleQuantityChange(shape.id, -1)}
-                  className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                  className="w-6 h-6 flex items-center justify-center rounded bg-secondary hover:bg-accent text-muted-foreground"
                   disabled={qty === 0}
                 >
                   <Minus className="w-3 h-3" />
@@ -154,13 +154,13 @@ export function TemplateFormDialog({
                   type="number"
                   value={qty}
                   onChange={(e) => setQuantity(shape.id, parseInt(e.target.value) || 0)}
-                  className="w-10 h-6 text-center text-sm bg-gray-900 border border-gray-600 rounded text-white"
+                  className="w-10 h-6 text-center text-sm bg-background border border-border rounded text-foreground"
                   min="0"
                 />
                 <button
                   type="button"
                   onClick={() => handleQuantityChange(shape.id, 1)}
-                  className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                  className="w-6 h-6 flex items-center justify-center rounded bg-secondary hover:bg-accent text-muted-foreground"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -184,7 +184,7 @@ export function TemplateFormDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Template Name
             </label>
             <input
@@ -192,14 +192,14 @@ export function TemplateFormDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., River Set, Basic Starter"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               required
             />
           </div>
 
           {/* Icon */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Icon
             </label>
             <div className="flex flex-wrap gap-2">
@@ -210,8 +210,8 @@ export function TemplateFormDialog({
                   onClick={() => setIcon(emoji)}
                   className={`w-9 h-9 text-lg rounded-lg transition-all ${
                     icon === emoji
-                      ? 'bg-blue-600 ring-2 ring-blue-400'
-                      : 'bg-gray-800 hover:bg-gray-700'
+                      ? 'bg-primary ring-2 ring-primary'
+                      : 'bg-card hover:bg-secondary'
                   }`}
                 >
                   {emoji}
@@ -222,7 +222,7 @@ export function TemplateFormDialog({
 
           {/* Description */}
           <div>
-            <label className="text-sm font-medium text-gray-300 block mb-1">
+            <label className="text-sm font-medium text-muted-foreground block mb-1">
               Description (optional)
             </label>
             <input
@@ -230,17 +230,17 @@ export function TemplateFormDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this template for?"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           {/* Pieces */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-300">
+              <label className="text-sm font-medium text-muted-foreground">
                 Pieces
               </label>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted-foreground">
                 Total: {totalPieces} pieces
               </span>
             </div>

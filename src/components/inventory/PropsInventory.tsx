@@ -266,8 +266,8 @@ export function PropsInventory({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Props Library</h2>
-          <p className="text-sm text-gray-400">
+          <h2 className="text-lg font-semibold text-foreground">Props Library</h2>
+          <p className="text-sm text-muted-foreground">
             {uniqueProps} unique props ({totalProps} total available)
             {customProps.length > 0 && ` · ${customProps.length} custom`}
           </p>
@@ -276,7 +276,7 @@ export function PropsInventory({
           <Button
             onClick={openCreateDialog}
             variant="outline"
-            className="border-gray-600"
+            className="border-border"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Prop
@@ -296,18 +296,18 @@ export function PropsInventory({
       {/* Search and Filter */}
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search props..."
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-8 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-card border border-border rounded-lg pl-9 pr-8 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -321,8 +321,8 @@ export function PropsInventory({
           onClick={() => setSelectedCategory('all')}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
             selectedCategory === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              ? 'bg-primary text-white'
+              : 'bg-card text-muted-foreground hover:bg-secondary'
           }`}
         >
           All
@@ -333,8 +333,8 @@ export function PropsInventory({
             onClick={() => setSelectedCategory(cat.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
               selectedCategory === cat.id
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                ? 'bg-primary text-white'
+                : 'bg-card text-muted-foreground hover:bg-secondary'
             }`}
           >
             <span>{cat.icon}</span>
@@ -351,7 +351,7 @@ export function PropsInventory({
             const categoryInfo = PROP_CATEGORIES.find(c => c.id === category);
             return (
               <div key={category}>
-                <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
                   <span className="text-lg">{categoryInfo?.icon}</span>
                   {categoryInfo?.name || 'Custom'} ({props.length})
                 </h3>
@@ -397,7 +397,7 @@ export function PropsInventory({
         )}
 
         {filteredProps.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             <p>No props found matching your criteria.</p>
           </div>
         )}
@@ -420,7 +420,7 @@ export function PropsInventory({
           <div className="space-y-4 py-4">
             {/* Name */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Name
               </label>
               <input
@@ -428,13 +428,13 @@ export function PropsInventory({
                 value={newPropName}
                 onChange={(e) => setNewPropName(e.target.value)}
                 placeholder="e.g., Wooden Chair"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             {/* Image Upload */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Image (optional)
               </label>
               <input
@@ -446,7 +446,7 @@ export function PropsInventory({
               />
               {newPropImage ? (
                 <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800 border border-gray-700">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-card border border-border">
                     <img
                       src={newPropImage}
                       alt="Prop preview"
@@ -488,7 +488,7 @@ export function PropsInventory({
                   )}
                 </Button>
               )}
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Image will be resized to 256px (PNG, preserves transparency)
               </p>
             </div>
@@ -496,12 +496,12 @@ export function PropsInventory({
             {/* Emoji (only if no image) */}
             {!newPropImage && (
               <div>
-                <label className="text-sm font-medium text-gray-300 block mb-2">
+                <label className="text-sm font-medium text-muted-foreground block mb-2">
                   Emoji
                 </label>
                 <div className="flex items-center gap-3">
                   <EmojiPicker value={newPropEmoji} onChange={setNewPropEmoji} />
-                  <span className="text-sm text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     Click to select an emoji
                   </span>
                 </div>
@@ -510,13 +510,13 @@ export function PropsInventory({
 
             {/* Category */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Category
               </label>
               <select
                 value={newPropCategory}
                 onChange={(e) => setNewPropCategory(e.target.value as PropCategory)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {PROP_CATEGORIES.map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -528,13 +528,13 @@ export function PropsInventory({
 
             {/* Size */}
             <div>
-              <label className="text-sm font-medium text-gray-300 block mb-2">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Size
               </label>
               <select
                 value={newPropSize}
                 onChange={(e) => setNewPropSize(e.target.value as keyof typeof PROP_SIZES)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {Object.entries(PROP_SIZES).map(([key, size]) => (
                   <option key={key} value={key}>
@@ -558,7 +558,7 @@ export function PropsInventory({
             <Button
               onClick={handleSaveProp}
               disabled={!newPropName.trim()}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/80"
             >
               {editingProp ? 'Save Changes' : 'Create Prop'}
             </Button>
@@ -586,10 +586,10 @@ function PropCard({ prop, quantity, onQuantityChange, onSetQuantity, isCustom, o
   )?.[0] || 'custom';
 
   return (
-    <div className="bg-gray-800 rounded-lg p-3 border border-gray-700 hover:border-gray-600 transition-colors">
+    <div className="bg-card rounded-lg p-3 border border-border hover:border-border transition-colors">
       <div className="flex items-start gap-3">
         {/* Emoji or Image */}
-        <div className="text-3xl flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gray-900 rounded-lg overflow-hidden">
+        <div className="text-3xl flex-shrink-0 w-10 h-10 flex items-center justify-center bg-background rounded-lg overflow-hidden">
           {prop.propImage ? (
             <img src={prop.propImage} alt={prop.name} className="w-full h-full object-cover" />
           ) : (
@@ -600,14 +600,14 @@ function PropCard({ prop, quantity, onQuantityChange, onSetQuantity, isCustom, o
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h4 className="font-medium text-white truncate">{prop.name}</h4>
+            <h4 className="font-medium text-foreground truncate">{prop.name}</h4>
             {isCustom && (
               <span className="text-xs px-1.5 py-0.5 bg-purple-600/30 text-purple-300 rounded">
                 Custom
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400 capitalize">{sizeLabel} ({prop.size.width}&quot; x {prop.size.height}&quot;)</p>
+          <p className="text-xs text-muted-foreground capitalize">{sizeLabel} ({prop.size.width}&quot; x {prop.size.height}&quot;)</p>
         </div>
 
         {/* Edit/Delete for custom props */}
@@ -615,14 +615,14 @@ function PropCard({ prop, quantity, onQuantityChange, onSetQuantity, isCustom, o
           <div className="flex gap-1">
             <button
               onClick={onEdit}
-              className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-gray-700"
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent"
               title="Edit prop"
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={onDelete}
-              className="p-1.5 rounded text-gray-400 hover:text-red-400 hover:bg-gray-700"
+              className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-accent"
               title="Delete prop"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -637,13 +637,13 @@ function PropCard({ prop, quantity, onQuantityChange, onSetQuantity, isCustom, o
           {prop.tags.slice(0, 4).map(tag => (
             <span
               key={tag}
-              className="px-1.5 py-0.5 text-xs bg-gray-700 text-gray-300 rounded"
+              className="px-1.5 py-0.5 text-xs bg-secondary text-muted-foreground rounded"
             >
               {tag}
             </span>
           ))}
           {prop.tags.length > 4 && (
-            <span className="px-1.5 py-0.5 text-xs bg-gray-700 text-gray-400 rounded">
+            <span className="px-1.5 py-0.5 text-xs bg-secondary text-muted-foreground rounded">
               +{prop.tags.length - 4}
             </span>
           )}
@@ -652,12 +652,12 @@ function PropCard({ prop, quantity, onQuantityChange, onSetQuantity, isCustom, o
 
       {/* Quantity Control */}
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-sm text-gray-400">Quantity:</span>
+        <span className="text-sm text-muted-foreground">Quantity:</span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => onQuantityChange(-1)}
             disabled={quantity <= 0}
-            className="p-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1 rounded bg-secondary hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -665,12 +665,12 @@ function PropCard({ prop, quantity, onQuantityChange, onSetQuantity, isCustom, o
             type="number"
             value={quantity}
             onChange={(e) => onSetQuantity(parseInt(e.target.value) || 0)}
-            className="w-14 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-center text-white text-sm"
+            className="w-14 bg-background border border-border rounded px-2 py-1 text-center text-foreground text-sm"
             min={0}
           />
           <button
             onClick={() => onQuantityChange(1)}
-            className="p-1 rounded bg-gray-700 hover:bg-gray-600"
+            className="p-1 rounded bg-secondary hover:bg-accent"
           >
             <Plus className="h-4 w-4" />
           </button>

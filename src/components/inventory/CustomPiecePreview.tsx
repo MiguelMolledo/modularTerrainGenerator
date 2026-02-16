@@ -35,7 +35,7 @@ export function CustomPiecePreview({
     const color = getTerrainColor(cellColors[0]?.[0] || '');
     return (
       <div
-        className={`border-2 border-gray-600 rounded ${className}`}
+        className={`border-2 border-border rounded ${className}`}
         style={{
           width: displayWidth,
           height: displayHeight,
@@ -51,7 +51,7 @@ export function CustomPiecePreview({
 
   return (
     <div
-      className={`border-2 border-gray-600 rounded overflow-hidden ${className}`}
+      className={`border-2 border-border rounded overflow-hidden ${className}`}
       style={{
         width: displayWidth,
         height: displayHeight,
