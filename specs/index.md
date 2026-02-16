@@ -14,7 +14,7 @@ Map creation, piece placement, canvas, drag-drop, zoom, pan, grid, levels, 2D vi
 
 ## [3D Viewer](./3d-viewer.md)
 
-Three.js, 3D rendering, elevation, camera, lighting, piece visualization, rotate view.
+Three.js, 3D rendering, elevation, camera, lighting, piece visualization, Unity camera, fly mode, WASD navigation, right-click look.
 
 **Source**: `src/components/map-designer/three/`
 
@@ -22,7 +22,7 @@ Three.js, 3D rendering, elevation, camera, lighting, piece visualization, rotate
 
 ## [3D Editor](./3d-editor.md)
 
-Transform controls, gizmos, Unity-style, Unreal-style, move pieces 3D, rotate 3D, W key, E key, TransformControls, three-stdlib, selection outline, multi-select, axis handles, height limits, layers, real-time sync.
+Transform controls, gizmos, Unity-style, move pieces 3D, rotate 3D, height movement, level change, W key move mode, E key rotate mode, TransformControls, three-stdlib, selection outline, multi-select, axis handles, Y axis height, fly camera WASD, real-time sync, drag preview.
 
 **Source**: `src/components/map-designer/three/`, `src/hooks/use3DTransform.ts`
 
@@ -86,7 +86,7 @@ Corner heights, slopes, 3D terrain, piece elevation, nw/ne/sw/se corners.
 
 ## [Export System](./export.md)
 
-PDF reports, map snapshots, piece inventory export, jsPDF.
+PDF reports, map snapshots, piece inventory export, jsPDF, magnets table, magnet requirements per piece type, magnet summary, magnets by terrain.
 
 **Source**: `src/lib/exportReport.ts`, `src/components/maps/ExportReportDialog.tsx`
 
@@ -121,5 +121,13 @@ Grid cells, snap-to-grid, magnetic snap, cell size, grid display, alignment.
 Quick access, recently used pieces, Q key shortcut, circular menu.
 
 **Source**: `src/components/map-designer/RadialMenu.tsx`
+
+---
+
+## [Authentication](./authentication.md)
+
+Login, logout, register, email verification, password reset, JWT, sessions, roles, admin, user, feature flags, NextAuth, MongoDB Atlas, protected routes, access control.
+
+**Source**: `src/lib/auth/`, `src/app/api/auth/`, `src/middleware.ts`, `src/hooks/useAuth.ts`, `src/app/admin/`
 
 ---

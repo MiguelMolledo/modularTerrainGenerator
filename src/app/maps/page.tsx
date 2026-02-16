@@ -25,7 +25,7 @@ export default function MapsPage() {
   const router = useRouter();
   const { savedMaps, isLoading, error, fetchMaps, clearError, saveMap } = useMapInventoryStore();
   const { loadMapData } = useMapStore();
-  const { terrainTypes, fetchTerrainTypes, getModularPieces } = useInventoryStore();
+  const { terrainTypes, shapes, fetchTerrainTypes, getModularPieces } = useInventoryStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('updated');
   const [showNewMapDialog, setShowNewMapDialog] = useState(false);
@@ -310,6 +310,7 @@ export default function MapsPage() {
           map={selectedMapForReport}
           availablePieces={availablePieces}
           terrainTypes={terrainTypes}
+          shapes={shapes}
         />
       )}
     </div>

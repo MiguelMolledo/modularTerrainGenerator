@@ -205,9 +205,13 @@ export function useUndoRedo() {
     });
   }, [pushHistory]);
 
-  // Record moving multiple pieces
+  // Record moving multiple pieces (supports position and rotation)
   const recordMovePieces = useCallback((
-    moves: Array<{ id: string; from: { x: number; y: number }; to: { x: number; y: number } }>
+    moves: Array<{
+      id: string;
+      from: { x: number; y: number; rotation?: number };
+      to: { x: number; y: number; rotation?: number };
+    }>
   ) => {
     pushHistory({
       type: 'MOVE_PIECES',

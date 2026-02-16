@@ -328,3 +328,87 @@ export function checkCollisionWithPieces(
 
   return false;
 }
+
+/**
+ * Check 3D collisions between all placed pieces on the same level.
+ * Returns an array of piece IDs that are in collision with at least one other piece.
+ * This is used by the 3D editor to show visual warnings (red tint) on colliding pieces.
+ *
+ * @param placedPieces - Array of placed pieces with position and rotation
+ * @param getPieceInfo - Function to get piece dimensions by pieceId
+ * @param level - Optional level to filter pieces (if undefined, checks all levels separately)
+ * @returns Array of piece IDs that are colliding
+ */
+export function check3DCollisions(
+  placedPieces: Array<{
+    id: string;
+    x: number;
+    y: number;
+    rotation: number;
+    pieceId: string;
+    level: number;
+  }>,
+  getPieceInfo: (pieceId: string) => { width: number; height: number; isDiagonal: boolean } | null,
+  level?: number
+): string[] {
+  const collidingIds = new Set<string>();
+
+  // Filter pieces by level if specified
+  const piecesToCheck = level !== undefined
+    ? placedPieces.filter(p => p.level === level)
+    : placedPieces;
+
+  // Group pieces by level for efficient collision checking
+  const piecesByLevel = new Map<number, typeof piecesToCheck>();
+  for (const piece of piecesToCheck) {
+    const levelPieces = piecesByLevel.get(piece.level) || [];
+    levelPieces.push(piece);
+    piecesByLevel.set(piece.level, levelPieces);
+  }
+
+  // Check collisions within each level
+  for (const levelPieces of piecesByLevel.values()) {
+    // Compare each pair of pieces on the same level
+    for (let i = 0; i < levelPieces.length; i++) {
+      const piece1 = levelPieces[i];
+      const info1 = getPieceInfo(piece1.pieceId);
+      if (!info1) continue;
+
+      // Calculate effective dimensions based on rotation
+      const isRotated1 = piece1.rotation === 90 || piece1.rotation === 270;
+      const geometry1: PieceGeometry = {
+        x: piece1.x,
+        y: piece1.y,
+        width: isRotated1 ? info1.height : info1.width,
+        height: isRotated1 ? info1.width : info1.height,
+        rotation: piece1.rotation,
+        isDiagonal: info1.isDiagonal,
+      };
+
+      for (let j = i + 1; j < levelPieces.length; j++) {
+        const piece2 = levelPieces[j];
+        const info2 = getPieceInfo(piece2.pieceId);
+        if (!info2) continue;
+
+        // Calculate effective dimensions based on rotation
+        const isRotated2 = piece2.rotation === 90 || piece2.rotation === 270;
+        const geometry2: PieceGeometry = {
+          x: piece2.x,
+          y: piece2.y,
+          width: isRotated2 ? info2.height : info2.width,
+          height: isRotated2 ? info2.width : info2.height,
+          rotation: piece2.rotation,
+          isDiagonal: info2.isDiagonal,
+        };
+
+        // Check if these two pieces collide
+        if (checkPieceCollision(geometry1, geometry2)) {
+          collidingIds.add(piece1.id);
+          collidingIds.add(piece2.id);
+        }
+      }
+    }
+  }
+
+  return Array.from(collidingIds);
+}

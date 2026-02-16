@@ -1,14 +1,28 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { Grid, OrbitControls, Html } from '@react-three/drei';
+import React, { useMemo, useRef, useCallback } from 'react';
+import { Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { useMapStore } from '@/store/mapStore';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { PlacedPiece3D } from './PlacedPiece3D';
 import { Prop3D } from './Prop3D';
+import { SelectionOutline3D, Selectable } from './SelectionOutline3D';
+import { TransformGizmo3D } from './TransformGizmo3D';
+import { SelectionGroup3D } from './SelectionGroup3D';
+import { UnityCameraController, UnityCameraControllerRef } from './UnityCameraController';
 import { LEVEL_HEIGHT_INCHES } from '@/config/terrain';
+import type { PlacedPiece } from '@/types';
 
-export function Scene3D() {
+interface Scene3DProps {
+  editingDisabled?: boolean;
+}
+
+export function Scene3D({ editingDisabled = false }: Scene3DProps) {
+  const cameraControlsRef = useRef<UnityCameraControllerRef>(null);
+  // Ref to store initial piece state when transform starts
+  const transformStartStateRef = useRef<PlacedPiece[] | null>(null);
+
   const {
     placedPieces,
     availablePieces,
@@ -17,7 +31,6 @@ export function Scene3D() {
     mapHeight,
     selectedPlacedPieceIds,
     setSelectedPlacedPieceIds,
-    toggleSelection,
     levels,
     currentLevel,  // Read directly from store
     showReferenceLevels,
@@ -25,10 +38,78 @@ export function Scene3D() {
     customProps,
     showTerrain,
     showProps,
+    colliding3DPieceIds,
   } = useMapStore();
+
+  const { recordMovePiece, recordMovePieces } = useUndoRedo();
+
+  // Handler for when 3D transform starts - capture initial state
+  const handleTransformStart = useCallback(() => {
+    // Store a deep copy of the selected pieces' current state
+    const selectedPieces = placedPieces.filter(p =>
+      selectedPlacedPieceIds.includes(p.id)
+    );
+    transformStartStateRef.current = selectedPieces.map(p => ({ ...p }));
+  }, [placedPieces, selectedPlacedPieceIds]);
+
+  // Handler for when 3D transform ends - record history
+  const handleTransformEnd = useCallback(() => {
+    const initialState = transformStartStateRef.current;
+    if (!initialState || initialState.length === 0) return;
+
+    // Get the current state of the pieces after transform
+    const currentPieces = placedPieces.filter(p =>
+      selectedPlacedPieceIds.includes(p.id)
+    );
+
+    // Check if anything actually changed
+    const hasChanges = initialState.some(initial => {
+      const current = currentPieces.find(p => p.id === initial.id);
+      if (!current) return false;
+      return initial.x !== current.x ||
+             initial.y !== current.y ||
+             initial.rotation !== current.rotation;
+    });
+
+    if (!hasChanges) {
+      transformStartStateRef.current = null;
+      return;
+    }
+
+    if (initialState.length === 1) {
+      // Single piece - use recordMovePiece (also handles rotation)
+      const initial = initialState[0];
+      const current = currentPieces.find(p => p.id === initial.id);
+      if (current) {
+        recordMovePieces([{
+          id: initial.id,
+          from: { x: initial.x, y: initial.y, rotation: initial.rotation },
+          to: { x: current.x, y: current.y, rotation: current.rotation },
+        }]);
+      }
+    } else {
+      // Multiple pieces - use recordMovePieces
+      const moves = initialState.map(initial => {
+        const current = currentPieces.find(p => p.id === initial.id);
+        return {
+          id: initial.id,
+          from: { x: initial.x, y: initial.y, rotation: initial.rotation },
+          to: current
+            ? { x: current.x, y: current.y, rotation: current.rotation }
+            : { x: initial.x, y: initial.y, rotation: initial.rotation },
+        };
+      });
+      recordMovePieces(moves);
+    }
+
+    transformStartStateRef.current = null;
+  }, [placedPieces, selectedPlacedPieceIds, recordMovePieces]);
 
   // Create a Set for efficient selection lookup
   const selectedSet = useMemo(() => new Set(selectedPlacedPieceIds), [selectedPlacedPieceIds]);
+
+  // Create a Set for efficient collision lookup
+  const collidingSet = useMemo(() => new Set(colliding3DPieceIds), [colliding3DPieceIds]);
 
   // Create piece lookup map (includes custom props)
   const pieceMap = useMemo(() => {
@@ -138,15 +219,13 @@ export function Scene3D() {
         args={['#87ceeb', '#362d1a', 0.6]}
       />
 
-      {/* Orbit controls for camera */}
-      <OrbitControls
-        target={cameraTarget}
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
-        minDistance={10}
-        maxDistance={200}
-        maxPolarAngle={Math.PI / 2 - 0.1}
+      {/* Unity-style camera controls */}
+      <UnityCameraController
+        ref={cameraControlsRef}
+        initialTarget={cameraTarget}
+        baseSpeed={20}
+        minY={1}
+        maxY={150}
       />
 
       {/* Ground grid - solid lines, no fade, positioned at current view level */}
@@ -208,41 +287,72 @@ export function Scene3D() {
         );
       })}
 
-      {/* Render current level terrain pieces */}
-      {visibleTerrainPieces.map((placedPiece) => {
-        const piece = pieceMap.get(placedPiece.pieceId);
-        if (!piece) return null;
+      {/* Selection outline post-processing wrapper */}
+      <SelectionOutline3D>
+        {/* Render current level terrain pieces */}
+        {visibleTerrainPieces.map((placedPiece) => {
+          const piece = pieceMap.get(placedPiece.pieceId);
+          if (!piece) return null;
 
-        const terrain = terrainMap.get(piece.terrainTypeId);
+          const terrain = terrainMap.get(piece.terrainTypeId);
+          const isSelected = selectedSet.has(placedPiece.id);
+          const isColliding = collidingSet.has(placedPiece.id);
 
-        return (
-          <PlacedPiece3D
-            key={placedPiece.id}
-            placedPiece={placedPiece}
-            piece={piece}
-            terrain={terrain}
-            terrainMap={terrainMap}
-            isSelected={selectedSet.has(placedPiece.id)}
-            onClick={() => setSelectedPlacedPieceIds([placedPiece.id])}
-          />
-        );
-      })}
+          return (
+            <Selectable key={placedPiece.id} enabled={isSelected && !editingDisabled}>
+              <PlacedPiece3D
+                placedPiece={placedPiece}
+                piece={piece}
+                terrain={terrain}
+                terrainMap={terrainMap}
+                isSelected={isSelected && !editingDisabled}
+                isColliding={isColliding}
+                editingDisabled={editingDisabled}
+              />
+            </Selectable>
+          );
+        })}
 
-      {/* Render current level props */}
-      {visibleProps.map((placedProp) => {
-        const piece = pieceMap.get(placedProp.pieceId);
-        if (!piece) return null;
+        {/* Render current level props */}
+        {visibleProps.map((placedProp) => {
+          const piece = pieceMap.get(placedProp.pieceId);
+          if (!piece) return null;
 
-        return (
-          <Prop3D
-            key={placedProp.id}
-            placedPiece={placedProp}
-            piece={piece}
-            isSelected={selectedSet.has(placedProp.id)}
-            onClick={() => setSelectedPlacedPieceIds([placedProp.id])}
-          />
-        );
-      })}
+          const isSelected = selectedSet.has(placedProp.id);
+          const isColliding = collidingSet.has(placedProp.id);
+
+          return (
+            <Selectable key={placedProp.id} enabled={isSelected && !editingDisabled}>
+              <Prop3D
+                placedPiece={placedProp}
+                piece={piece}
+                isSelected={isSelected && !editingDisabled}
+                isColliding={isColliding}
+                editingDisabled={editingDisabled}
+                onClick={editingDisabled ? undefined : () => setSelectedPlacedPieceIds([placedProp.id])}
+              />
+            </Selectable>
+          );
+        })}
+      </SelectionOutline3D>
+
+      {/* Transform gizmo for single selection (only when editing enabled) */}
+      {!editingDisabled && selectedPlacedPieceIds.length === 1 && (
+        <TransformGizmo3D
+          cameraControlsRef={cameraControlsRef}
+          onTransformStart={handleTransformStart}
+          onTransformEnd={handleTransformEnd}
+        />
+      )}
+
+      {/* Transform gizmo for multi-selection (2+ pieces, only when editing enabled) */}
+      {!editingDisabled && selectedPlacedPieceIds.length >= 2 && (
+        <SelectionGroup3D
+          cameraControlsRef={cameraControlsRef}
+          onTransformStart={handleTransformStart}
+          onTransformEnd={handleTransformEnd}
+        />
+      )}
 
       {/* Map boundary box (wireframe) */}
       <lineSegments position={[gridCenterX, (maxLevel - minLevel) * LEVEL_HEIGHT_INCHES / 2, gridCenterZ]}>

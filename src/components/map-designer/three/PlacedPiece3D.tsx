@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
+import { ThreeEvent } from '@react-three/fiber';
 import { PlacedPiece, ModularPiece, TerrainType, CornerElevations, DEFAULT_CORNER_ELEVATIONS } from '@/types';
 import { PIECE_HEIGHT_INCHES, LEVEL_HEIGHT_INCHES } from '@/config/terrain';
 import { desaturateColor } from '@/lib/colorUtils';
+import { useMapStore } from '@/store/mapStore';
 import * as THREE from 'three';
 
 interface PlacedPiece3DProps {
@@ -12,9 +14,11 @@ interface PlacedPiece3DProps {
   terrain: TerrainType | undefined;
   terrainMap: Map<string, TerrainType>;
   isSelected: boolean;
+  isColliding?: boolean;
   isReference?: boolean;
   referenceOpacity?: number;
-  onClick: () => void;
+  editingDisabled?: boolean;
+  onClick?: () => void;
 }
 
 /**
@@ -140,16 +144,68 @@ function rotateCornerElevations(corners: CornerElevations, rotation: number): Co
 // Cell size for grid-based pieces (1.5" per cell)
 const CELL_SIZE = 1.5;
 
+// Collision warning color - semi-transparent red tint
+const COLLISION_TINT_COLOR = '#ff4444';
+
+/**
+ * Blend a color with red tint for collision warning
+ */
+function applyCollisionTint(baseColor: string, intensity: number = 0.4): string {
+  // Parse the base color
+  const base = new THREE.Color(baseColor);
+  const tint = new THREE.Color(COLLISION_TINT_COLOR);
+
+  // Blend base color with red tint
+  base.lerp(tint, intensity);
+  return '#' + base.getHexString();
+}
+
 export function PlacedPiece3D({
   placedPiece,
   piece,
   terrain,
   terrainMap,
   isSelected,
+  isColliding = false,
   isReference = false,
   referenceOpacity = 0.3,
+  editingDisabled = false,
   onClick,
 }: PlacedPiece3DProps) {
+  const { toggleSelection, setSelectedPlacedPieceIds } = useMapStore();
+
+  // Check if interactions are disabled (reference pieces or editing disabled)
+  const isInteractionDisabled = isReference || editingDisabled;
+
+  // Handle click with Shift+click multi-selection support
+  const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+
+    if (isInteractionDisabled) return;
+
+    if (e.nativeEvent.shiftKey) {
+      // Shift+click: toggle selection (add/remove from multi-selection)
+      toggleSelection(placedPiece.id);
+    } else {
+      // Normal click: replace selection with this piece
+      setSelectedPlacedPieceIds([placedPiece.id]);
+    }
+
+    // Also call the optional onClick prop if provided
+    onClick?.();
+  }, [isInteractionDisabled, placedPiece.id, toggleSelection, setSelectedPlacedPieceIds, onClick]);
+
+  // Handle pointer enter - show cursor pointer for selectable pieces
+  const handlePointerEnter = useCallback(() => {
+    if (!isInteractionDisabled) {
+      document.body.style.cursor = 'pointer';
+    }
+  }, [isInteractionDisabled]);
+
+  // Handle pointer leave - restore default cursor
+  const handlePointerLeave = useCallback(() => {
+    document.body.style.cursor = 'auto';
+  }, []);
   // Get piece height (use piece's baseHeight or default)
   const pieceHeight = piece.baseHeight ?? PIECE_HEIGHT_INCHES;
 
@@ -225,14 +281,20 @@ export function PlacedPiece3D({
     }
   }, [piece.size.width, piece.size.height, piece.isDiagonal, piece.defaultRotation, elevation, hasCellColors, pieceHeight]);
 
-  // Parse terrain color (desaturated for reference pieces)
+  // Parse terrain color (desaturated for reference pieces, red tint for collisions)
   const color = useMemo(() => {
     const baseColor = terrain?.color || '#888888';
-    return isReference ? desaturateColor(baseColor, 0.5) : baseColor;
-  }, [terrain?.color, isReference]);
+    if (isReference) {
+      return desaturateColor(baseColor, 0.5);
+    }
+    if (isColliding) {
+      return applyCollisionTint(baseColor);
+    }
+    return baseColor;
+  }, [terrain?.color, isReference, isColliding]);
 
-  // Edge color for outline
-  const edgeColor = isSelected ? '#ffffff' : '#000000';
+  // Edge color for outline (red for collisions, white for selected, black otherwise)
+  const edgeColor = isColliding ? COLLISION_TINT_COLOR : (isSelected ? '#ffffff' : '#000000');
 
   // Material props for transparency
   const materialProps = isReference
@@ -255,40 +317,47 @@ export function PlacedPiece3D({
       <group
         position={position}
         rotation={[0, rotationY, 0]}
-        onClick={isReference ? undefined : (e) => { e.stopPropagation(); onClick(); }}
+        onClick={isInteractionDisabled ? undefined : handleClick}
+        onPointerEnter={isInteractionDisabled ? undefined : handlePointerEnter}
+        onPointerLeave={isInteractionDisabled ? undefined : handlePointerLeave}
       >
         {cells.map((row, rowIdx) =>
           row.map((cellTerrainId, colIdx) => {
             const cellTerrain = terrainMap.get(cellTerrainId);
             const baseCellColor = cellTerrain?.color || '#888888';
-            const cellColor = isReference ? desaturateColor(baseCellColor, 0.5) : baseCellColor;
+            let cellColor = baseCellColor;
+            if (isReference) {
+              cellColor = desaturateColor(baseCellColor, 0.5);
+            } else if (isColliding) {
+              cellColor = applyCollisionTint(baseCellColor);
+            }
 
             // Calculate cell position relative to piece center
             // Row 0 is at the back (-Z/north), higher rows toward front (+Z/south)
             const cellX = (colIdx + 0.5) * cellWidth - totalWidth / 2;
             const cellZ = (rowIdx + 0.5) * cellDepth - totalHeight / 2;
 
-            // Box geometry sized to actual cell dimensions
-            const cellGeometry = new THREE.BoxGeometry(cellWidth - 0.05, pieceHeight, cellDepth - 0.05);
-
             return (
               <group key={`cell-${rowIdx}-${colIdx}`} position={[cellX, pieceHeight / 2, cellZ]}>
-                <mesh geometry={cellGeometry}>
-                  <meshBasicMaterial color={cellColor} {...materialProps} />
+                <mesh castShadow receiveShadow>
+                  <boxGeometry args={[cellWidth - 0.05, pieceHeight, cellDepth - 0.05]} />
+                  <meshStandardMaterial
+                    color={cellColor}
+                    {...materialProps}
+                    side={THREE.DoubleSide}
+                    roughness={0.7}
+                    metalness={0.1}
+                  />
                 </mesh>
-                <lineSegments>
-                  <edgesGeometry args={[cellGeometry]} />
-                  <lineBasicMaterial color="#000000" />
-                </lineSegments>
               </group>
             );
           })
         )}
-        {/* Selection outline for the whole piece */}
-        {isSelected && !isReference && (
+        {/* Selection or collision outline for the whole piece */}
+        {(isSelected || isColliding) && !isReference && (
           <lineSegments>
             <edgesGeometry args={[new THREE.BoxGeometry(totalWidth, pieceHeight, totalHeight)]} />
-            <lineBasicMaterial color="#ffffff" linewidth={2} />
+            <lineBasicMaterial color={isColliding ? COLLISION_TINT_COLOR : '#ffffff'} linewidth={2} />
           </lineSegments>
         )}
       </group>
@@ -297,16 +366,30 @@ export function PlacedPiece3D({
 
   // Render single-color piece
   return (
-    <group position={position} rotation={[0, rotationY, 0]} onClick={isReference ? undefined : (e) => { e.stopPropagation(); onClick(); }}>
-      {/* Main mesh - flat color */}
-      <mesh geometry={geometry!}>
-        <meshBasicMaterial color={color} {...materialProps} />
+    <group
+      position={position}
+      rotation={[0, rotationY, 0]}
+      onClick={isInteractionDisabled ? undefined : handleClick}
+      onPointerEnter={isInteractionDisabled ? undefined : handlePointerEnter}
+      onPointerLeave={isInteractionDisabled ? undefined : handlePointerLeave}
+    >
+      {/* Main mesh - standard material for proper lighting */}
+      <mesh geometry={geometry!} castShadow receiveShadow>
+        <meshStandardMaterial
+          color={color}
+          {...materialProps}
+          side={THREE.DoubleSide}
+          roughness={0.7}
+          metalness={0.1}
+        />
       </mesh>
       {/* Edge outline */}
-      <lineSegments>
-        <edgesGeometry args={[geometry!]} />
-        <lineBasicMaterial color={edgeColor} linewidth={isSelected ? 2 : 1} />
-      </lineSegments>
+      {geometry && (
+        <lineSegments>
+          <edgesGeometry args={[geometry]} />
+          <lineBasicMaterial color={edgeColor} linewidth={isSelected ? 2 : 1} />
+        </lineSegments>
+      )}
     </group>
   );
 }

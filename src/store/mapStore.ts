@@ -93,6 +93,12 @@ interface MapState {
   // Generated images history
   generatedImages: GeneratedImage[];
 
+  // 3D Editor Transform Mode
+  transform3DMode: 'translate' | 'rotate';
+
+  // 3D Editor Collision Tracking
+  colliding3DPieceIds: string[];
+
   // Actions
   setMapName: (name: string) => void;
   setMapDescription: (description: string) => void;
@@ -188,6 +194,22 @@ interface MapState {
   addGeneratedImage: (image: Omit<GeneratedImage, 'id' | 'createdAt'>) => void;
   removeGeneratedImage: (id: string) => void;
   clearGeneratedImages: () => void;
+
+  // 3D Editor Transform Mode
+  setTransform3DMode: (mode: 'translate' | 'rotate') => void;
+
+  // 3D Editor Collision Tracking
+  setColliding3DPieceIds: (ids: string[]) => void;
+  addColliding3DPieceId: (id: string) => void;
+  removeColliding3DPieceId: (id: string) => void;
+  clearColliding3DPieceIds: () => void;
+
+  // 3D Editor Position Update (converts 3D coords to 2D)
+  updatePlacedPiecePosition3D: (
+    id: string,
+    position3D: { x: number; y: number; z: number },
+    rotationDegrees: number
+  ) => void;
 }
 
 // Demo pieces for testing
@@ -719,6 +741,8 @@ export const useMapStore = create<MapState>((set, get) => ({
   hasUnsavedChanges: false,
   lastSavedSnapshot: null,
   generatedImages: [],
+  transform3DMode: 'translate',
+  colliding3DPieceIds: [],
 
   // Actions
   setMapName: (name) => set({ mapName: name, hasUnsavedChanges: true }),
@@ -1191,4 +1215,80 @@ export const useMapStore = create<MapState>((set, get) => ({
       generatedImages: [],
       hasUnsavedChanges: true,
     }),
+
+  // 3D Editor Transform Mode
+  setTransform3DMode: (mode) => set({ transform3DMode: mode }),
+
+  // 3D Editor Collision Tracking
+  setColliding3DPieceIds: (ids) => set({ colliding3DPieceIds: ids }),
+
+  addColliding3DPieceId: (id) =>
+    set((state) => ({
+      colliding3DPieceIds: state.colliding3DPieceIds.includes(id)
+        ? state.colliding3DPieceIds
+        : [...state.colliding3DPieceIds, id],
+    })),
+
+  removeColliding3DPieceId: (id) =>
+    set((state) => ({
+      colliding3DPieceIds: state.colliding3DPieceIds.filter((pid) => pid !== id),
+    })),
+
+  clearColliding3DPieceIds: () => set({ colliding3DPieceIds: [] }),
+
+  // 3D Editor Position Update (converts 3D coords to 2D)
+  updatePlacedPiecePosition3D: (id, position3D, rotationDegrees) => {
+    const state = get();
+    const piece = state.placedPieces.find(p => p.id === id);
+    if (!piece) return;
+
+    // Find the piece definition to get dimensions
+    const pieceDefinition = state.availablePieces.find(p => p.id === piece.pieceId) ||
+                           state.customProps.find(p => p.id === piece.pieceId);
+    if (!pieceDefinition) return;
+
+    // Snap rotation to 90-degree increments
+    const snappedRotation = ((Math.round(rotationDegrees / 90) * 90) % 360 + 360) % 360;
+
+    // Calculate effective dimensions based on rotation
+    // Rotation affects which dimension is width vs height
+    const isRotated = snappedRotation === 90 || snappedRotation === 270;
+    const effectiveWidth = isRotated ? pieceDefinition.size.height : pieceDefinition.size.width;
+    const effectiveHeight = isRotated ? pieceDefinition.size.width : pieceDefinition.size.height;
+
+    // 3D position is the center of the piece
+    // 2D position (x, y) is the top-left corner of the piece
+    // So we need to convert from center to corner
+    const snapToGrid = (value: number): number => {
+      return Math.round(value / GRID_CELL_SIZE) * GRID_CELL_SIZE;
+    };
+
+    // Convert 3D center position to 2D corner position
+    // In 3D: X = right, Y = up, Z = forward (away from camera)
+    // In 2D: x = right (same as 3D X), y = down (same as 3D Z)
+    const snappedX = snapToGrid(position3D.x - effectiveWidth / 2);
+    const snappedY = snapToGrid(position3D.z - effectiveHeight / 2);
+
+    // Calculate new level from Y position
+    // Pieces render at Y = level * LEVEL_HEIGHT_INCHES (2.5")
+    // Level -1: Y = -2.5, Level 0: Y = 0, Level 1: Y = 2.5, Level 2: Y = 5
+    // Use midpoints as boundaries
+    const calculateLevelFromY = (y: number): number => {
+      const levelHeight = 2.5; // LEVEL_HEIGHT_INCHES
+      // Round to nearest level based on Y position
+      const level = Math.round(y / levelHeight);
+      // Clamp to valid range (-1 to 2)
+      return Math.max(-1, Math.min(2, level));
+    };
+    const newLevel = calculateLevelFromY(position3D.y);
+
+    set((state) => ({
+      placedPieces: state.placedPieces.map((p) =>
+        p.id === id
+          ? { ...p, x: snappedX, y: snappedY, rotation: snappedRotation, level: newLevel }
+          : p
+      ),
+      hasUnsavedChanges: true,
+    }));
+  },
 }));

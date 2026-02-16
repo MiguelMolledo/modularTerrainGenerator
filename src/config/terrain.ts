@@ -14,6 +14,28 @@ export const PIECE_HEIGHT_INCHES = 0.5;
 // Height per level/floor in inches (for 3D view)
 export const LEVEL_HEIGHT_INCHES = 2.5;
 
+// Height per layer for 3D editor transformations (3 inches per layer)
+export const LAYER_HEIGHT_INCHES = 3;
+
+// Layer height limits for 3D editing (min/max Y positions in inches)
+export const LAYER_LIMITS = {
+  basement: { min: 0, max: 3 },     // -1 level
+  ground: { min: 3, max: 6 },       // 0 level
+  level1: { min: 6, max: 9 },       // 1 level
+  level2: { min: 9, max: 12 },      // 2 level
+} as const;
+
+// Helper to get layer limits by level number (-1, 0, 1, 2)
+export const getLayerLimitsByLevel = (level: number): { min: number; max: number } => {
+  switch (level) {
+    case -1: return LAYER_LIMITS.basement;
+    case 0: return LAYER_LIMITS.ground;
+    case 1: return LAYER_LIMITS.level1;
+    case 2: return LAYER_LIMITS.level2;
+    default: return LAYER_LIMITS.ground;
+  }
+};
+
 // Map dimensions
 export const DEFAULT_MAP_WIDTH = 60;  // inches
 export const DEFAULT_MAP_HEIGHT = 60; // inches
