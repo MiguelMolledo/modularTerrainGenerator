@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const publicRoutes = ['/login', '/auth/callback', '/suspended'];
+const publicRoutes = ['/login', '/signup', '/auth/callback', '/suspended'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -72,8 +72,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Already logged in and visiting /login → redirect to app
-  if (user && pathname === '/login') {
+  // Already logged in and visiting /login or /signup → redirect to app
+  if (user && (pathname === '/login' || pathname === '/signup')) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);

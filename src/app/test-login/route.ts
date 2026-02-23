@@ -29,69 +29,31 @@ export async function GET() {
   );
 
   try {
-    // Use the existing test user email
-    const testEmail = 'miguel.molledo.alvarez@gmail.com';
+    // Sign in with the test user
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: 'test@local.dev',
+      password: 'test-password-dev-only',
+    });
 
-    // Get the user from the database
-    const { data: users, error: listError } = await supabase
-      .from('profiles')
-      .select('id, email')
-      .eq('email', testEmail)
-      .limit(1);
-
-    if (listError || !users || users.length === 0) {
+    if (error) {
       return NextResponse.json(
         {
-          error: 'Test user not found. Please login with Google first to create the profile.',
-          details: listError
+          error: 'Failed to authenticate test user',
+          details: error.message,
+          hint: 'Make sure you ran: supabase db reset'
         },
-        { status: 404 }
+        { status: 401 }
       );
     }
 
-    // For test purposes, show instructions
-    return new NextResponse(
-      `
-      <html>
-        <body style="font-family: system-ui; padding: 40px; max-width: 600px; margin: 0 auto;">
-          <h1>🧪 Test Login</h1>
-          <p>Test user profile found: <strong>${testEmail}</strong></p>
+    console.log('✅ Test user authenticated:', data.user?.email);
 
-          <h2>For Playwright Testing:</h2>
-          <p>To bypass Google OAuth in tests, you have two options:</p>
-
-          <h3>Option A: Save Authentication State (Recommended)</h3>
-          <ol>
-            <li>Login manually with Google once</li>
-            <li>In your Playwright test, save the storage state:
-              <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px;">await page.context().storageState({ path: 'auth.json' });</pre>
-            </li>
-            <li>Reuse in future tests:
-              <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px;">const context = await browser.newContext({
-  storageState: 'auth.json'
-});</pre>
-            </li>
-          </ol>
-
-          <h3>Option B: Mock the Session</h3>
-          <p>Set cookies manually in Playwright before visiting the app.</p>
-
-          <hr style="margin: 30px 0;">
-          <p><a href="/">← Back to App</a></p>
-          <p><small>This route only works in development mode.</small></p>
-        </body>
-      </html>
-      `,
-      {
-        headers: {
-          'Content-Type': 'text/html',
-        },
-      }
-    );
+    // Redirect to home
+    return response;
   } catch (error) {
     console.error('Test login error:', error);
     return NextResponse.json(
-      { error: 'Failed to process test login', details: error },
+      { error: 'Failed to create test session', details: error },
       { status: 500 }
     );
   }

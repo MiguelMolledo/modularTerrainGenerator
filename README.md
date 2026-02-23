@@ -268,6 +268,71 @@ npx supabase db reset --local
 npx supabase migration new <name>
 ```
 
+## Testing with Playwright
+
+### Setup Authentication for Tests (One-time)
+
+Playwright tests can reuse your authenticated session to avoid manual Google OAuth login every time:
+
+```bash
+node playwright-auth-setup.mjs
+```
+
+This will:
+1. Open a browser window
+2. Prompt you to login with Google
+3. Save your session cookies to `playwright-auth.json`
+
+### Run Tests with Saved Authentication
+
+```bash
+node test-with-auth.mjs
+```
+
+This opens a browser already authenticated - you'll see your avatar and "Sign out" button immediately.
+
+### Use in Your Own Tests
+
+```javascript
+import { test } from '@playwright/test';
+
+// Use saved authentication state
+test.use({ storageState: 'playwright-auth.json' });
+
+test('my authenticated test', async ({ page }) => {
+  await page.goto('http://localhost:4200');
+  // Already logged in! No need for OAuth flow
+});
+```
+
+**Note:** `playwright-auth.json` is git-ignored and contains your local session. Re-run `playwright-auth-setup.mjs` if your session expires.
+
+## Troubleshooting
+
+### "Database error saving new user" on login
+
+This means migrations weren't applied after starting Supabase:
+
+```bash
+supabase db reset
+```
+
+### Supabase won't start
+
+Make sure Docker Desktop is running first. If issues persist:
+
+```bash
+supabase stop
+supabase start
+supabase db reset
+```
+
+### Lost session after restart
+
+Sessions are tied to the running server. After restarting the dev server (`npm run dev`), you'll need to login again.
+
+For testing, use the Playwright auth setup above to avoid manual login.
+
 ## License
 
 MIT

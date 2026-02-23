@@ -5,33 +5,42 @@ import { chromium } from '@playwright/test';
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  console.log('Navegando a localhost:4200...');
-  await page.goto('http://localhost:4200');
+  console.log('🔐 Authenticating with test user...');
 
-  // Wait for navigation to complete
+  // Go directly to test-login endpoint (bypasses Google OAuth)
+  await page.goto('http://localhost:4200/test-login');
+
+  // Wait for redirect to home
+  await page.waitForURL('http://localhost:4200/', { timeout: 5000 });
+
+  console.log('✅ Authenticated! Now on home page.');
+
+  // Wait for page to load
   await page.waitForLoadState('networkidle');
-
-  const url = page.url();
-  console.log('URL actual:', url);
 
   // Take screenshot
   await page.screenshot({ path: 'screenshot.png', fullPage: true });
-  console.log('Screenshot guardado en screenshot.png');
+  console.log('📸 Screenshot saved: screenshot.png');
 
-  // Check if sign out button exists
+  // Check authentication UI
   const signOutButton = await page.locator('button:has-text("Sign out")').count();
-  console.log('Botón "Sign out" encontrado:', signOutButton > 0 ? 'SÍ' : 'NO');
+  const userAvatar = await page.locator('img[alt*="avatar"], img[alt*="User"]').count();
+  const userName = await page.locator('text=Test User').count();
 
-  // Check if user info is visible
-  const userAvatar = await page.locator('img[alt*="avatar"]').count();
-  console.log('Avatar de usuario encontrado:', userAvatar > 0 ? 'SÍ' : 'NO');
+  console.log('\n📊 Authentication Check:');
+  console.log('   Sign out button:', signOutButton > 0 ? '✅ Found' : '❌ Not found');
+  console.log('   User avatar:', userAvatar > 0 ? '✅ Found' : '❌ Not found');
+  console.log('   User name "Test User":', userName > 0 ? '✅ Found' : '❌ Not found');
 
-  // Get the top nav HTML
-  const topNavHTML = await page.locator('nav').first().innerHTML();
-  console.log('\n=== HTML del TopNav ===');
-  console.log(topNavHTML.substring(0, 500) + '...');
+  if (signOutButton > 0) {
+    console.log('\n🎉 SUCCESS! Test login works perfectly!\n');
+  } else {
+    console.log('\n❌ Something went wrong\n');
+    const topNavHTML = await page.locator('nav').first().innerHTML();
+    console.log('TopNav HTML:', topNavHTML.substring(0, 300));
+  }
 
-  console.log('\nPresiona Enter para cerrar el navegador...');
+  console.log('Press Enter to close...');
   await new Promise(resolve => process.stdin.once('data', resolve));
 
   await browser.close();
