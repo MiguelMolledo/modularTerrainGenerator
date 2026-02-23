@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Map, FolderOpen, Settings, Package } from 'lucide-react';
+import { Home, Map, FolderOpen, Settings, Package, LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface NavItem {
   href: string;
@@ -19,8 +21,15 @@ const navItems: NavItem[] = [
   { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
 ];
 
+const hiddenRoutes = ['/login', '/suspended'];
+
 export function TopNav() {
   const pathname = usePathname();
+  const { profile, isLoading, signOut } = useAuth();
+
+  if (hiddenRoutes.includes(pathname)) {
+    return null;
+  }
 
   return (
     <nav className="h-12 bg-background border-b border-border flex items-center px-4">
@@ -56,10 +65,37 @@ export function TopNav() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Right side - could add user menu, etc. */}
-      <div className="text-xs text-muted-foreground">
-        Modular Terrain Creator
-      </div>
+      {/* User info & sign out */}
+      {!isLoading && profile && (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {profile.avatar_url ? (
+              <Image
+                src={profile.avatar_url}
+                alt={profile.display_name || 'User avatar'}
+                width={28}
+                height={28}
+                className="rounded-full"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-xs font-medium text-foreground">
+                {(profile.display_name || profile.email || '?').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="text-sm text-foreground hidden sm:inline">
+              {profile.display_name || profile.email}
+            </span>
+          </div>
+          <button
+            onClick={signOut}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+        </div>
+      )}
     </nav>
   );
 }

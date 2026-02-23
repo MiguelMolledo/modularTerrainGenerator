@@ -1,28 +1,17 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-// Only create client if credentials are available
-let supabaseClient: SupabaseClient | null = null;
-
-if (supabaseUrl && supabaseAnonKey) {
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-} else if (typeof window !== 'undefined') {
-  // Only warn in browser, not during build
-  console.warn(
-    'Supabase credentials not found. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local'
-  );
-}
-
-export const supabase = supabaseClient;
+// Browser client — use this in client components
+// For server components and middleware, use createClient from '@/lib/supabase/server'
+export const supabase = createClient();
 
 // Helper to check if Supabase is configured
-export const isSupabaseConfigured = () => supabaseClient !== null;
+export const isSupabaseConfigured = () =>
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Database types
 export interface DbMap {
   id: string;
+  user_id: string;
   name: string;
   description: string | null;
   map_width: number;

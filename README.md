@@ -82,34 +82,140 @@ src/
 
 ### Prerequisites
 - Node.js 20+
-- Docker (for local Supabase)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
 
-### Installation
+### Step 1: Install dependencies
 
 ```bash
-# Clone the repository
 git clone git@github.com:MiguelMolledo/modularTerrainGenerator.git
 cd modularTerrainGenerator
-
-# Install dependencies
 npm install
+```
 
-# Start Supabase (requires Docker)
-npx supabase start
+### Step 2: Set up environment variables
 
-# Run development server
+```bash
+cp .env.local.example .env.local
+```
+
+Edit `.env.local` with your values:
+
+```env
+# Supabase (local)
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<copied from `supabase start` output>
+
+# Google OAuth (see Step 3)
+GOOGLE_CLIENT_ID=<your-google-client-id>
+GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+
+# AI features (optional)
+OPENROUTER_API_KEY=<your-openrouter-key>
+FAL_KEY=<your-fal-key>
+
+# 3D Viewer Settings
+NEXT_PUBLIC_DISABLE_3D_EDITING=true
+```
+
+### Step 3: Set up Google OAuth
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a project (or select existing)
+3. Go to **APIs & Services > OAuth consent screen**
+   - Choose "External" user type
+   - Add scopes: `email`, `profile`, `openid`
+   - Add your email as a test user (required while app is in testing mode)
+4. Go to **APIs & Services > Credentials > Create Credentials > OAuth client ID**
+   - Application type: **Web application**
+   - **Authorized JavaScript origins:**
+     - `http://localhost:4200`
+     - `http://127.0.0.1:54321`
+   - **Authorized redirect URIs:**
+     - `http://127.0.0.1:54321/auth/v1/callback` (local)
+     - `https://<YOUR_SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback` (production)
+5. Copy the **Client ID** and **Client Secret** into your `.env.local`
+
+### Step 4: Start Docker
+
+Open Docker Desktop and wait for it to be ready.
+
+### Step 5: Start Supabase
+
+```bash
+supabase start
+```
+
+This spins up local Postgres, Auth, Storage, and other services in Docker.
+
+### Step 6: Apply database migrations
+
+```bash
+supabase db reset
+```
+
+This resets the local database and applies all migrations from `supabase/migrations/`.
+
+### Step 7: Start the app
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:4200](http://localhost:4200) — you'll be redirected to the login page.
 
-### Environment Variables
+### Quick start (returning developers)
 
-Create `.env.local`:
-```env
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key-from-supabase-start>
+```bash
+# Open Docker Desktop first, then:
+supabase start
+npm run dev
 ```
+
+### Local URLs
+
+| Service | URL |
+|---|---|
+| App | http://localhost:4200 |
+| Supabase API | http://127.0.0.1:54321 |
+| Supabase Studio (DB UI) | http://127.0.0.1:54323 |
+| Mailpit (email testing) | http://127.0.0.1:54324 |
+
+### Admin & User Management
+
+All user management is done through **Supabase Studio** (http://127.0.0.1:54323) in the `profiles` table:
+
+- **Make admin:** Set `role` to `admin`
+- **Ban user:** Set `is_active` to `false` (user sees `/suspended` page)
+- **Unban user:** Set `is_active` back to `true`
+
+Or via SQL in Supabase Studio > SQL Editor:
+
+```sql
+-- Make a user admin
+UPDATE profiles SET role = 'admin' WHERE email = 'user@gmail.com';
+
+-- Ban a user
+UPDATE profiles SET is_active = false WHERE email = 'user@gmail.com';
+```
+
+### Stopping services
+
+```bash
+supabase stop    # Stop Supabase containers
+# Close Docker Desktop when done
+```
+
+### Production deployment
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Run migrations in the hosted DB (SQL Editor or `supabase db push`)
+3. Enable Google provider in **Supabase Dashboard > Authentication > Providers** with your Client ID and Secret
+4. Set environment variables in Vercel:
+   - `NEXT_PUBLIC_SUPABASE_URL` = your hosted Supabase URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your hosted anon key
+5. Update Google OAuth redirect URI to `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
+6. Publish your Google OAuth app (OAuth consent screen > Publish) to allow all users
 
 ## Usage
 

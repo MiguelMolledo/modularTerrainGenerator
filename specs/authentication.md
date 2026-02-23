@@ -1,150 +1,142 @@
 # Authentication
 
-Authentication system for Modular Terrain Creator with role-based access control and per-user feature flags.
+Authentication system for Modular Terrain Creator using Supabase Auth with Google OAuth and role-based access control.
 
 ## Technical Stack
 
-- **Auth library**: NextAuth.js (Auth.js)
-- **Database**: MongoDB Atlas
-- **Sessions**: JWT in httpOnly cookies
-- **Deployment**: Vercel
+- **Auth provider**: Supabase Auth (Google OAuth)
+- **Database**: Supabase (PostgreSQL) — already in use
+- **Sessions**: Supabase session management (JWT via `@supabase/ssr`)
+- **Deployment**: Vercel free tier + Supabase free tier
 
 ## User Capabilities
 
-### All Users
-- Users can register with email and password
-- Users receive email verification after registration
-- Users can log in with verified email and password
-- Users can reset their password via email link
-- Users can create their own pieces, maps, templates, and props
-- Users can access features based on their individual feature flags
+### All Active Users
+- Users can sign in with Google OAuth
+- Users can sign out
+- Users can view and edit only their own maps
+- Users can access all app features (designer, inventory, 3D viewer, AI, export) when active
 
 ### Admins
-- Admins can view all registered users
-- Admins can change any user's role (user/admin)
-- Admins can enable/disable feature flags for any user
-- Admins can delete user accounts
-- Admins have access to all features regardless of feature flags
+- Admins can ban/unban users by toggling `is_active` in Supabase dashboard
+- Admins can promote users to admin by changing `role` in Supabase dashboard
+- Admins have full access regardless of `is_active` status
+
+### Banned Users
+- Banned users see a "Your account has been suspended" page
+- Banned users cannot access any app functionality
+- Ban status is checked on every page load via middleware
 
 ## Roles
 
 | Role | Description |
 |------|-------------|
-| `admin` | Full access, user management, feature flag control |
-| `user` | Standard access, features controlled by flags |
+| `admin` | Full access, manages users via Supabase dashboard |
+| `user` | Standard access to all features when active |
 
-## Feature Flags
+- New users default to `user` role
+- Admins are promoted manually in Supabase dashboard
 
-Simple per-user boolean flags stored on the user document.
+## Database Schema
 
-| Flag | Description |
-|------|-------------|
-| `ai_toolkit` | Access to AI chat, layout suggestions, prop generation |
-| `image_generation` | Access to FAL.ai image generation |
-| `export_features` | Access to PDF export and reports |
+### Profiles Table (new)
 
-Default flags for new users:
-```json
-{
-  "ai_toolkit": true,
-  "image_generation": true,
-  "export_features": true
-}
+```sql
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  display_name TEXT,
+  avatar_url TEXT,
+  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
-## User Model
+- Auto-created via database trigger when a user signs up through Supabase Auth
+- `id` matches the Supabase `auth.users` UUID
 
-```typescript
-interface User {
-  _id: ObjectId
-  email: string              // unique, lowercase
-  passwordHash: string       // bcrypt hashed
-  role: 'admin' | 'user'
-  emailVerified: boolean
-  emailVerifyToken?: string
-  passwordResetToken?: string
-  passwordResetExpires?: Date
-  featureFlags: {
-    ai_toolkit: boolean
-    image_generation: boolean
-    export_features: boolean
-  }
-  createdAt: Date
-  updatedAt: Date
-}
-```
+### Maps Table Changes
+
+- Add `user_id UUID REFERENCES profiles(id)` column
+- Delete all existing maps (fresh start)
+- Update RLS policies for user isolation
+
+### RLS Policies
+
+**Profiles:**
+- Users can SELECT their own profile
+- Admins can SELECT and UPDATE all profiles
+
+**Maps:**
+- Users can SELECT, INSERT, UPDATE, DELETE only rows where `user_id = auth.uid()`
+- INSERT must set `user_id = auth.uid()`
 
 ## Authentication Flows
 
-### Registration
-1. User submits email + password
-2. System validates email format and password strength (min 8 chars)
-3. System creates user with `emailVerified: false`
-4. System sends verification email with token link
-5. User clicks link → `emailVerified: true`
+### Sign In
+1. User clicks "Sign in with Google" on landing page
+2. Supabase redirects to Google OAuth consent screen
+3. Google redirects back to `/auth/callback`
+4. Supabase creates session, trigger creates profile row
+5. Middleware checks `is_active` on profile
+6. If active → redirect to main app (`/`)
+7. If banned → redirect to `/suspended`
 
-### Login
-1. User submits email + password
-2. System verifies credentials and `emailVerified: true`
-3. System creates JWT session in httpOnly cookie
-4. User redirected to dashboard
+### Sign Out
+1. User clicks sign out
+2. Supabase session destroyed
+3. Redirect to landing page
 
-### Password Reset
-1. User requests reset with email
-2. System generates reset token (expires in 1 hour)
-3. System sends reset link via email
-4. User clicks link → enters new password
-5. Token invalidated after use
+### Session Check (every page load)
+1. Middleware reads Supabase session from cookies
+2. No session → redirect to `/login`
+3. Session exists → fetch profile, check `is_active`
+4. `is_active = false` → redirect to `/suspended`
+5. `is_active = true` → allow access
 
-### Session Management
-- JWT stored in httpOnly cookie
-- Session expires after 7 days
-- Refresh on activity (sliding window)
+## Routes
 
-## Protected Routes
+| Route | Access |
+|-------|--------|
+| `/login` | Public — landing page with Google sign-in |
+| `/auth/callback` | Public — OAuth callback handler |
+| `/suspended` | Authenticated but banned users only |
+| All other routes | Authenticated + active users only |
 
-| Route Pattern | Access |
-|---------------|--------|
-| `/` | Public |
-| `/login`, `/register` | Public (redirect if logged in) |
-| `/designer/*` | Authenticated users |
-| `/inventory/*` | Authenticated users |
-| `/maps/*` | Authenticated users |
-| `/settings` | Authenticated users |
-| `/admin/*` | Admin role only |
+## Landing Page
 
-## Feature Flag Checks
+- App name and brief tagline
+- Google sign-in button (Supabase OAuth)
+- Clean, minimal design using existing Tailwind setup
+- Redirect to app if already authenticated
 
-Components check feature flags before rendering:
-```typescript
-// Example usage
-const { hasFeature } = useAuth()
+## Supabase Client Setup
 
-if (!hasFeature('ai_toolkit')) {
-  return <UpgradePrompt feature="AI Toolkit" />
-}
-```
+Two clients needed:
+- **Browser client** (`createBrowserClient`) — for client components
+- **Server client** (`createServerClient`) — for server components and middleware
+
+Both from `@supabase/ssr` package for proper cookie handling with Next.js.
 
 ## Constraints
 
-- Email must be unique (case-insensitive)
-- Password minimum 8 characters
-- Email verification required before login
-- Password reset tokens expire after 1 hour
-- Failed login attempts rate-limited (5 per minute per IP)
-- First registered user automatically becomes admin
+- Google OAuth only (no email/password)
+- Free tier limits: 50,000 monthly active users (Supabase), sufficient for this app
+- Admin management is dashboard-only (no admin UI in the app for now)
+- All existing maps will be deleted when auth migration runs
 
 ## Related Specs
 
-- [API Keys](./api-keys.md) - external API keys for AI services
-- [AI Assistant](./ai-assistant.md) - feature controlled by `ai_toolkit` flag
-- [Image Generation](./image-generation.md) - feature controlled by `image_generation` flag
-- [Export System](./export.md) - feature controlled by `export_features` flag
+- [Map Persistence](./map-persistence.md) — maps now scoped to authenticated user
+- [API Keys](./api-keys.md) — external API keys for AI services
 
 ## Source
 
-- `src/lib/auth/` - auth utilities
-- `src/app/api/auth/` - NextAuth routes
-- `src/middleware.ts` - route protection
-- `src/hooks/useAuth.ts` - auth hook
-- `src/app/admin/` - admin dashboard
+- `src/lib/supabase.ts` — Supabase client (to be updated)
+- `src/lib/supabase/` — new: browser + server clients
+- `src/app/login/` — landing/login page
+- `src/app/auth/callback/` — OAuth callback route
+- `src/app/suspended/` — suspended account page
+- `src/middleware.ts` — route protection + session refresh

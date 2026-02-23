@@ -126,8 +126,8 @@ Quick access, recently used pieces, Q key shortcut, circular menu.
 
 ## [Authentication](./authentication.md)
 
-Login, logout, register, email verification, password reset, JWT, sessions, roles, admin, user, feature flags, NextAuth, MongoDB Atlas, protected routes, access control.
+Login, logout, Google OAuth, Supabase Auth, sessions, roles, admin, user, ban, suspend, is_active, profiles, RLS, protected routes, access control, middleware, landing page.
 
-**Source**: `src/lib/auth/`, `src/app/api/auth/`, `src/middleware.ts`, `src/hooks/useAuth.ts`, `src/app/admin/`
+**Source**: `src/lib/supabase/`, `src/app/login/`, `src/app/auth/callback/`, `src/app/suspended/`, `src/middleware.ts`
 
 ---
