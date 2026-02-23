@@ -29,11 +29,18 @@ export function useAuth(): AuthState {
     const supabase = createClient();
 
     async function fetchProfile(userId: string) {
-      const { data } = await supabase
+      console.log('🔍 Fetching profile for user ID:', userId);
+      const { data, error } = await supabase
         .from('profiles')
         .select('id, email, display_name, avatar_url, role, is_active')
         .eq('id', userId)
         .single();
+
+      if (error) {
+        console.error('❌ Error fetching profile:', error);
+      } else {
+        console.log('✅ Profile loaded:', data);
+      }
 
       setProfile(data as Profile | null);
     }

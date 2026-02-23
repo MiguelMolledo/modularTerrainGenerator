@@ -1,5 +1,6 @@
 -- RLS policies for profiles table
--- Users can SELECT their own profile, admins can SELECT/UPDATE all profiles
+-- Users can SELECT their own profile
+-- Admins manage users via Supabase Studio (service_role key)
 
 -- Policy: Users can read their own profile
 CREATE POLICY "Users can select own profile"
@@ -7,30 +8,12 @@ CREATE POLICY "Users can select own profile"
   FOR SELECT
   USING (id = auth.uid());
 
--- Policy: Admins can read all profiles
-CREATE POLICY "Admins can select all profiles"
-  ON profiles
-  FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles AS p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
-  );
-
--- Policy: Admins can update all profiles (e.g., ban/unban, change roles)
-CREATE POLICY "Admins can update all profiles"
+-- Policy: Users can update their own profile (display_name, avatar only)
+CREATE POLICY "Users can update own profile"
   ON profiles
   FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles AS p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM profiles AS p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
-  );
+  USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
+
+-- Note: Admin operations (ban/unban, role changes) should be done via Supabase Studio
+-- or using the service_role key to avoid RLS recursion issues
