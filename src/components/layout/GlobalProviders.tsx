@@ -10,7 +10,7 @@ export function GlobalProviders({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       {children}
-      {profile?.ai_enabled && <AIChatDialog />}
+      {profile?.is_active && profile?.ai_enabled && <AIChatDialog />}
     </ErrorBoundary>
   );
 }
