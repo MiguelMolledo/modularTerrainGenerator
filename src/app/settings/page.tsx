@@ -23,6 +23,7 @@ import {
   HardDrive,
 } from 'lucide-react';
 import { downloadAppData, uploadAppData, clearAllData, exportAllData } from '@/lib/localStorage';
+import { useAuth } from '@/hooks/useAuth';
 
 // Status indicator component
 function StatusIndicator({
@@ -137,6 +138,7 @@ function APIKeyInput({
 }
 
 export default function SettingsPage() {
+  const { profile } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -272,120 +274,122 @@ export default function SettingsPage() {
       <div className="max-w-3xl mx-auto px-4">
         <h1 className="text-2xl font-bold text-foreground mb-6">Settings</h1>
 
-        {/* AI Services */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Sparkles className="h-5 w-5 text-purple-400" />
-              AI Services
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <p className="text-sm text-muted-foreground">
-              Configure your API keys to enable AI-powered features. Keys are stored locally in your browser and are never sent to our servers.
-            </p>
+        {/* AI Services - only visible when ai_enabled */}
+        {profile?.ai_enabled && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Sparkles className="h-5 w-5 text-purple-400" />
+                AI Services
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-sm text-muted-foreground">
+                Configure your API keys to enable AI-powered features. Keys are stored locally in your browser and are never sent to our servers.
+              </p>
 
-            {/* OpenRouter API Key */}
-            <div className="p-4 bg-secondary rounded-lg space-y-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-purple-400" />
-                <span className="font-medium text-foreground">OpenRouter</span>
-                <span className="text-xs text-muted-foreground">(AI Prop Generation)</span>
-              </div>
-              <APIKeyInput
-                label="API Key"
-                value={localOpenRouterKey}
-                onChange={setLocalOpenRouterKey}
-                placeholder="sk-or-..."
-                onTest={handleTestOpenRouter}
-                status={openRouterStatus}
-                error={openRouterError}
-                isTestingDisabled={openRouterStatus === 'checking'}
-              />
-              {openRouterHasChanges && (
+              {/* OpenRouter API Key */}
+              <div className="p-4 bg-secondary rounded-lg space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-yellow-500">Unsaved changes</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSaveOpenRouterKey}
-                    className="text-xs h-6"
-                  >
-                    Save
-                  </Button>
+                  <Sparkles className="h-4 w-4 text-purple-400" />
+                  <span className="font-medium text-foreground">OpenRouter</span>
+                  <span className="text-xs text-muted-foreground">(AI Prop Generation)</span>
                 </div>
-              )}
-              <a
-                href="https://openrouter.ai/keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
-              >
-                Get an API key <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-
-            {/* FAL.ai API Key */}
-            <div className="p-4 bg-secondary rounded-lg space-y-3">
-              <div className="flex items-center gap-2">
-                <Wand2 className="h-4 w-4 text-amber-400" />
-                <span className="font-medium text-foreground">FAL.ai</span>
-                <span className="text-xs text-muted-foreground">(Generate Art)</span>
-              </div>
-              <APIKeyInput
-                label="API Key"
-                value={localFalKey}
-                onChange={setLocalFalKey}
-                placeholder="fal_..."
-                onTest={handleTestFal}
-                status={falStatus}
-                error={falError}
-                isTestingDisabled={falStatus === 'checking'}
-              />
-              {falHasChanges && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-yellow-500">Unsaved changes</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSaveFalKey}
-                    className="text-xs h-6"
-                  >
-                    Save
-                  </Button>
-                </div>
-              )}
-              <a
-                href="https://fal.ai/dashboard/keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
-              >
-                Get an API key <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-
-            {/* Clear all keys */}
-            {(openRouterKey || falKey) && (
-              <div className="pt-2 border-t border-border">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (confirm('Are you sure you want to clear all API keys?')) {
-                      clearKeys();
-                      setLocalOpenRouterKey('');
-                      setLocalFalKey('');
-                    }
-                  }}
-                  className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                <APIKeyInput
+                  label="API Key"
+                  value={localOpenRouterKey}
+                  onChange={setLocalOpenRouterKey}
+                  placeholder="sk-or-..."
+                  onTest={handleTestOpenRouter}
+                  status={openRouterStatus}
+                  error={openRouterError}
+                  isTestingDisabled={openRouterStatus === 'checking'}
+                />
+                {openRouterHasChanges && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-yellow-500">Unsaved changes</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveOpenRouterKey}
+                      className="text-xs h-6"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                )}
+                <a
+                  href="https://openrouter.ai/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
                 >
-                  Clear all API keys
-                </Button>
+                  Get an API key <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              {/* FAL.ai API Key */}
+              <div className="p-4 bg-secondary rounded-lg space-y-3">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="h-4 w-4 text-amber-400" />
+                  <span className="font-medium text-foreground">FAL.ai</span>
+                  <span className="text-xs text-muted-foreground">(Generate Art)</span>
+                </div>
+                <APIKeyInput
+                  label="API Key"
+                  value={localFalKey}
+                  onChange={setLocalFalKey}
+                  placeholder="fal_..."
+                  onTest={handleTestFal}
+                  status={falStatus}
+                  error={falError}
+                  isTestingDisabled={falStatus === 'checking'}
+                />
+                {falHasChanges && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-yellow-500">Unsaved changes</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveFalKey}
+                      className="text-xs h-6"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                )}
+                <a
+                  href="https://fal.ai/dashboard/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
+                >
+                  Get an API key <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+
+              {/* Clear all keys */}
+              {(openRouterKey || falKey) && (
+                <div className="pt-2 border-t border-border">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to clear all API keys?')) {
+                        clearKeys();
+                        setLocalOpenRouterKey('');
+                        setLocalFalKey('');
+                      }
+                    }}
+                    className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                  >
+                    Clear all API keys
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Storage Mode */}
         <Card className="mb-6">

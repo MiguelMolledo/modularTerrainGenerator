@@ -11,6 +11,7 @@ interface Profile {
   avatar_url: string | null;
   role: 'user' | 'admin';
   is_active: boolean;
+  ai_enabled: boolean;
 }
 
 interface AuthState {
@@ -32,7 +33,7 @@ export function useAuth(): AuthState {
       console.log('🔍 Fetching profile for user ID:', userId);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, display_name, avatar_url, role, is_active')
+        .select('id, email, display_name, avatar_url, role, is_active, ai_enabled')
         .eq('id', userId)
         .single();
 

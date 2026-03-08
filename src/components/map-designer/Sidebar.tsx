@@ -21,6 +21,7 @@ import type { ModularPiece, PropCategory, CellColors } from '@/types';
 import { useAIStore } from '@/store/aiStore';
 import { AIPropsDialog } from './AIPropsDialog';
 import { CampaignAnalyzerDialog } from './CampaignAnalyzerDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 // Visual preview component for terrain pieces
 interface PiecePreviewProps {
@@ -215,6 +216,7 @@ export function Sidebar() {
   } = useMapStore();
 
   const { setDialogOpen: setAIDialogOpen } = useAIStore();
+  const { profile } = useAuth();
 
   // Get first terrain tab as default
   const defaultTab = terrainTypes[0]?.slug || terrainTypes[0]?.id || '';
@@ -546,26 +548,30 @@ export function Sidebar() {
           )}
           {editMode === 'props' && (
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-900/30"
-                onClick={() => setAIDialogOpen(true)}
-                title="Generate props with AI"
-              >
-                <Sparkles className="h-3 w-3 mr-1" />
-                AI
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10"
-                onClick={() => setShowCampaignAnalyzer(true)}
-                title="Analyze campaign text"
-              >
-                <FileText className="h-3 w-3 mr-1" />
-                Doc
-              </Button>
+              {profile?.ai_enabled && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-900/30"
+                    onClick={() => setAIDialogOpen(true)}
+                    title="Generate props with AI"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    AI
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                    onClick={() => setShowCampaignAnalyzer(true)}
+                    title="Analyze campaign text"
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    Doc
+                  </Button>
+                </>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

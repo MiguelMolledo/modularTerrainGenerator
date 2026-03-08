@@ -30,6 +30,7 @@ import { generateThumbnail, generateFullMapSnapshot } from '@/lib/stageRef';
 import { clearLastMapId } from './UnsavedChangesGuard';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import type { ModularPiece, SavedMap } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 
 // Dropdown menu component
 function DropdownMenu({
@@ -117,6 +118,7 @@ const modKey = isMac ? '⌘' : 'Ctrl';
 
 export function Toolbar() {
   const router = useRouter();
+  const { profile } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveName, setSaveName] = useState('');
@@ -710,35 +712,37 @@ export function Toolbar() {
         <Separator orientation="vertical" className="h-8" />
 
         {/* AI Tools Dropdown */}
-        <DropdownMenu
-          trigger={
-            <Button variant="outline" size="sm" className="gap-1 text-purple-400 border-purple-600/50 hover:bg-purple-900/30">
-              <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">AI Tools</span>
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          }
-        >
-          <MenuItem
-            icon={Sparkles}
-            label="Generate Layout"
-            onClick={() => setShowAILayoutDialog(true)}
-            className="text-green-400"
-          />
-          <MenuItem
-            icon={PaintBucket}
-            label="Fill Gaps"
-            onClick={() => setShowFillGapsDialog(true)}
-            className="text-primary"
-          />
-          <MenuDivider />
-          <MenuItem
-            icon={Wand2}
-            label="Generate Art"
-            onClick={() => setShowGenerateArtDialog(true)}
-            className="text-amber-400"
-          />
-        </DropdownMenu>
+        {profile?.ai_enabled && (
+          <DropdownMenu
+            trigger={
+              <Button variant="outline" size="sm" className="gap-1 text-purple-400 border-purple-600/50 hover:bg-purple-900/30">
+                <Sparkles className="h-4 w-4" />
+                <span className="hidden sm:inline">AI Tools</span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            }
+          >
+            <MenuItem
+              icon={Sparkles}
+              label="Generate Layout"
+              onClick={() => setShowAILayoutDialog(true)}
+              className="text-green-400"
+            />
+            <MenuItem
+              icon={PaintBucket}
+              label="Fill Gaps"
+              onClick={() => setShowFillGapsDialog(true)}
+              className="text-primary"
+            />
+            <MenuDivider />
+            <MenuItem
+              icon={Wand2}
+              label="Generate Art"
+              onClick={() => setShowGenerateArtDialog(true)}
+              className="text-amber-400"
+            />
+          </DropdownMenu>
+        )}
 
         <div className="flex-1" />
 
