@@ -1,241 +1,265 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useMapInventoryStore } from '@/store/mapInventoryStore';
-import { useMapStore } from '@/store/mapStore';
-import { Map, FolderOpen, Plus, Clock, Loader2 } from 'lucide-react';
+import {
+  Palette,
+  Ruler,
+  Cloud,
+  Sparkles,
+  ArrowRight,
+  Github,
+  LogIn,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { DEFAULT_MAP_WIDTH, DEFAULT_MAP_HEIGHT, DEFAULT_LEVELS } from '@/config/terrain';
 
-export default function Home() {
-  const router = useRouter();
-  const { savedMaps, fetchMaps, isLoading, saveMap } = useMapInventoryStore();
-  const { loadMapData } = useMapStore();
-  const [hasFetched, setHasFetched] = useState(false);
-  const [showNewMapDialog, setShowNewMapDialog] = useState(false);
-  const [newMapName, setNewMapName] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-
-  useEffect(() => {
-    if (!hasFetched) {
-      fetchMaps();
-      setHasFetched(true);
-    }
-  }, [fetchMaps, hasFetched]);
-
-  const handleNewMapClick = () => {
-    setNewMapName('');
-    setShowNewMapDialog(true);
-  };
-
-  const handleCreateMap = async () => {
-    if (!newMapName.trim()) return;
-
-    setIsCreating(true);
-    try {
-      const mapData = {
-        name: newMapName.trim(),
-        mapWidth: DEFAULT_MAP_WIDTH,
-        mapHeight: DEFAULT_MAP_HEIGHT,
-        levels: DEFAULT_LEVELS,
-        placedPieces: [],
-      };
-
-      const savedMap = await saveMap(mapData);
-      if (savedMap) {
-        loadMapData(savedMap, savedMap.id);
-        router.push(`/designer?mapId=${savedMap.id}`);
-      }
-    } finally {
-      setIsCreating(false);
-      setShowNewMapDialog(false);
-    }
-  };
-
-  const recentMaps = savedMaps.slice(0, 4);
-
+export default function Landing() {
   return (
-    <div className="min-h-[calc(100vh-3rem)] bg-background">
-      {/* Hero section */}
-      <div className="bg-gradient-to-b from-card to-background py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Modular Terrain Creator
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Public top bar */}
+      <header className="h-14 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto h-full px-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-2xl">🗺️</span>
+            <span className="font-bold text-foreground">Terrain Creator</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                <LogIn className="h-4 w-4 mr-2" />
+                Log in
+              </Button>
+            </Link>
+            <Link href="/signup">
+              <Button size="sm">
+                Sign up
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background pointer-events-none" />
+        <div className="relative max-w-5xl mx-auto px-4 pt-20 pb-16 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-xs text-muted-foreground mb-6">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            AI-assisted terrain layouts
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
+            Design modular terrain
+            <br />
+            <span className="text-primary">for your tabletop games</span>
           </h1>
-          <p className="text-xl text-muted-foreground mb-8">
-            Design and manage your tabletop terrain layouts with ease
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+            Drag, snap, and stack terrain pieces into reusable maps. Plan
+            scenarios visually and save them to the cloud — all from the
+            browser.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="w-full sm:w-auto" onClick={handleNewMapClick}>
-              <Plus className="h-5 w-5 mr-2" />
-              New Map
-            </Button>
-            <Link href="/maps">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/signup">
+              <Button size="lg" className="w-full sm:w-auto">
+                Get started — it&apos;s free
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+            <Link href="/login">
               <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                <FolderOpen className="h-5 w-5 mr-2" />
-                My Maps
+                I already have an account
               </Button>
             </Link>
           </div>
         </div>
-      </div>
 
-      {/* Recent maps section */}
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            Recent Maps
-          </h2>
-          {savedMaps.length > 4 && (
-            <Link href="/maps" className="text-sm text-primary hover:text-primary/80">
-              View all ({savedMaps.length})
-            </Link>
-          )}
-        </div>
-
-        {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading...</div>
-        ) : recentMaps.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {recentMaps.map((map) => (
-              <Link key={map.id} href={`/designer?mapId=${map.id}`}>
-                <Card className="hover:ring-2 hover:ring-ring transition-all cursor-pointer h-full">
-                  <div className="h-24 bg-card flex items-center justify-center">
-                    {map.thumbnail ? (
-                      <img
-                        src={map.thumbnail}
-                        alt={map.name}
-                        className="w-full h-full object-cover"
+        {/* Designer preview mock */}
+        <div className="relative max-w-5xl mx-auto px-4 pb-20">
+          <div className="rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+            {/* fake window chrome */}
+            <div className="h-9 border-b border-border bg-background/60 flex items-center px-4 gap-1.5">
+              <span className="h-3 w-3 rounded-full bg-red-500/70" />
+              <span className="h-3 w-3 rounded-full bg-yellow-500/70" />
+              <span className="h-3 w-3 rounded-full bg-green-500/70" />
+              <span className="ml-4 text-xs text-muted-foreground">
+                designer · battlefield-01
+              </span>
+            </div>
+            <div className="flex">
+              {/* fake palette */}
+              <div className="hidden md:flex w-44 border-r border-border bg-background/40 flex-col p-3 gap-2">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                  Pieces
+                </div>
+                {['🌲 Forest', '⛰️ Hill', '🏚️ Ruin', '🌊 River', '🗿 Rock'].map(
+                  (label) => (
+                    <div
+                      key={label}
+                      className="text-sm text-foreground rounded-md bg-secondary/60 px-2 py-1.5"
+                    >
+                      {label}
+                    </div>
+                  )
+                )}
+              </div>
+              {/* fake grid */}
+              <div className="flex-1 p-6 bg-gradient-to-br from-card to-background">
+                <div
+                  className="grid gap-1 mx-auto"
+                  style={{
+                    gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
+                    maxWidth: '32rem',
+                  }}
+                >
+                  {Array.from({ length: 96 }).map((_, i) => {
+                    const accents: Record<number, string> = {
+                      14: 'bg-emerald-500/60',
+                      15: 'bg-emerald-500/60',
+                      26: 'bg-emerald-500/60',
+                      27: 'bg-emerald-500/60',
+                      40: 'bg-amber-700/60',
+                      41: 'bg-amber-700/60',
+                      52: 'bg-amber-700/60',
+                      53: 'bg-amber-700/60',
+                      54: 'bg-amber-700/60',
+                      67: 'bg-sky-500/60',
+                      68: 'bg-sky-500/60',
+                      69: 'bg-sky-500/60',
+                      79: 'bg-sky-500/60',
+                      80: 'bg-sky-500/60',
+                      81: 'bg-stone-400/60',
+                      82: 'bg-stone-400/60',
+                    };
+                    return (
+                      <div
+                        key={i}
+                        className={`aspect-square rounded-sm border border-border/40 ${accents[i] ?? 'bg-secondary/30'}`}
                       />
-                    ) : (
-                      <Map className="h-8 w-8 text-muted-foreground" />
-                    )}
-                  </div>
-                  <CardContent className="p-3">
-                    <h3 className="font-medium text-foreground text-sm truncate">
-                      {map.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {map.placedPieces.length} pieces
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <Card className="bg-secondary border-dashed">
-            <CardContent className="py-12 text-center">
-              <Map className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg text-muted-foreground mb-2">No maps yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Create your first terrain map to get started
-              </p>
-              <Button onClick={handleNewMapClick}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Map
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          {/* glow */}
+          <div className="absolute inset-x-0 -bottom-10 h-32 bg-primary/20 blur-3xl rounded-full pointer-events-none" />
+        </div>
+      </section>
 
-      {/* New Map Dialog */}
-      <Dialog open={showNewMapDialog} onOpenChange={setShowNewMapDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Map</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <label className="text-sm font-medium text-muted-foreground block mb-2">
-              Map Name
-            </label>
-            <input
-              type="text"
-              value={newMapName}
-              onChange={(e) => setNewMapName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newMapName.trim()) {
-                  handleCreateMap();
-                }
-              }}
-              placeholder="Enter map name..."
-              className="w-full bg-card border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowNewMapDialog(false)}
-              disabled={isCreating}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateMap}
-              disabled={isCreating || !newMapName.trim()}
-            >
-              {isCreating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create & Open
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Features */}
+      <section className="max-w-6xl mx-auto px-4 py-20 w-full">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
+            Everything you need to build maps
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Built for game masters and miniature painters who want to plan
+            modular layouts without re-drawing them every session.
+          </p>
+        </div>
 
-      {/* Features section */}
-      <div className="max-w-6xl mx-auto px-4 py-12 border-t border-border">
-        <h2 className="text-xl font-semibold text-foreground mb-6 text-center">Features</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-secondary">
-            <CardContent className="p-6 text-center">
-              <div className="text-3xl mb-3">🎨</div>
-              <h3 className="font-medium text-foreground mb-2">Visual Designer</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-card">
+            <CardContent className="p-6">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Palette className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">
+                Visual designer
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Drag and drop terrain pieces with real-time preview
+                Drag and drop terrain pieces with real-time preview and
+                multi-level stacking.
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-secondary">
-            <CardContent className="p-6 text-center">
-              <div className="text-3xl mb-3">📐</div>
-              <h3 className="font-medium text-foreground mb-2">Snap to Grid</h3>
+          <Card className="bg-card">
+            <CardContent className="p-6">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Ruler className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">
+                Snap to grid
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Precise placement with magnetic snapping
+                Precise placement with magnetic snapping that respects piece
+                footprints and rotations.
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-secondary">
-            <CardContent className="p-6 text-center">
-              <div className="text-3xl mb-3">☁️</div>
-              <h3 className="font-medium text-foreground mb-2">Cloud Storage</h3>
+          <Card className="bg-card">
+            <CardContent className="p-6">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Cloud className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">
+                Cloud storage
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Save your maps to the cloud with Supabase
+                Maps and inventories live in the cloud, so you can pick up
+                where you left off on any device.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardContent className="p-6">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">
+                AI assistant
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Describe the scenario you want and let the assistant suggest a
+                starting layout.
               </p>
             </CardContent>
           </Card>
         </div>
-      </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="max-w-4xl mx-auto px-4 pb-20 w-full">
+        <div className="rounded-2xl border border-border bg-gradient-to-br from-card to-background p-10 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+            Ready to design your first map?
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Create an account and start building in under a minute.
+          </p>
+          <Link href="/signup">
+            <Button size="lg">
+              Create free account
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="mt-auto border-t border-border">
+        <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="text-xl">🗺️</span>
+            <span>© {new Date().getFullYear()} Modular Terrain Creator</span>
+          </div>
+          <div className="flex items-center gap-5 text-sm text-muted-foreground">
+            <Link href="/login" className="hover:text-foreground transition-colors">
+              Log in
+            </Link>
+            <Link href="/signup" className="hover:text-foreground transition-colors">
+              Sign up
+            </Link>
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+            >
+              <Github className="h-4 w-4" />
+              GitHub
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

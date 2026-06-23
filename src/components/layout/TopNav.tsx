@@ -14,14 +14,14 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/', label: 'Home', icon: <Home className="h-4 w-4" /> },
+  { href: '/dashboard', label: 'Home', icon: <Home className="h-4 w-4" /> },
   { href: '/inventory', label: 'Inventory', icon: <Package className="h-4 w-4" /> },
   { href: '/designer', label: 'Designer', icon: <Map className="h-4 w-4" /> },
   { href: '/maps', label: 'My Maps', icon: <FolderOpen className="h-4 w-4" /> },
   { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
 ];
 
-const hiddenRoutes = ['/login', '/suspended'];
+const hiddenRoutes = ['/', '/login', '/signup', '/suspended'];
 
 export function TopNav() {
   const pathname = usePathname();
@@ -34,7 +34,7 @@ export function TopNav() {
   return (
     <nav className="h-12 bg-background border-b border-border flex items-center px-4">
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 mr-8">
+      <Link href="/dashboard" className="flex items-center gap-2 mr-8">
         <span className="text-2xl">🗺️</span>
         <span className="font-bold text-foreground hidden sm:inline">Terrain Creator</span>
       </Link>

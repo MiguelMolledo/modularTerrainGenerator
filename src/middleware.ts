@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const publicRoutes = ['/login', '/signup', '/auth/callback', '/suspended'];
+const publicRoutes = ['/', '/login', '/signup', '/auth/callback', '/suspended'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -57,7 +57,9 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+    const isPublicRoute = publicRoutes.some((route) =>
+      route === '/' ? pathname === '/' : pathname.startsWith(route)
+    );
 
     // No session and trying to access protected route → redirect to login
     if (!user && !isPublicRoute) {
@@ -86,10 +88,10 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Already logged in and visiting /login or /signup → redirect to app
+    // Already logged in and visiting /login or /signup → redirect to dashboard
     if (user && (pathname === '/login' || pathname === '/signup')) {
       const url = request.nextUrl.clone();
-      url.pathname = '/';
+      url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }
 
