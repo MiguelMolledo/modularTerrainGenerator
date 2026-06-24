@@ -14,9 +14,42 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4200";
+
 export const metadata: Metadata = {
-  title: "Modular Terrain Creator",
-  description: "Design and manage your modular terrain maps",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Modular Terrain Creator",
+    template: "%s · Modular Terrain Creator",
+  },
+  description:
+    "Design modular terrain layouts for your tabletop games. Drag, snap, and stack pieces into reusable maps — all from the browser.",
+  applicationName: "Modular Terrain Creator",
+  keywords: [
+    "tabletop",
+    "terrain",
+    "map editor",
+    "modular terrain",
+    "wargaming",
+    "RPG",
+    "dungeon builder",
+  ],
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: "Modular Terrain Creator",
+    title: "Modular Terrain Creator",
+    description:
+      "Design modular terrain layouts for your tabletop games. Drag, snap, and stack pieces into reusable maps.",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Modular Terrain Creator",
+    description:
+      "Design modular terrain layouts for your tabletop games. Drag, snap, and stack pieces into reusable maps.",
+  },
 };
 
 export default function RootLayout({
