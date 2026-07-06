@@ -1,13 +1,28 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { MapDesigner } from '@/components/map-designer';
 import { useMapStore } from '@/store/mapStore';
 import { useMapInventoryStore } from '@/store/mapInventoryStore';
 import { useInventoryStore } from '@/store/inventoryStore';
 import { getLastMapId } from '@/components/map-designer/UnsavedChangesGuard';
 import { DEFAULT_PROPS } from '@/config/props';
+
+// The designer pulls in react-konva (and, lazily, three.js). Load it client-side
+// only and in its own chunk so those libraries stay out of every other route's
+// initial bundle.
+const MapDesigner = dynamic(
+  () => import('@/components/map-designer').then((m) => m.MapDesigner),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[calc(100vh-3rem)] bg-background flex items-center justify-center text-foreground">
+        Loading designer…
+      </div>
+    ),
+  }
+);
 
 function MapLoader() {
   const searchParams = useSearchParams();

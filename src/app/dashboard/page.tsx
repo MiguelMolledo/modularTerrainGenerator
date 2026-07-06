@@ -113,6 +113,8 @@ export default function Dashboard() {
                 <Card className="hover:ring-2 hover:ring-ring transition-all cursor-pointer h-full">
                   <div className="h-24 bg-card flex items-center justify-center">
                     {map.thumbnail ? (
+                      // Canvas-generated base64 data URL; next/image can't optimize it.
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={map.thumbnail}
                         alt={map.name}

@@ -169,6 +169,8 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
                 </div>
               </div>
             ) : map.thumbnail ? (
+              // Canvas-generated base64 data URL; next/image can't optimize it.
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={map.thumbnail}
                 alt={map.name}
@@ -216,6 +218,8 @@ export function MapCard({ map, onExport, onExportReport }: MapCardProps) {
             onClick={handleEdit}
           >
             {map.snapshot ? (
+              // Canvas-generated base64 data URL; next/image can't optimize it.
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={map.snapshot}
                 alt={`${map.name} snapshot`}

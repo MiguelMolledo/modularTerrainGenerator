@@ -447,6 +447,7 @@ export function PropsInventory({
               {newPropImage ? (
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 rounded-lg overflow-hidden bg-card border border-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- base64 data URL */}
                     <img
                       src={newPropImage}
                       alt="Prop preview"
@@ -591,6 +592,7 @@ function PropCard({ prop, quantity, onQuantityChange, onSetQuantity, isCustom, o
         {/* Emoji or Image */}
         <div className="text-3xl flex-shrink-0 w-10 h-10 flex items-center justify-center bg-background rounded-lg overflow-hidden">
           {prop.propImage ? (
+            // eslint-disable-next-line @next/next/no-img-element -- base64 data URL
             <img src={prop.propImage} alt={prop.name} className="w-full h-full object-cover" />
           ) : (
             prop.propEmoji

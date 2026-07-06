@@ -98,6 +98,7 @@ export function ExportReportDialog({
           {map.snapshot && (
             <div className="space-y-2">
               <div className="aspect-video bg-card rounded-lg overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element -- canvas data URL */}
                 <img
                   src={map.snapshot}
                   alt={map.name}

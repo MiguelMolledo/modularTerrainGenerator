@@ -379,6 +379,8 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                     <span className="text-sm">Capturing...</span>
                   </div>
                 ) : mapPreview ? (
+                  // Canvas capture (data URL); next/image can't optimize it.
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={mapPreview}
                     alt="Map preview"
@@ -406,6 +408,8 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                     <span className="text-xs text-muted-foreground">This may take a moment</span>
                   </div>
                 ) : generatedImageUrl ? (
+                  // Generated art shown in a dialog (data/remote URL); not an LCP image.
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={generatedImageUrl}
                     alt="Generated art"
@@ -652,6 +656,7 @@ export function GenerateArtDialog({ open, onOpenChange }: GenerateArtDialogProps
                         key={img.id}
                         className="relative group rounded-lg overflow-hidden border border-border"
                       >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- dialog gallery thumb, not LCP */}
                         <img
                           src={img.url}
                           alt={`Generated ${img.style}`}

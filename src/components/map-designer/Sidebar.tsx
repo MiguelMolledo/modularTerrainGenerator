@@ -854,6 +854,7 @@ export function Sidebar() {
                               <CardContent className="p-2">
                                 <div className="flex items-center gap-2">
                                   {prop.propImage ? (
+                                    // eslint-disable-next-line @next/next/no-img-element -- base64 data URL
                                     <img
                                       src={prop.propImage}
                                       alt={prop.name}
@@ -991,6 +992,7 @@ export function Sidebar() {
                 <div className="flex items-center gap-3">
                   {newPropImage ? (
                     <div className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- base64 data URL */}
                       <img
                         src={newPropImage}
                         alt="Prop preview"
@@ -1140,6 +1142,7 @@ export function Sidebar() {
                 <div className="flex items-center gap-3">
                   {newPropImage ? (
                     <div className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- base64 data URL */}
                       <img
                         src={newPropImage}
                         alt="Prop preview"
