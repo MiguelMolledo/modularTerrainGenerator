@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/api/auth';
 
 interface TestResponse {
   success: boolean;
@@ -8,6 +9,14 @@ interface TestResponse {
 
 export async function POST(request: NextRequest): Promise<NextResponse<TestResponse>> {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Get API key from header or env
     const headerKey = request.headers.get('X-OpenRouter-Key');
     const apiKey = headerKey || process.env.OPENROUTER_API_KEY;

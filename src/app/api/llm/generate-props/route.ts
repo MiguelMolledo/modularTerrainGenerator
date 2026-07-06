@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/api/auth';
 import {
   generateProps,
   OpenRouterError,
@@ -71,6 +72,9 @@ function validateRequest(body: unknown): GeneratePropsRequest {
 
 export async function POST(request: NextRequest): Promise<NextResponse<GeneratePropsResponse | ErrorResponse>> {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+
     // Get API key from header (client-side key) or fall back to env
     const headerKey = request.headers.get('X-OpenRouter-Key');
 

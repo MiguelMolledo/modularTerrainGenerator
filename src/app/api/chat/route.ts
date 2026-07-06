@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/api/auth';
 import type { OpenRouterChatMessage, OpenRouterChatResponse, ChatResponse } from '@/lib/chat/types';
 import { chatTools } from '@/lib/chat/tools';
 import { OPENROUTER_MODELS } from '@/lib/openrouter';
@@ -50,6 +51,9 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ChatResponse | ErrorResponse>> {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+
     // Get API key from header
     const headerKey = request.headers.get('X-OpenRouter-Key');
     const apiKey = headerKey || process.env.OPENROUTER_API_KEY;

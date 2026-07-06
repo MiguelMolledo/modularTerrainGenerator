@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/api/auth';
 
 interface CornerElevations {
   nw: number;
@@ -120,6 +121,9 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+
     let body: FillGapsRequest;
     try {
       body = await request.json();

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/api/auth';
 import type { TerrainDetail } from '@/lib/falai';
 
 // System prompt for generating image prompts using the JSON template
@@ -166,6 +167,9 @@ async function callGemini(systemPrompt: string, userMessage: string, apiKey?: st
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+
     const openRouterKey = request.headers.get('X-OpenRouter-Key');
 
     const body: GeneratePromptRequest = await request.json();

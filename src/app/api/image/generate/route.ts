@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/api/auth';
 import {
   generateImage,
   FalAIError,
@@ -178,6 +179,9 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+
     // Get API key from headers (client-side key) or fall back to env
     const falKey = request.headers.get('X-Fal-Key');
 

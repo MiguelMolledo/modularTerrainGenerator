@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/api/auth';
 import { callOpenRouter, OPENROUTER_MODELS } from '@/lib/openrouter';
 
 // System prompt for campaign analysis
@@ -67,6 +68,9 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+
     // Get API key from header or env
     const openRouterKey = request.headers.get('X-OpenRouter-Key');
 
