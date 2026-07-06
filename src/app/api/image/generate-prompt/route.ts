@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
+import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
 import type { TerrainDetail } from '@/lib/falai';
 
 // System prompt for generating image prompts using the JSON template
@@ -169,6 +170,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireUser();
     if (!auth.ok) return auth.response;
+
+    const rate = checkRateLimit(clientKey(request, auth.user.id));
+    if (!rate.ok) return rate.response;
 
     const openRouterKey = request.headers.get('X-OpenRouter-Key');
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
+import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
 import {
   generateImage,
   FalAIError,
@@ -181,6 +182,9 @@ export async function POST(
   try {
     const auth = await requireUser();
     if (!auth.ok) return auth.response;
+
+    const rate = checkRateLimit(clientKey(request, auth.user.id));
+    if (!rate.ok) return rate.response;
 
     // Get API key from headers (client-side key) or fall back to env
     const falKey = request.headers.get('X-Fal-Key');

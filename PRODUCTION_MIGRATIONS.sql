@@ -626,6 +626,39 @@ CREATE POLICY "Users can delete own maps"
 
 
 -- =============================================
+-- MIGRATION 15: Lock down inventory RLS
+-- File: 20260707000000_lock_down_inventory_rls.sql
+-- =============================================
+-- Inventory tables hold seed/reference data only; the client uses localStorage
+-- and never writes to them. Replace "Allow all" with read-only SELECT for
+-- authenticated users so nobody can mutate them from the client.
+
+DROP POLICY IF EXISTS "Allow all on piece_shapes" ON piece_shapes;
+CREATE POLICY "Read piece_shapes" ON piece_shapes FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow all on terrain_types" ON terrain_types;
+CREATE POLICY "Read terrain_types" ON terrain_types FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow all on terrain_pieces" ON terrain_pieces;
+CREATE POLICY "Read terrain_pieces" ON terrain_pieces FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow all on terrain_objects" ON terrain_objects;
+CREATE POLICY "Read terrain_objects" ON terrain_objects FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow all on custom_pieces" ON custom_pieces;
+CREATE POLICY "Read custom_pieces" ON custom_pieces FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow all on piece_templates" ON piece_templates;
+CREATE POLICY "Read piece_templates" ON piece_templates FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow all on piece_template_items" ON piece_template_items;
+CREATE POLICY "Read piece_template_items" ON piece_template_items FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Allow all operations on piece_variants" ON piece_variants;
+CREATE POLICY "Read piece_variants" ON piece_variants FOR SELECT TO authenticated USING (true);
+
+
+-- =============================================
 -- ALL MIGRATIONS COMPLETE ✅
 -- =============================================
 -- Next steps:

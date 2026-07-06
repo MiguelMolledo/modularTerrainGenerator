@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
+import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
 import { callOpenRouter, OPENROUTER_MODELS } from '@/lib/openrouter';
 
 // System prompt for campaign analysis
@@ -70,6 +71,9 @@ export async function POST(
   try {
     const auth = await requireUser();
     if (!auth.ok) return auth.response;
+
+    const rate = checkRateLimit(clientKey(request, auth.user.id));
+    if (!rate.ok) return rate.response;
 
     // Get API key from header or env
     const openRouterKey = request.headers.get('X-OpenRouter-Key');

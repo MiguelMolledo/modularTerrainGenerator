@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
+import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
 
 interface CornerElevations {
   nw: number;
@@ -123,6 +124,9 @@ export async function POST(
   try {
     const auth = await requireUser();
     if (!auth.ok) return auth.response;
+
+    const rate = checkRateLimit(clientKey(request, auth.user.id));
+    if (!rate.ok) return rate.response;
 
     let body: FillGapsRequest;
     try {

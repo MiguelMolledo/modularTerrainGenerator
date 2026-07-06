@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
+import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
 import type { OpenRouterChatMessage, OpenRouterChatResponse, ChatResponse } from '@/lib/chat/types';
 import { chatTools } from '@/lib/chat/tools';
 import { OPENROUTER_MODELS } from '@/lib/openrouter';
@@ -53,6 +54,9 @@ export async function POST(
   try {
     const auth = await requireUser();
     if (!auth.ok) return auth.response;
+
+    const rate = checkRateLimit(clientKey(request, auth.user.id));
+    if (!rate.ok) return rate.response;
 
     // Get API key from header
     const headerKey = request.headers.get('X-OpenRouter-Key');

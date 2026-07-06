@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
+import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
 import {
   generateProps,
   OpenRouterError,
@@ -74,6 +75,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateP
   try {
     const auth = await requireUser();
     if (!auth.ok) return auth.response;
+
+    const rate = checkRateLimit(clientKey(request, auth.user.id));
+    if (!rate.ok) return rate.response;
 
     // Get API key from header (client-side key) or fall back to env
     const headerKey = request.headers.get('X-OpenRouter-Key');
