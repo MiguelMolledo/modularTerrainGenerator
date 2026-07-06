@@ -11,6 +11,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import HeroDesignerDemo from '@/components/landing/HeroDesignerDemo';
+import AIFlowDemo from '@/components/landing/AIFlowDemo';
+import StackingDemo from '@/components/landing/StackingDemo';
+import ExportDemo from '@/components/landing/ExportDemo';
+import Reveal from '@/components/landing/Reveal';
 
 export default function Landing() {
   return (
@@ -71,148 +76,150 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Designer preview mock */}
+        {/* Live designer demo */}
         <div className="relative max-w-5xl mx-auto px-4 pb-20">
-          <div className="rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
-            {/* fake window chrome */}
-            <div className="h-9 border-b border-border bg-background/60 flex items-center px-4 gap-1.5">
-              <span className="h-3 w-3 rounded-full bg-red-500/70" />
-              <span className="h-3 w-3 rounded-full bg-yellow-500/70" />
-              <span className="h-3 w-3 rounded-full bg-green-500/70" />
-              <span className="ml-4 text-xs text-muted-foreground">
-                designer · battlefield-01
-              </span>
-            </div>
-            <div className="flex">
-              {/* fake palette */}
-              <div className="hidden md:flex w-44 border-r border-border bg-background/40 flex-col p-3 gap-2">
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                  Pieces
-                </div>
-                {['🌲 Forest', '⛰️ Hill', '🏚️ Ruin', '🌊 River', '🗿 Rock'].map(
-                  (label) => (
-                    <div
-                      key={label}
-                      className="text-sm text-foreground rounded-md bg-secondary/60 px-2 py-1.5"
-                    >
-                      {label}
-                    </div>
-                  )
-                )}
-              </div>
-              {/* fake grid */}
-              <div className="flex-1 p-6 bg-gradient-to-br from-card to-background">
-                <div
-                  className="grid gap-1 mx-auto"
-                  style={{
-                    gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
-                    maxWidth: '32rem',
-                  }}
-                >
-                  {Array.from({ length: 96 }).map((_, i) => {
-                    const accents: Record<number, string> = {
-                      14: 'bg-emerald-500/60',
-                      15: 'bg-emerald-500/60',
-                      26: 'bg-emerald-500/60',
-                      27: 'bg-emerald-500/60',
-                      40: 'bg-amber-700/60',
-                      41: 'bg-amber-700/60',
-                      52: 'bg-amber-700/60',
-                      53: 'bg-amber-700/60',
-                      54: 'bg-amber-700/60',
-                      67: 'bg-sky-500/60',
-                      68: 'bg-sky-500/60',
-                      69: 'bg-sky-500/60',
-                      79: 'bg-sky-500/60',
-                      80: 'bg-sky-500/60',
-                      81: 'bg-stone-400/60',
-                      82: 'bg-stone-400/60',
-                    };
-                    return (
-                      <div
-                        key={i}
-                        className={`aspect-square rounded-sm border border-border/40 ${accents[i] ?? 'bg-secondary/30'}`}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
+          <HeroDesignerDemo />
           {/* glow */}
           <div className="absolute inset-x-0 -bottom-10 h-32 bg-primary/20 blur-3xl rounded-full pointer-events-none" />
         </div>
       </section>
 
+      {/* Real flows, animated */}
+      <section className="max-w-6xl mx-auto px-4 py-20 w-full">
+        <Reveal>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
+              See it in action
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Real workflows from the app — no screenshots, this is how it
+              actually feels to build a map.
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+          <Reveal className="h-full">
+            <Card className="bg-card h-full">
+              <CardContent className="p-5 flex flex-col h-full">
+                <h3 className="font-semibold text-foreground mb-1">
+                  Generate layouts with AI
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Describe the scene and get a starting layout in seconds.
+                </p>
+                <AIFlowDemo />
+              </CardContent>
+            </Card>
+          </Reveal>
+          <Reveal delay={120} className="h-full">
+            <Card className="bg-card h-full">
+              <CardContent className="p-5 flex flex-col h-full">
+                <h3 className="font-semibold text-foreground mb-1">
+                  Stack elevations
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Build hills and towers by layering pieces level by level.
+                </p>
+                <StackingDemo />
+              </CardContent>
+            </Card>
+          </Reveal>
+          <Reveal delay={240} className="h-full md:col-span-2 lg:col-span-1">
+            <Card className="bg-card h-full">
+              <CardContent className="p-5 flex flex-col h-full">
+                <h3 className="font-semibold text-foreground mb-1">
+                  Export your piece list
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Know exactly which pieces you need before game night.
+                </p>
+                <ExportDemo />
+              </CardContent>
+            </Card>
+          </Reveal>
+        </div>
+      </section>
+
       {/* Features */}
       <section className="max-w-6xl mx-auto px-4 py-20 w-full">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-            Everything you need to build maps
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Built for game masters and miniature painters who want to plan
-            modular layouts without re-drawing them every session.
-          </p>
-        </div>
+        <Reveal>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
+              Everything you need to build maps
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Built for game masters and miniature painters who want to plan
+              modular layouts without re-drawing them every session.
+            </p>
+          </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-card">
-            <CardContent className="p-6">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Palette className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">
-                Visual designer
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Drag and drop terrain pieces with real-time preview and
-                multi-level stacking.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card">
-            <CardContent className="p-6">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Ruler className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">
-                Snap to grid
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Precise placement with magnetic snapping that respects piece
-                footprints and rotations.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card">
-            <CardContent className="p-6">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Cloud className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">
-                Cloud storage
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Maps and inventories live in the cloud, so you can pick up
-                where you left off on any device.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card">
-            <CardContent className="p-6">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Sparkles className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">
-                AI assistant
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Describe the scenario you want and let the assistant suggest a
-                starting layout.
-              </p>
-            </CardContent>
-          </Card>
+          <Reveal className="h-full">
+            <Card className="bg-card h-full">
+              <CardContent className="p-6">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                  <Palette className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Visual designer
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Drag and drop terrain pieces with real-time preview and
+                  multi-level stacking.
+                </p>
+              </CardContent>
+            </Card>
+          </Reveal>
+          <Reveal delay={100} className="h-full">
+            <Card className="bg-card h-full">
+              <CardContent className="p-6">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                  <Ruler className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Snap to grid
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Precise placement with magnetic snapping that respects piece
+                  footprints and rotations.
+                </p>
+              </CardContent>
+            </Card>
+          </Reveal>
+          <Reveal delay={200} className="h-full">
+            <Card className="bg-card h-full">
+              <CardContent className="p-6">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                  <Cloud className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  Cloud storage
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Maps and inventories live in the cloud, so you can pick up
+                  where you left off on any device.
+                </p>
+              </CardContent>
+            </Card>
+          </Reveal>
+          <Reveal delay={300} className="h-full">
+            <Card className="bg-card h-full">
+              <CardContent className="p-6">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">
+                  AI assistant
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Describe the scenario you want and let the assistant suggest
+                  a starting layout.
+                </p>
+              </CardContent>
+            </Card>
+          </Reveal>
         </div>
       </section>
 
