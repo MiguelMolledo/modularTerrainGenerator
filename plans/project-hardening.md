@@ -1,5 +1,13 @@
 # Project Hardening Implementation Plan
 
+## Status (2026-07-07)
+
+- **Phase 1 — Critical Security: DONE** (commit `d528156`).
+- **Phase 2 — Access Control & Abuse: DONE** except the API-key storage change, which the user chose to leave as-is (localStorage). Commit `be64790`.
+- **Phase 3 — Performance: DONE** (commit `9167396`). The `<img>` migration turned out to be inapplicable — all flagged images are canvas data URLs — so they were documented with eslint-disable instead.
+- **Phase 4 — Code Quality: PARTIAL** (commit `bc2933f`). Done: shared LLM JSON parser, `eslint --fix`. Deferred (risky refactors needing manual testing): React-Compiler "setState in effect" errors across ~10 dialogs, MapCanvas render memoization, store/localStorage de-duplication, toolExecutor cast validation.
+- **Phase 5 — Testing/CI/Hygiene: PARTIAL** (commit `890b45a`). Done: untracked artifacts, moved scripts, CI workflow (tsc + build blocking, build verified). Deferred: making the Playwright specs assert real conditions and run against a seeded Supabase in CI.
+
 ## Summary
 
 Address the findings from the full project review across four areas: **security** (unauthenticated paid API routes, open redirect, test user in production migrations, allow-all RLS policies, exposed test endpoints, weak API-key storage), **performance** (eager three.js/konva bundle, unoptimized images, bare next.config), **code quality** (43 lint errors, duplicated persistence logic, unvalidated casts, oversized MapCanvas), and **testing/hygiene** (no CI, no-op test assertions, tracked build artifacts).
