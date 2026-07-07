@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
 import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
+import { parseLlmJson } from '@/lib/llm/parseJson';
 import { callOpenRouter, OPENROUTER_MODELS } from '@/lib/openrouter';
 
 // System prompt for region-based layout suggestions with path and elevation support
@@ -1189,18 +1190,7 @@ async function generateDungeonLayout(
   // Parse LLM response
   let dungeonLayout: DungeonLayout;
   try {
-    let cleanResponse = response.trim();
-    if (cleanResponse.startsWith('```json')) {
-      cleanResponse = cleanResponse.slice(7);
-    } else if (cleanResponse.startsWith('```')) {
-      cleanResponse = cleanResponse.slice(3);
-    }
-    if (cleanResponse.endsWith('```')) {
-      cleanResponse = cleanResponse.slice(0, -3);
-    }
-    cleanResponse = cleanResponse.trim();
-
-    dungeonLayout = JSON.parse(cleanResponse);
+    dungeonLayout = parseLlmJson<DungeonLayout>(response);
     dungeonLayout = validateDungeonLayout(dungeonLayout, mapWidth, mapHeight);
   } catch (error) {
     console.error('Failed to parse dungeon layout:', response);
@@ -1419,19 +1409,8 @@ Return ONLY valid JSON with "regions" array, optional "paths", optional "elevati
 
     let result: LayoutResult;
     try {
-      let cleanResponse = response.trim();
-      if (cleanResponse.startsWith('```json')) {
-        cleanResponse = cleanResponse.slice(7);
-      } else if (cleanResponse.startsWith('```')) {
-        cleanResponse = cleanResponse.slice(3);
-      }
-      if (cleanResponse.endsWith('```')) {
-        cleanResponse = cleanResponse.slice(0, -3);
-      }
-      cleanResponse = cleanResponse.trim();
-
-      result = JSON.parse(cleanResponse);
-    } catch (parseError) {
+      result = parseLlmJson<LayoutResult>(response);
+    } catch {
       console.error('Failed to parse LLM response:', response);
       return NextResponse.json(
         { error: 'Failed to parse layout suggestions. Please try again.' },

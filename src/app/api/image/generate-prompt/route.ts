@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
 import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
+import { parseLlmJson } from '@/lib/llm/parseJson';
 import type { TerrainDetail } from '@/lib/falai';
 
 // System prompt for generating image prompts using the JSON template
@@ -225,19 +226,7 @@ Generate the complete JSON following the template structure. Be creative with ar
     let finalPrompt: string;
 
     try {
-      // Clean the response - remove markdown code blocks if present
-      let cleanJson = jsonResponse.trim();
-      if (cleanJson.startsWith('```json')) {
-        cleanJson = cleanJson.slice(7);
-      } else if (cleanJson.startsWith('```')) {
-        cleanJson = cleanJson.slice(3);
-      }
-      if (cleanJson.endsWith('```')) {
-        cleanJson = cleanJson.slice(0, -3);
-      }
-      cleanJson = cleanJson.trim();
-
-      const parsed = JSON.parse(cleanJson);
+      const parsed = parseLlmJson<Record<string, unknown>>(jsonResponse);
       finalPrompt = jsonToPrompt(parsed);
 
       // Return both the JSON and the converted prompt

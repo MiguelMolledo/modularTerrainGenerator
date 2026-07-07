@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api/auth';
 import { checkRateLimit, clientKey } from '@/lib/api/rateLimit';
+import { parseLlmJson } from '@/lib/llm/parseJson';
 import { callOpenRouter, OPENROUTER_MODELS } from '@/lib/openrouter';
 
 // System prompt for scene description
@@ -139,20 +140,8 @@ Generate immersive read-aloud text and tactical DM notes.`;
     // Parse the response
     let result: DescriptionResult;
     try {
-      // Clean up response - remove markdown code blocks if present
-      let cleanResponse = response.trim();
-      if (cleanResponse.startsWith('```json')) {
-        cleanResponse = cleanResponse.slice(7);
-      } else if (cleanResponse.startsWith('```')) {
-        cleanResponse = cleanResponse.slice(3);
-      }
-      if (cleanResponse.endsWith('```')) {
-        cleanResponse = cleanResponse.slice(0, -3);
-      }
-      cleanResponse = cleanResponse.trim();
-
-      result = JSON.parse(cleanResponse);
-    } catch (parseError) {
+      result = parseLlmJson<DescriptionResult>(response);
+    } catch {
       console.error('Failed to parse LLM response:', response);
       return NextResponse.json(
         { error: 'Failed to parse description. Please try again.' },

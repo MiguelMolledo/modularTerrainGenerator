@@ -348,7 +348,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       saveTerrainTypes(storedTypes);
 
       // Apply template if provided
-      let pieces: TerrainPieceConfig[] = [];
+      const pieces: TerrainPieceConfig[] = [];
       if (data.templateId) {
         const storedTemplateItems = getTemplateItems();
         const templateItems = storedTemplateItems.filter(i => i.templateId === data.templateId);
@@ -491,7 +491,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           if (t.id !== terrainId) return t;
 
           const existingPieceIndex = t.pieces.findIndex(p => p.shapeId === shapeId);
-          let newPieces = [...t.pieces];
+          const newPieces = [...t.pieces];
 
           if (existingPieceIndex !== -1) {
             if (quantity === 0) {
@@ -658,7 +658,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           if (t.id !== terrainId) return t;
 
           const existingPieceIndex = t.pieces.findIndex(p => p.shapeId === shapeId);
-          let newPieces = [...t.pieces];
+          const newPieces = [...t.pieces];
 
           if (existingPieceIndex !== -1) {
             // Update existing
@@ -918,7 +918,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
       // Add template items if provided
       const shapes = get().shapes;
-      let newItems: PieceTemplateItem[] = [];
+      const newItems: PieceTemplateItem[] = [];
       if (data.items && data.items.length > 0) {
         const storedItems = getTemplateItems();
         for (const item of data.items) {
@@ -1073,7 +1073,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
           if (t.id !== templateId) return t;
 
           const existingItemIndex = t.items.findIndex(i => i.shapeId === shapeId);
-          let newItems = [...t.items];
+          const newItems = [...t.items];
 
           if (existingItemIndex !== -1) {
             if (quantity === 0) {
