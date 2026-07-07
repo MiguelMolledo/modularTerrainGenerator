@@ -24,6 +24,11 @@
 .DS_Store
 *.pem
 
+# local scratch artifacts (screenshots, scratch files)
+/Untitled
+/screenshot.png
+/after-login.png
+
 # debug
 npm-debug.log*
 yarn-debug.log*

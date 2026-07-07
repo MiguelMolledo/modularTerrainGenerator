@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      # Lint currently has known pre-existing errors (React Compiler ruleset);
+      # report them but don't fail the build until they're worked down.
+      - name: Lint (non-blocking)
+        run: npm run lint || true
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+
+# Note: the Playwright specs in tests/ need a running app plus a seeded Supabase
+# instance, so they are not run here yet. To enable them, add a job that starts
+# `supabase start`, seeds a test user, runs `npm run dev`, then `npm run test`.
