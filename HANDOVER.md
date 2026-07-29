@@ -180,7 +180,7 @@ These scripts use `/test-login` to bypass Google OAuth for testing.
   - `http://127.0.0.1:54321`
 - **Authorized Redirect URIs**:
   - `http://127.0.0.1:54321/auth/v1/callback` (local)
-  - `https://zgvteidzhuysujeuampp.supabase.co/auth/v1/callback` (production)
+  - ~~`https://zgvteidzhuysujeuampp.supabase.co/auth/v1/callback`~~ (proyecto eliminado; ver DEPLOYMENT_GUIDE.md — ahora se usa el proyecto compartido `vwfesurfvemlfkhmiiuq` y Google OAuth está oculto tras `NEXT_PUBLIC_ENABLE_GOOGLE_AUTH`)
 
 **Environment Variables** (`.env.local`):
 ```env
@@ -213,7 +213,7 @@ In Supabase Dashboard → Authentication → Providers → Google:
 
 Set environment variables:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://zgvteidzhuysujeuampp.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://vwfesurfvemlfkhmiiuq.supabase.co  # proyecto compartido (schema terrain)
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-production-anon-key>
 GOOGLE_CLIENT_ID=<your-client-id>
 GOOGLE_CLIENT_SECRET=<your-client-secret>

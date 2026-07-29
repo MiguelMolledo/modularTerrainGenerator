@@ -1,14 +1,12 @@
--- Create a test user for local development and testing
--- This migration only runs in local development
+-- Test user para desarrollo local (NO aplicar en el proyecto hosted).
+-- El trigger on_auth_user_created_terrain crea terrain.profiles automaticamente.
 
 DO $$
 DECLARE
   test_user_id UUID := '00000000-0000-0000-0000-000000000001'::uuid;
 BEGIN
-  -- Delete existing test user if it exists (to recreate with correct fields)
   DELETE FROM auth.users WHERE id = test_user_id;
 
-  -- Insert into auth.users with all required fields
   INSERT INTO auth.users (
     id,
     instance_id,
@@ -34,9 +32,9 @@ BEGIN
     crypt('test-password-dev-only', gen_salt('bf')),
     NOW(),
     '',  -- Empty string instead of NULL
-    '',  -- Empty string instead of NULL
-    '',  -- Empty string instead of NULL
-    '',  -- Empty string instead of NULL
+    '',
+    '',
+    '',
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"full_name":"Test User","avatar_url":"https://api.dicebear.com/7.x/avataaars/svg?seed=test"}'::jsonb,
     NOW(),
@@ -46,6 +44,8 @@ BEGIN
     'authenticated',
     false
   );
+
+  UPDATE terrain.profiles SET ai_enabled = true WHERE id = test_user_id;
 
   RAISE NOTICE 'Test user created: test@local.dev';
 END $$;

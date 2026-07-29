@@ -41,6 +41,9 @@ export async function middleware(request: NextRequest) {
       supabaseUrl,
       supabaseAnonKey,
       {
+        // Las tablas de esta app viven en el schema `terrain`
+        // (proyecto Supabase compartido con otras apps).
+        db: { schema: 'terrain' },
         cookies: {
           getAll() {
             return request.cookies.getAll();

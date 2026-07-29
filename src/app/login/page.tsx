@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+// Google OAuth queda oculto (solo user/password). Para reactivarlo en el
+// futuro, pon NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=true en el entorno.
+const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true';
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -104,6 +108,7 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {googleAuthEnabled && (<>
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border"></div>
@@ -137,6 +142,7 @@ export default function LoginPage() {
           </svg>
           Sign in with Google
         </button>
+        </>)}
 
         <p className="text-center text-sm text-muted-foreground">
           Don't have an account?{' '}
