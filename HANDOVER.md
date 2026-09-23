@@ -180,7 +180,7 @@ These scripts use `/test-login` to bypass Google OAuth for testing.
   - `http://127.0.0.1:54321`
 - **Authorized Redirect URIs**:
   - `http://127.0.0.1:54321/auth/v1/callback` (local)
-  - ~~`https://zgvteidzhuysujeuampp.supabase.co/auth/v1/callback`~~ (proyecto eliminado; ver DEPLOYMENT_GUIDE.md — ahora se usa el proyecto compartido `vwfesurfvemlfkhmiiuq` y Google OAuth está oculto tras `NEXT_PUBLIC_ENABLE_GOOGLE_AUTH`)
+  - ~~`https://zgvteidzhuysujeuampp.supabase.co/auth/v1/callback`~~ (proyecto eliminado; ver DEPLOYMENT_GUIDE.md — ahora se usa el proyecto compartido DndMaster `neklxghwqtjinyufnhxh` y Google OAuth está oculto tras `NEXT_PUBLIC_ENABLE_GOOGLE_AUTH`)
 
 **Environment Variables** (`.env.local`):
 ```env
@@ -195,10 +195,7 @@ GOOGLE_CLIENT_SECRET=<your-client-secret>
 ## 📋 Next Steps - Production Deployment
 
 ### 1. Push Migrations to Production Supabase
-```bash
-supabase db push
-# Or manually run SQL in Supabase Dashboard > SQL Editor
-```
+Nunca `supabase db push` (proyecto compartido con rolApp): aplicar con psql, ver DEPLOYMENT_GUIDE.md.
 
 **Important:** The test user migration (`20260223000000_create_test_user.sql`) is safe for production - it only runs if the user doesn't exist.
 
@@ -213,7 +210,7 @@ In Supabase Dashboard → Authentication → Providers → Google:
 
 Set environment variables:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://vwfesurfvemlfkhmiiuq.supabase.co  # proyecto compartido (schema terrain)
+NEXT_PUBLIC_SUPABASE_URL=https://neklxghwqtjinyufnhxh.supabase.co  # proyecto compartido DndMaster (schema terrain); ver DEPLOYMENT_GUIDE.md
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-production-anon-key>
 GOOGLE_CLIENT_ID=<your-client-id>
 GOOGLE_CLIENT_SECRET=<your-client-secret>

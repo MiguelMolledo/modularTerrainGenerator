@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createAccount } from './actions';
 
 // Google OAuth queda oculto (solo user/password). Para reactivarlo en el
 // futuro, pon NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=true en el entorno.
@@ -27,26 +28,18 @@ export default function SignUpPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: displayName || undefined,
-          },
-        },
-      });
+      const { error } = await createAccount({ email, password, displayName });
+      if (error) throw new Error(error);
 
-      if (error) throw error;
+      const supabase = createClient();
 
       // Sign in automatically after signup
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -126,7 +119,7 @@ export default function SignUpPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className="w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
             />
@@ -142,7 +135,7 @@ export default function SignUpPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className="w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
             />
