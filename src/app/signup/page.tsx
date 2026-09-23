@@ -16,6 +16,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +37,12 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const { error } = await createAccount({ email, password, displayName });
+      const { error } = await createAccount({
+        email,
+        password,
+        displayName,
+        inviteCode,
+      });
       if (error) throw new Error(error);
 
       const supabase = createClient();
@@ -138,6 +144,22 @@ export default function SignUpPage() {
               minLength={8}
               className="w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="inviteCode" className="block text-sm font-medium text-foreground mb-1">
+              Invite code
+            </label>
+            <input
+              id="inviteCode"
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              required
+              autoComplete="off"
+              className="w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ask the admin for one"
             />
           </div>
 

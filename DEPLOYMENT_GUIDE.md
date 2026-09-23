@@ -51,6 +51,7 @@ El schema `terrain` ya está expuesto en la API (Exposed schemas).
 NEXT_PUBLIC_SUPABASE_URL=https://neklxghwqtjinyufnhxh.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key del proyecto>
 SUPABASE_SERVICE_ROLE_KEY=<service_role key del proyecto>  # alta de usuarios
+INVITE_CODE=<código que exige el registro>  # el alta con service role se salta los límites de Auth
 OPENROUTER_API_KEY=<tu key>
 FAL_KEY=<tu key>
 ```
@@ -72,6 +73,7 @@ El código sigue en `login/page.tsx` y `signup/page.tsx`, oculto tras el flag:
 ## Verificación post-deploy
 
 - [ ] Usuario sin sesión → redirigido a `/login`
+- [ ] Signup sin código de invitación válido → «Invalid invite code»
 - [ ] Signup con email/password crea fila en `terrain.profiles` (y ninguna en `public.profiles` de rolApp)
 - [ ] Login funciona y aparece el botón de sign out
 - [ ] Guardar un mapa crea fila en `terrain.maps` con `user_id` propio

@@ -7,11 +7,19 @@ import { createClient } from '@supabase/supabase-js';
 // aquí con la service role y marcada con app_metadata.app = 'terrain': el
 // trigger de terrain.profiles solo actúa sobre esos usuarios y las otras apps
 // los ignoran. Después el cliente inicia sesión con email y contraseña.
+// Como el alta con la service role se salta los límites de Supabase Auth, el
+// registro exige el código de invitación de INVITE_CODE (igual que GymStats).
 export async function createAccount(input: {
   email: string;
   password: string;
   displayName: string;
+  inviteCode: string;
 }): Promise<{ error: string | null }> {
+  const expected = process.env.INVITE_CODE;
+  if (!expected || input.inviteCode.trim() !== expected) {
+    return { error: 'Invalid invite code' };
+  }
+
   const email = input.email.trim().toLowerCase();
   if (!email || !email.includes('@')) return { error: 'Invalid email' };
   if (input.password.length < 8) {
